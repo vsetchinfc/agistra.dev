@@ -1,2 +1,284 @@
-# agistra.dev
-Agistra Dev AI Team — Architect, Builder, Tester, and Router — that plan, build, test, and coordinate your software projects with shared memory, a live task queue, GitHub Issues and Telegram integration, ticket lifecycle tracking, and a project health scanner that keeps the whole team on the same page across every session and project.
+# Agistra Dev (V1.0.0)
+
+
+> Agistra Dev AI Team — Architect, Builder, Tester, and Router — that plan, build, test, and coordinate your software projects with shared memory, a live task queue, GitHub Issues and Telegram integration, ticket lifecycle tracking, and a project health scanner that keeps the whole team on the same page across every session and project.
+
+**[Get started →](#quick-start)** · [GitHub](https://github.com/vsetchinfc/agistra.dev) · Open source
+
+---
+
+## Contents
+
+- [The problem with AI-assisted development today](#the-problem-with-ai-assisted-development-today)
+- [How Agistra solves it](#how-agistra-solves-it)
+- [The team](#the-team)
+- [Quick start](#quick-start)
+- [CLI reference](#cli-reference)
+- [Project health scanner](#project-health-scanner)
+- [Task file format](#task-file-format)
+- [Agent memory](#agent-memory)
+- [Ticket lifecycle](#ticket-lifecycle)
+- [Open source](#open-source)
+
+---
+
+## The problem with AI-assisted development today
+
+You know how it goes.
+
+You open a new session and spend the first 15 minutes re-explaining your project — the stack, the decisions you already made, what was finished last time, what broke. The AI builds something reasonable. You close the tab. Tomorrow you start over.
+
+**Context resets are the real cost.** Not tokens. Not speed. The restart is a tax.
+
+And it gets worse when there's more than one of you. AI is a solo tool. It doesn't know your team's workflow, who owns what, or what state the ticket is in. You become the glue — tracking tasks in your head, copying outputs between sessions, chasing down what the AI actually shipped versus what it said it shipped.
+
+Here's what happens in practice:
+
+- **Decisions don't survive sessions.** You worked through an implementation approach — the tradeoffs, what you ruled out, the pattern you settled on. The next session doesn't know any of that. Instead of checking, it makes its own assumptions. You find the wrong call after it's already wired in.
+
+- **Architecture drift.** The AI doesn't stay in the style of your existing codebase. It introduces different patterns, different contracts, adds abstractions that weren't asked for. You wanted one feature; you got an uninvited refactor alongside it.
+
+- **Over-engineering trap.** AI defaults toward more complexity — extra error handling, extra layers, edge-case coverage for problems that can't happen in your system. The problem was simple. The solution shouldn't have to be complex.
+
+- **No structured handoff.** No TDD gate. No QA step. The same agent that wrote the code declares it done — and when it "tests," it tests what it knows works, not what the spec requires. Bugs ship.
+
+- **You're the project manager.** Tracking task state, prioritizing the backlog, deciding what the AI works on next — all in your head, all reloaded every session.
+
+- **Nobody's watching what degrades.** Test coverage quietly drops. TODOs accumulate. CI/CD gaps widen. No one notices until it's already a problem.
+
+---
+
+## How Agistra solves it
+
+Agistra gives AI a team structure with memory, a shared task queue, and a ticket workflow — so the context lives in the system, not in your head.
+
+**Memory that persists across sessions.** Each agent maintains a HOT / WARM / COLD memory file, updated at the start and end of every session. Cold restarts become warm pickups.
+
+**A shared task queue.** Tasks live in the hub repo as files, not in a chat transcript. Every agent reads the same queue. Nothing gets lost between sessions.
+
+**Role-separated workflow.** Architect scopes work and produces PRDs so Builder gets clear requirements, not open-ended questions. Tester verifies the spec against the running app — never the same agent that built it, never looking at the code. Each agent knows its lane and the lifecycle rules for its role — no improvising.
+
+**Enforced engineering discipline.** Builder runs in `software-engineer-mode`: it reads the codebase before touching it, matches existing patterns, and implements only what the ticket specifies. Scope expansion, uninvited abstractions, and unnecessary complexity don't get a foothold.
+
+**Ticket lifecycle with gates.** Work moves through defined states (`ready-for-implementation` → `in-progress` → `ready-for-qa` → `qa-passed`) with explicit entry gates. Builder can't declare QA done. Tester can't skip the handoff payload check.
+
+**Project health scanner.** Five-perspective automated scoring surfaces what's degrading before it becomes a problem — test coverage, CI/CD gaps, debug hygiene, documentation, infrastructure readiness.
+
+**GitHub Issues + Telegram integration.** Tickets flow from GitHub Issues into the task queue. Telegram relay keeps the remote team in the loop without leaving the workflow.
+
+---
+
+## The team
+
+| Agent | Role | What it does |
+| --- | --- | --- |
+| [**Architect**](docs/ARCHITECT.md) | Planning & design | Morning briefing, backlog creation, architecture decisions, task file generation |
+| [**Builder**](docs/BUILDER.md) | Implementation | Engineering delivery with TDD gate, self-review, QA readiness checks |
+| [**Tester**](docs/TESTER.md) | QA execution | Ticket verification, browser testing, Playwright automation, PASS/FAIL/BLOCKED verdicts |
+| [**Router**](docs/ROUTER.md) | Relay & coordination | Inbound classification, cross-team routing, Telegram relay, audit trail |
+
+Each agent runs in its own Claude Code workspace with its own identity, memory file, skills, and lifecycle role bindings. Architect orchestrates the others via the shared task queue — no agent talks to another directly except through defined handoff contracts.
+
+---
+
+## Quick start
+
+### 1. Clone or fork the hub
+
+```powershell
+git clone https://github.com/vsetchinfc/agistra.dev.git my-hub
+cd my-hub
+```
+
+To make it personal and update the agent identities, run the setup script:
+
+```powershell
+npm run setup
+```
+
+The setup wizard collects your name, role, organization, optional display names for each agent, and whether you work with a remote team. Results are written to a local-only `workspace.config.json` (gitignored — never committed).
+
+Or you can use vanilla config by skipping the wizard — the default identities are Architect, Builder, Tester, and Router, and the default remote team setting is false.
+
+### 2. Claude, Cursor, Github Copilot
+
+Out of the box, Agistra provides agent definitions for claude, cursor, and GitHub Copilot. You can remove the ones you don't need. See .claude, cursor, and .github folders for details.
+
+The memory files in `memory/` are shared between all models — if you switch from Claude to Cursor, the same memory carries over. Skills are also model-agnostic — if you switch models, the same skills load.
+
+### 2. Use VS Code, Cursor, or Claude Code
+
+You can use VS Code, Cursor or Claude Code to interact with the agents. Open my-hub and my-project workspaces in to same editor workspace. You will be able to use cli commands in the terminal to generate tasks and produce prompts to interact with agents.
+
+### 3. Add your first project
+
+Every time you add a new project by running `npm run scan <my-project>`, the project is added to projects and project related tasks are generated.
+
+The best structure is to have the project workspace folder next to my-hub.
+
+```text
+my-hub/
+  projects/
+    my-project/
+      task-1_todo_my_first-task.md
+      task-2_todo_another-task.md
+/my-project/
+  src/
+  README.md
+```
+
+## Project health scanner
+
+`scan` scores your project across five perspectives, each 0.0–1.0:
+
+| ID  | Perspective | What it measures                                       |
+| --- | ----------- | ------------------------------------------------------ |
+| SYS | System      | File complexity, directory cohesion, tsconfig, CI/CD   |
+| TST | Test        | Test file ratio, test script presence                  |
+| USR | User        | README quality, package description, changelog         |
+| ANL | Analytics   | CI/CD automation, commit fix-rate, uncommitted changes |
+| DBG | Debug       | TODO/FIXME density, console.log hygiene                |
+
+```text
+Perspective Scores
+──────────────────────────────────────────────────
+  SYS  System       ████████░░  0.80
+  TST  Test         ████░░░░░░  0.45 ▼0.10 ← lowest
+  USR  User         ████████░░  0.80 ▲0.05
+  ANL  Analytics    ██████░░░░  0.60
+  DBG  Debug        █████░░░░░  0.55 →
+──────────────────────────────────────────────────
+       Overall      ██████░░░░  0.64 ▲0.01
+```
+
+Scores and trends (▲ up ▼ down → unchanged) are saved to `projects/<project>/health.json` after every scan. Re-run scan any time — it skips findings that already have task files.
+
+---
+
+### 4. Dispatch work to Architect
+
+To get the most out of the Agistra use the prompt below to get the Agent to analyse your project. Agistra provides integration with GitHub, so if your project has an accessible repo, Architect can read the issues and codebase to create a task backlog for you. If your project is private, Architect can still read the local codebase and project files to generate tasks.
+
+```text
+@Architect You are in architecture mode. Review <project> and create a planning backlog.
+
+1. Read the codebase — README, src/, existing issues if accessible
+2. Check projects/<project>/ for existing task files
+3. Review open GitHub issues at <org>/<project> if accessible
+4. Create task files in projects/<project>/ for all work not already covered
+
+Task file naming: task_N_todo_<short-slug>.md
+```
+
+> **Display name note:** if you set a custom display name for Architect in `workspace.config.json` (e.g. "Argo"), use that name instead of `@Architect`.
+
+---
+
+## CLI reference
+
+Run from the hub directory. Replace `<project>` with your project name.
+
+```powershell
+npm run setup                     # first-time wizard (re-run to update config)
+npm run list                      # show pending tasks across all projects
+npm run scan     -- <project>     # scan project and generate task files
+npm run dispatch -- <project>     # print the current task prompt
+npm run advance  -- <project>     # mark current task done, show next
+npm run launch   -- <project>     # launch Claude in the project directory
+```
+
+Target a specific task:
+
+```powershell
+node cli/index.js dispatch <project> --task 6
+```
+
+Advance and immediately launch Claude on the next task:
+
+```powershell
+npm run advance -- <project> && npm run launch -- <project>
+```
+
+Preview what `scan` would generate without writing files:
+
+```powershell
+node cli/index.js scan <project> --dry-run
+```
+
+---
+
+## Task file format
+
+Task files are markdown with YAML front matter. The front matter tells Claude which agent, mode, model, and skills to load for the session.
+
+```markdown
+---
+agent: builder
+mode: engineering
+model: claude-sonnet-4-6
+finding-id: tst-low-coverage
+skills:
+  - scan-tst
+  - software-engineer-mode
+  - ticket-lifecycle-mode
+---
+
+# Increase test coverage
+
+**Project:** my-project
+**Priority:** high
+
+15 test files for 42 source files (36%). Target: ≥50% file coverage.
+
+## Acceptance Criteria
+
+- [ ] Test file ratio reaches 50%+
+- [ ] All new tests cover happy path, edge cases, and failure cases
+- [ ] No regressions introduced
+```
+
+---
+
+## Agent memory
+
+Memory files live in `memory/` (gitignored — local only):
+
+```text
+memory/
+  architect.md    ← HOT / WARM / COLD memory for Architect
+  builder.md
+  tester.md
+  router.md
+  archive/        ← rotated memory snapshots
+```
+
+Agents read their memory file at session start and update it at session end. HOT items surface in the morning briefing. WARM items inform planning. COLD items are archived or dropped.
+
+---
+
+## Ticket lifecycle
+
+Work moves through defined states with role-based transition permissions:
+
+| State | Owned by |
+| --- | --- |
+| `ready-for-implementation` | Architect / Developer Lead |
+| `in-progress` | Builder |
+| `ready-for-review` | Builder |
+| `ready-for-qa` | Builder (after self-review) |
+| `qa-passed` | Tester |
+| closed / next direction | Team Lead (you) |
+
+Tester produces PASS, FAIL, PARTIAL PASS, or BLOCKED — never skips the handoff payload check, never self-approves. Builder never declares QA done. You stay the final authority on merge and close.
+
+---
+
+## Open source
+
+Agistra is open source and free to use.
+
+**[github.com/vsetchinfc/agistra.dev](https://github.com/vsetchinfc/agistra.dev)**
+
+Clone it, deploy it to your own hub, and run your team from there. The source of truth for agent profiles, skills, and the CLI lives in the profiles repo — deploy generates your hub from it.
+
+Pull requests and issues welcome.

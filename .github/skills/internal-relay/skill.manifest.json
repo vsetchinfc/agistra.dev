@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "workflow-relay",
+	"ownerAgentId": "atlas",
+	"outputId": "workflow-relay",
+	"vscode": {
+		"description": "Use when: classify Telegram or async workflow updates, map them to a workflow state, route to Neo, Vera, or Vlad, ask one clarification question when context is missing, and leave a GitHub audit trail.",
+		"argumentHint": "Incoming message, issue or PR reference, sender, and desired routing context",
+		"userInvocable": true,
+		"disableModelInvocation": false
+	},
+	"exports": {
+		"generateVscodeSkill": true
+	}
+}

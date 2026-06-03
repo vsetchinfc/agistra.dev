@@ -1,0 +1,12 @@
+{
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "node cli/setup.js --output .",
+    "list": "node cli/index.js dispatch --list",
+    "dispatch": "node cli/index.js dispatch",
+    "advance": "node cli/index.js dispatch --advance",
+    "launch": "node cli/index.js dispatch --launch",
+    "scan": "node cli/index.js scan"
+  }
+}
