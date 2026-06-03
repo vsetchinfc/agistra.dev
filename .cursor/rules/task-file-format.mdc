@@ -1,0 +1,66 @@
+---
+description: Task file structure and acceptance criteria conventions for Agistra task queue files
+globs: projects/**/*.md
+alwaysApply: false
+---
+
+# Task file format
+
+Task files live in `projects/<project>/task_N_todo_<slug>.md`.
+
+## Structure
+
+```markdown
+# Task N: <Title>
+
+**Agent:** Builder | Architect | Tester | Router
+**Mode:** software-engineer-mode | architecture-mode | qa-mode
+**Priority:** CRITICAL | HIGH | MEDIUM | LOW
+**GitHub Issue:** #N  (optional — link to source issue)
+**Dependencies:** task_N, task_M  (optional — tasks that must complete first)
+
+---
+
+## Context
+[Why this task exists, current state, what is broken or missing]
+
+## Acceptance Criteria
+[Numbered list of specific, observable, testable criteria]
+
+## Technical Notes
+[Implementation guidance, code examples, API references, constraints]
+
+## Out of Scope
+[Explicit exclusions — prevents scope creep and ambiguity for Builder]
+
+## QA Handoff
+[How Tester will verify completion — exact steps, evidence required]
+```
+
+## Acceptance criteria conventions
+
+Good criteria are observable — they describe an outcome that can be verified without reading the code:
+
+- `Returns 200 with JSON body containing { messageId }` — good
+- `Works correctly` — not a criterion
+- `Edge function deployed to staging` — good
+- `Function implemented` — not a criterion
+
+## Lifecycle
+
+Files move through states by filename prefix rename:
+
+```
+task_N_todo_<slug>.md       ← not started
+task_N_in_progress_<slug>.md  ← Builder active
+task_N_done_<slug>.md       ← QA passed, closed
+```
+
+Use `npm run advance -- <project>` to advance the current task automatically.
+
+## Who does what
+
+- **Architect** creates task files, sets acceptance criteria, defines scope.
+- **Builder** reads the task file and implements exactly what is specified — no more, no less.
+- **Tester** verifies acceptance criteria against the running app — never the code.
+- **Team lead** approves merge and closes tasks.

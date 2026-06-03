@@ -1,0 +1,60 @@
+---
+description: Agistra hub layout — project task queue, memory, CLI, and workspace structure
+alwaysApply: true
+---
+
+# Agistra hub layout
+
+This workspace is an **Agistra hub** — it holds planning, memory, and task queues for one or more projects. Project source code lives in sibling repositories.
+
+## Directories
+
+| Path | Purpose |
+|------|---------|
+| `projects/<project>/` | Task files for a project — one Markdown file per task |
+| `memory/<agent>.md` | Live HOT/WARM/COLD agent memory (gitignored — local only) |
+| `memory/archive/` | Daily memory snapshots from end-of-day `dreaming` |
+| `.cursor/agents/` | Cursor agent profiles (generated — do not edit directly) |
+| `.github/skills/` | Raw skill definitions used by `dispatch` for context injection |
+| `cli/` | Hub CLI — dispatch, scan, advance, launch, setup |
+| `docs/` | Agent identity cards and skill reference |
+
+## Task file naming
+
+`task_N_todo_<short-slug>.md` — N is sequential (1, 2, 3…), slug is lowercase kebab-case.
+
+Example: `task_12_todo_security-hardening.md`
+
+State is encoded in the filename prefix: `todo` → `in_progress` → `done`.
+
+## CLI shortcuts
+
+```bash
+npm run dispatch -- <project>                         # Print current task prompt
+npm run scan     -- <project>                         # Health scan + generate task files
+npm run advance  -- <project>                         # Mark current task done, show next
+npm run launch   -- <project>                         # Launch Claude in the project directory
+node cli/index.js dispatch <project> --task 6        # Target a specific task by number
+node cli/index.js scan <project> --dry-run           # Preview scan without writing files
+```
+
+## Invoking an agent
+
+This hub folder must be open in your Cursor workspace for `@architect` to resolve:
+
+```text
+@architect Read .cursor/agents/architect.md. Then read memory/architect.md. Then: [your instruction]
+```
+
+If the short name doesn't resolve (hub folder not in workspace), use the explicit file path:
+
+```text
+@.cursor/agents/architect.md Read .cursor/agents/architect.md. Then read memory/architect.md. Then: [your instruction]
+```
+
+## Edit rules
+
+- Edit agent profiles in the **source repo** (`setchin-agent-profiles`), then redeploy with `npm run deploy -- <hub-path>`.
+- Edit task files directly in `projects/<project>/`.
+- Never edit `.cursor/agents/` or `.github/skills/` files by hand — they are generated.
+- `memory/` files are local-only. Each agent reads its own memory file at session start.
