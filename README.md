@@ -96,9 +96,9 @@ To make it personal and update the agent identities, run the setup script:
 npm run setup
 ```
 
-The setup wizard collects your name, role, organization, optional display names for each agent, and whether you work with a remote team. Results are written to a local-only `workspace.config.json` (gitignored — never committed).
+The setup wizard collects your name, role, organization, and whether you work with a remote team. Results are written to a local-only `workspace.config.json` (gitignored — never committed).
 
-Or you can use vanilla config by skipping the wizard — the default identities are Architect, Builder, Tester, and Router, and the default remote team setting is false.
+Or you can use vanilla config by skipping the wizard.
 
 ### 2. Claude, Cursor, Github Copilot
 
@@ -169,8 +169,6 @@ To get the most out of the Agistra use the prompt below to get the Agent to anal
 
 Task file naming: task_N_todo_<short-slug>.md
 ```
-
-> **Display name note:** if you set a custom display name for Architect in `workspace.config.json` (e.g. "Argo"), use that name instead of `@Architect`.
 
 ---
 

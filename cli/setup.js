@@ -63,13 +63,6 @@ async function run() {
 	line('Organisation ');
 	const orgName = await ask('Organisation or team name');
 
-	line('Agent display names ');
-	process.stdout.write('Press Enter to keep the default role name.\n\n');
-	const architectName = await ask('Architect display name', 'Architect');
-	const builderName   = await ask('Builder display name',   'Builder');
-	const testerName    = await ask('Tester display name',    'Tester');
-	const routerName    = await ask('Router display name',    'Router');
-
 	line('Remote team ');
 	const hasRemoteTeam = await askYN('Do you work with a remote team?', false);
 
@@ -85,12 +78,6 @@ async function run() {
 	const config = {
 		user: { name: userName, role: userRole },
 		org: orgName,
-		agents: {
-			architect: { displayName: architectName },
-			builder:   { displayName: builderName   },
-			tester:    { displayName: testerName    },
-			router:    { displayName: routerName    },
-		},
 		remoteTeam,
 	};
 
