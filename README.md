@@ -90,15 +90,6 @@ git clone https://github.com/vsetchinfc/agistra.dev.git my-hub
 cd my-hub
 ```
 
-To make it personal and update the agent identities, run the setup script:
-
-```powershell
-npm run setup
-```
-
-The setup wizard collects your name, role, organization, and whether you work with a remote team. Results are written to a local-only `workspace.config.json` (gitignored — never committed).
-
-Or you can use vanilla config by skipping the wizard.
 
 ### 2. Claude, Cursor, Github Copilot
 
@@ -155,12 +146,14 @@ Scores and trends (▲ up ▼ down → unchanged) are saved to `projects/<projec
 
 ---
 
-### 4. Dispatch work to Architect
+### 4. Dispatch work to agents
 
-To get the most out of the Agistra use the prompt below to get the Agent to analyse your project. Agistra provides integration with GitHub, so if your project has an accessible repo, Architect can read the issues and codebase to create a task backlog for you. If your project is private, Architect can still read the local codebase and project files to generate tasks.
+Open an Agent chat with this hub folder open in your workspace. Each agent reads its profile and memory before starting work — include both filenames in your prompt:
+
+This workspace has multiple root folders. Always prefix paths with the hub folder name so the agent looks in the right place:
 
 ```text
-@Architect You are in architecture mode. Review <project> and create a planning backlog.
+@architect Read <hub>/.cursor/agents/architect.md then <hub>/memory/architect.md. Then: you are in architecture mode. Review <project> and create a planning backlog.
 
 1. Read the codebase — README, src/, existing issues if accessible
 2. Check projects/<project>/ for existing task files
@@ -169,6 +162,16 @@ To get the most out of the Agistra use the prompt below to get the Agent to anal
 
 Task file naming: task_N_todo_<short-slug>.md
 ```
+
+```text
+@builder Read <hub>/.cursor/agents/builder.md then <hub>/memory/builder.md. Then: implement projects/<project>/task_N_todo_<slug>.md
+```
+
+```text
+@tester Read <hub>/.cursor/agents/tester.md then <hub>/memory/tester.md. Then: QA projects/<project>/task_N_todo_<slug>.md
+```
+
+Replace `<hub>` with the hub folder name (e.g. `agistra.dev`). Without the prefix, relative paths resolve against whichever workspace root is active — typically the project repo, not the hub.
 
 ---
 

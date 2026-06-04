@@ -197,6 +197,7 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable patterns to project memory
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
 
 ### Scan Skills
 

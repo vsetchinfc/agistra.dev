@@ -7,6 +7,8 @@
     "dispatch": "node cli/index.js dispatch",
     "advance": "node cli/index.js dispatch --advance",
     "launch": "node cli/index.js dispatch --launch",
-    "scan": "node cli/index.js scan"
+    "scan": "node cli/index.js scan",
+    "export": "python tools/export-letter.py",
+    "export:all": "python tools/export-letter.py --all"
   }
 }

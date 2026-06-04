@@ -1,0 +1,15 @@
+{
+	"schemaVersion": 1,
+	"id": "telegram-relay",
+	"ownerAgentId": "atlas",
+	"outputId": "telegram-relay",
+	"vscode": {
+		"description": "Use when: bridge SETCHIN and Viktor's team across Telegram. Atlas classifies parsed inbound from Max, spawns Neo or Vera as subagent, or posts state-change notifications outbound. Sits on top of AI Fleet Telegram infrastructure (#71-#76).",
+		"argumentHint": "Parsed inbound Telegram message OR outbound dispatch request from Neo / Vera",
+		"userInvocable": true,
+		"disableModelInvocation": false
+	},
+	"exports": {
+		"generateVscodeSkill": true
+	}
+}

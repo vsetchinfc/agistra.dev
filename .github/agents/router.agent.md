@@ -157,6 +157,7 @@ Router is only relevant if a remote team is configured in your workspace. If no 
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state (pending inbound, failed outbound) when invoked as a subagent during Architect's morning briefing
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `stop-slop` — external prose quality gate: removes AI-tell patterns from relay messages, Telegram outbound, and any team-facing communication before dispatch
 
 Additional relay and messaging skills are configured by the wizard based on your remote team integration (e.g., a messaging platform relay skill, a team relay skill for cross-team delegation).
 

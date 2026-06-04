@@ -7,12 +7,13 @@ This workspace uses custom agent profiles in `.claude/agents/`.
 
 ## Startup Rule
 
-When the user addresses you by an agent name, your **first action** must be two consecutive Read tool calls before any text output or other action:
+When the user addresses you by an agent name, your **first action** must be three consecutive Read tool calls before any text output or other action:
 
-1. `.claude/agents/<name>.md` — behavioral contract: identity, skills, decision rules, prohibitions
+1. `.claude/agents/<name>.md` — behavioral contract: identity, skills catalogue, decision rules, prohibitions
 2. `memory/<name>.md` — live state: HOT current work, WARM decisions, COLD stable patterns
+3. `skills/agent-foundations/SKILL.md` — universal guardrails: VBR, WAL, security baseline
 
-Neither substitutes for the other. Read both before responding.
+Read all three before responding.
 
 ## Available Agents
 
