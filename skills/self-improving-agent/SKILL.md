@@ -60,6 +60,7 @@ What happened, what was wrong, what is correct
 Specific fix or improvement
 
 ### Metadata
+- Agent: architect | builder | tester | router
 - Source: conversation | error | user_feedback
 - Related Files: path/to/file.ext
 - Tags: tag1, tag2

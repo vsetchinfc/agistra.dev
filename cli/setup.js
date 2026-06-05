@@ -14,6 +14,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { wireTelegramMcp } from './wizard.js';
 
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
@@ -123,6 +124,180 @@ export function generateGithubCopilotInstructions(root, config) {
 	fs.writeFileSync(path.join(githubDir, 'copilot-instructions.md'), content, 'utf-8');
 }
 
+// ── Token sentinel (exported for testing) ─────────────────────────────────────
+
+/**
+ * Sentinel value shown in the bot-token prompt when a token is already stored.
+ * If the user presses Enter without typing, ask() returns this string.
+ * setup.run() checks for equality: if the returned value matches, the existing
+ * token is preserved silently. If the user types anything else, that replaces it.
+ */
+export const TOKEN_SENTINEL = '[token set — press Enter to keep]';
+
+// ── Testable run factory (exported for unit tests) ─────────────────────────────
+
+/**
+ * Create a run() function with injectable I/O and filesystem.
+ * Separating the run logic from the real readline/fs lets unit tests drive the
+ * wizard without spawning a subprocess or touching real files.
+ *
+ * @param {object} deps
+ * @param {function(string, string=): Promise<string>} deps.ask
+ *   Prompt for a string value. Should honour a defaultValue parameter.
+ * @param {function(string, boolean=): Promise<boolean>} deps.askYN
+ *   Prompt for a yes/no value. Should honour a defaultYes parameter.
+ * @param {function(string=): void} deps.line
+ *   Print a visual section separator.
+ * @param {object} deps.fsMod
+ *   Injectable fs module (real fs or an in-memory mock).
+ * @param {string} deps.cliOutputRoot
+ *   Absolute path to the workspace root being configured.
+ * @returns {function(): Promise<void>}
+ */
+export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
+	return async function run() {
+		// ── Read existing config (pre-populate defaults) ──────────────────────────
+		let existingConfig = null;
+		const configPath = path.join(cliOutputRoot, 'workspace.config.json');
+		if (fsMod.existsSync(configPath)) {
+			try {
+				existingConfig = JSON.parse(fsMod.readFileSync(configPath, 'utf-8'));
+			} catch {
+				// Unparseable config — treat as fresh run
+			}
+		}
+
+		const prev = existingConfig ?? {};
+		const prevRemoteTeam = prev.remoteTeam ?? {};
+		const prevTelegram = prev.telegram ?? {};
+		const prevTgHandle = prevRemoteTeam.telegram?.handle ?? '';
+		const prevTgGroupId = prevTelegram.relay_group_id ?? '';
+		const prevBotToken = prevTelegram.bot_token ?? '';
+
+		// ── Prompts ────────────────────────────────────────────────────────────────
+
+		process.stdout.write('\n╔══════════════════════════════════════════════╗\n');
+		process.stdout.write('║           Agent Workspace Setup              ║\n');
+		process.stdout.write('╚══════════════════════════════════════════════╝\n');
+
+		line('You ');
+		const userName = await ask('Your name', prev.user?.name ?? '');
+		const userRole = await ask('Your role (e.g. Technical Lead)', prev.user?.role ?? 'Technical Lead');
+
+		line('Organisation ');
+		const orgName = await ask('Organisation or team name', prev.org ?? '');
+
+		line('Remote team ');
+		const hasRemoteTeam = await askYN('Do you work with a remote team?', prevRemoteTeam.enabled === true);
+
+		let remoteTeam = { enabled: false };
+		let telegramMcp = null;
+		if (hasRemoteTeam) {
+			const remoteTeamName = await ask('Remote team name', prevRemoteTeam.name ?? 'Remote Team');
+			const remoteAgentName = await ask('Remote agent name', prevRemoteTeam.agentName ?? 'Remote Agent');
+			const hasTelegram = await askYN(
+				'Does the remote team use Telegram?',
+				prevRemoteTeam.telegram != null,
+			);
+			if (hasTelegram) {
+				const telegramHandle = await ask('Telegram bot handle (e.g. @mybot)', prevTgHandle);
+				const tokenDefault = prevBotToken ? TOKEN_SENTINEL : '';
+				const tokenAnswer = await ask('Telegram bot token (from @BotFather)', tokenDefault);
+				const telegramToken = tokenAnswer === TOKEN_SENTINEL ? prevBotToken : tokenAnswer;
+				const telegramGroupId = await ask('Relay group ID (e.g. -1001234567890)', prevTgGroupId);
+				remoteTeam = {
+					enabled: true,
+					name: remoteTeamName,
+					agentName: remoteAgentName,
+					telegram: { handle: telegramHandle },
+				};
+				telegramMcp = { enabled: true, bot_token: telegramToken, relay_group_id: telegramGroupId };
+			} else {
+				remoteTeam = { enabled: true, name: remoteTeamName, agentName: remoteAgentName };
+			}
+		}
+
+		// Detect which platforms are present
+		const platforms = detectPlatforms(cliOutputRoot);
+
+		// Ask confirmation per detected platform (skip Claude — workspace.config.json is sufficient)
+		let configureCursor = false;
+		let configureGithub = false;
+
+		if (platforms.cursor) {
+			line('Cursor ');
+			configureCursor = await askYN('Generate Cursor workspace identity rule?', true);
+		}
+
+		if (platforms.github) {
+			line('GitHub ');
+			configureGithub = await askYN('Generate GitHub Copilot instructions?', true);
+		}
+
+		const config = {
+			user: { name: userName, role: userRole },
+			org: orgName,
+			remoteTeam,
+			...(telegramMcp ? { telegram: telegramMcp } : {}),
+		};
+
+		// Preserve existing agents block (preserves display names across re-runs)
+		if (existingConfig?.agents) {
+			config.agents = existingConfig.agents;
+		}
+
+		fsMod.mkdirSync(cliOutputRoot, { recursive: true });
+		fsMod.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
+
+		// Warn if .gitignore does not cover the config file
+		const gitignorePath = path.join(cliOutputRoot, '.gitignore');
+		let gitignoreCovers = false;
+		if (fsMod.existsSync(gitignorePath)) {
+			const gi = fsMod.readFileSync(gitignorePath, 'utf-8');
+			gitignoreCovers = gi.split('\n').some(l => l.trim() === 'workspace.config.json');
+		}
+
+		// Wire Telegram MCP into detected platform configs
+		if (telegramMcp) {
+			const targets = [
+				...(platforms.claude ? ['claude-code'] : []),
+				...(platforms.cursor ? ['cursor'] : []),
+			];
+			line('Telegram MCP ');
+			const { wrote } = wireTelegramMcp({ config, workspaceRoot: cliOutputRoot, targets });
+			if (wrote.length > 0) {
+				for (const f of wrote) process.stdout.write(`  MCP wired → ${f}\n`);
+			}
+		}
+
+		line('Done ');
+		process.stdout.write(`  Config written → ${configPath}\n`);
+
+		if (configureCursor) {
+			generateCursorIdentity(cliOutputRoot, config);
+			process.stdout.write(`  Cursor identity → ${path.join(cliOutputRoot, '.cursor', 'rules', 'workspace-identity.mdc')}\n`);
+		}
+
+		if (configureGithub) {
+			generateGithubCopilotInstructions(cliOutputRoot, config);
+			process.stdout.write(`  GitHub Copilot → ${path.join(cliOutputRoot, '.github', 'copilot-instructions.md')}\n`);
+		}
+
+		if (!gitignoreCovers) {
+			process.stdout.write('\n  WARNING: workspace.config.json is not listed in .gitignore.\n');
+			process.stdout.write('  Add the following line to prevent committing personal config:\n\n');
+			process.stdout.write('    workspace.config.json\n');
+		}
+
+		if (!remoteTeam.enabled) {
+			process.stdout.write('\n  Remote team disabled — Router will run in minimal mode.\n');
+			process.stdout.write('  Re-run setup and enable remote team to unlock relay skills.\n');
+		}
+
+		process.stdout.write('\n');
+	};
+}
+
 // ── CLI entry point (only runs when executed directly, not when imported) ──────
 
 function parseCliArgs(argv) {
@@ -164,116 +339,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		process.stdout.write(`\n── ${label}${dashes}\n\n`);
 	}
 
-	async function run() {
-		process.stdout.write('\n╔══════════════════════════════════════════════╗\n');
-		process.stdout.write('║           Agent Workspace Setup              ║\n');
-		process.stdout.write('╚══════════════════════════════════════════════╝\n');
+	const run = createRun({ ask, askYN, line, fsMod: fs, cliOutputRoot });
 
-		line('You ');
-		const userName = await ask('Your name');
-		const userRole = await ask('Your role (e.g. Technical Lead)', 'Technical Lead');
-
-		line('Organisation ');
-		const orgName = await ask('Organisation or team name');
-
-		line('Remote team ');
-		const hasRemoteTeam = await askYN('Do you work with a remote team?', false);
-
-		let remoteTeam = { enabled: false };
-		if (hasRemoteTeam) {
-			const remoteTeamName  = await ask('Remote team name',  'Remote Team');
-			const remoteAgentName = await ask('Remote agent name', 'Remote Agent');
-			const hasTelegram = await askYN('Does the remote team use Telegram?', false);
-			if (hasTelegram) {
-				const telegramHandle = await ask('Telegram bot handle (e.g. @mybot)', '');
-				remoteTeam = {
-					enabled: true,
-					name: remoteTeamName,
-					agentName: remoteAgentName,
-					telegram: { handle: telegramHandle },
-				};
-			} else {
-				remoteTeam = { enabled: true, name: remoteTeamName, agentName: remoteAgentName };
-			}
-		}
-
-		// Detect which platforms are present
-		const platforms = detectPlatforms(cliOutputRoot);
-
-		// Ask confirmation per detected platform (skip Claude — workspace.config.json is sufficient)
-		let configureCursor = false;
-		let configureGithub = false;
-
-		if (platforms.cursor) {
-			line('Cursor ');
-			configureCursor = await askYN('Generate Cursor workspace identity rule?', true);
-		}
-
-		if (platforms.github) {
-			line('GitHub ');
-			configureGithub = await askYN('Generate GitHub Copilot instructions?', true);
-		}
-
+	run().then(() => {
 		rl.close();
-
-		const config = {
-			user: { name: userName, role: userRole },
-			org: orgName,
-			remoteTeam,
-		};
-
-		// Read existing agents block if config already exists (preserves display names)
-		const configPath = path.join(cliOutputRoot, 'workspace.config.json');
-		if (fs.existsSync(configPath)) {
-			try {
-				const existing = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-				if (existing.agents) {
-					config.agents = existing.agents;
-				}
-			} catch {
-				// If existing config is unparseable, proceed without agents block
-			}
-		}
-
-		fs.mkdirSync(cliOutputRoot, { recursive: true });
-		fs.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
-
-		// Warn if .gitignore does not cover the config file
-		const gitignorePath = path.join(cliOutputRoot, '.gitignore');
-		let gitignoreCovers = false;
-		if (fs.existsSync(gitignorePath)) {
-			const gi = fs.readFileSync(gitignorePath, 'utf-8');
-			gitignoreCovers = gi.split('\n').some(l => l.trim() === 'workspace.config.json');
-		}
-
-		line('Done ');
-		process.stdout.write(`  Config written → ${configPath}\n`);
-
-		if (configureCursor) {
-			generateCursorIdentity(cliOutputRoot, config);
-			process.stdout.write(`  Cursor identity → ${path.join(cliOutputRoot, '.cursor', 'rules', 'workspace-identity.mdc')}\n`);
-		}
-
-		if (configureGithub) {
-			generateGithubCopilotInstructions(cliOutputRoot, config);
-			process.stdout.write(`  GitHub Copilot → ${path.join(cliOutputRoot, '.github', 'copilot-instructions.md')}\n`);
-		}
-
-		if (!gitignoreCovers) {
-			process.stdout.write('\n  WARNING: workspace.config.json is not listed in .gitignore.\n');
-			process.stdout.write('  Add the following line to prevent committing personal config:\n\n');
-			process.stdout.write('    workspace.config.json\n');
-		}
-
-		if (!remoteTeam.enabled) {
-			process.stdout.write('\n  Remote team disabled — Router will run in minimal mode.\n');
-			process.stdout.write('  Re-run setup and enable remote team to unlock relay skills.\n');
-		}
-
-		process.stdout.write('\n');
-	}
-
-	run().catch(err => {
+	}).catch(err => {
 		rl.close();
 		process.stderr.write(err.message + '\n');
 		process.exit(1);

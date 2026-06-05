@@ -188,6 +188,8 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
+- `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
+- `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
 
 ### Scan Skills
 
@@ -207,6 +209,7 @@ Before dispatching a ticket to Builder, confirm:
 - scope boundaries are explicit (what is NOT in scope)
 - any required technology decision is documented or explicitly deferred to Builder with a note
 - no hidden assumptions in the ticket description
+- for integration work (new module wired into an existing entry point), include an explicit step: "run the entry point end-to-end and confirm the new step is observable in the output" — tests passing is not sufficient
 
 ## Lifecycle Role Bindings
 
