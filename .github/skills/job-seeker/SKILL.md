@@ -6,6 +6,10 @@ argument-hint: "Cover letter, recruiter email, LinkedIn message, or follow-up to
 
 # Job Seeker — Voice Skill
 
+> **Extends writing-core.** Load `skills/writing-core/SKILL.md` before this file.
+
+---
+
 ## Profile
 
 I am actively looking for work. I write cover letters, recruiter emails, LinkedIn connection messages, interview follow-ups, and thank-you notes. My audience is recruiters, hiring managers, and professional contacts. I want my writing to sound like a real person — specific, confident, and direct — not a template.
@@ -51,10 +55,6 @@ You are a writing assistant for someone actively looking for work. Every piece o
 - One sentence on why you're more interested after the conversation, not less
 - No generic closing ("I remain enthusiastic about the opportunity")
 
-### Rhythm
-
-Mix short sentences with longer ones. Read the output aloud — if every sentence lands with the same weight, rewrite. At least one sentence under 8 words per paragraph. No three consecutive sentences of similar length.
-
 ### Structural tells
 
 These patterns flag as AI regardless of word choice:
@@ -80,29 +80,6 @@ These patterns flag as AI regardless of word choice:
 - "Please find attached my resume"
 - "Do not hesitate to contact me"
 
-### Banned AI vocabulary
-
-Single words that mark AI-generated writing — replace with plain language:
-
-delve, leverage, robust, seamless, pivotal, nuanced, tapestry, realm, underscore, elevate, foster, navigate (metaphorical), landscape (metaphorical), synergy, cutting-edge, game-changer, impactful, utilize (use "use")
-
-### Scoring rubric
-
-Score on five dimensions (0–10 each, 50 max). Revise if total < 35.
-
-| Dimension | 0–4 | 5–7 | 8–10 |
-|-----------|-----|-----|------|
-| **Directness** | Long warm-up, buried claim | Main point findable | Claim or hook in first sentence |
-| **Rhythm** | Uniform sentence length, monotone | Some variation | Deliberate mix, reads naturally aloud |
-| **Trust** | Constant hedging and softening | Occasional hedging | States directly, no apology for existing |
-| **Authenticity** | Generic, could be any applicant | Some specific detail | Sounds like a specific person with a specific history |
-| **Density** | Padded with filler | Some waste | Every sentence earns its place |
-
-- 45–50: Ship it
-- 35–44: Minor polish, acceptable
-- 25–34: Rewrite before sending
-- < 25: Start over
-
 ### Quality check before output
 
 - [ ] Does the first sentence earn the reader's attention?
@@ -113,3 +90,7 @@ Score on five dimensions (0–10 each, 50 max). Revise if total < 35.
 - [ ] Do any three consecutive sentences or paragraphs open with the same structure?
 - [ ] Are there any staccato dramatic fragments ("Not just X. Y.")?
 - [ ] Are there semicolon-enumerated technical lists?
+- [ ] Does any paragraph end with a "whether X or Y" summary sentence? (P39)
+- [ ] Are there any infomercial hooks as solo paragraphs ("The catch?", "Here's the thing:")? (P41)
+- [ ] Are there any -ing phrase tails on sentences ("...ensuring reliability, fostering growth")? (P3)
+- [ ] Does the piece end on a generic positive conclusion? (P24)

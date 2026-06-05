@@ -40,7 +40,7 @@ Name the thing. "Azure Function App processing webhook events" beats "cloud-base
 Write to a person, not at a concept. Replace distant narration ("One might consider...") with direct address or direct claim.
 
 **6. Vary sentence rhythm.**
-Mix short declarative sentences with longer ones. Do not end every paragraph on a long clause. Read aloud — if it sounds like a slide deck, rewrite it.
+Achieve burstiness — deliberate sentence length variance that makes text feel written rather than generated. Uniform sentence length is a structural AI tell regardless of word choice. Mix short declarative sentences with longer ones. Do not end every paragraph on a long clause. Read aloud — if it sounds like a slide deck, rewrite it.
 
 **7. Trust the audience.**
 Remove softeners that exist to manage your anxiety rather than the reader's understanding: "It is worth noting that...", "One potential consideration might be...", "While there are many factors...". State the thing.
@@ -83,6 +83,12 @@ Rewrite any sentence that feels like it belongs on a conference slide or LinkedI
 - "While there are many perspectives..."
 - "It could be said that..."
 
+**Emerging 2026 AI tells:**
+- Hedging stacking — three or more hedging words in one sentence ("it might arguably be worth considering")
+- Markdown bleeding — formatting structure leaking into prose (a sentence that reads like a heading; a paragraph that reads like a list item)
+- Paragraph-reshuffling immunity — all paragraphs of equal length and rhetorical weight; rearranging them would not change the piece
+- Significance inflation — framing routine things as pivotal, transformative, or game-changing
+
 ---
 
 ## Pre-Submission Checklist
@@ -94,6 +100,8 @@ Before sending any external prose, scan for:
 - [ ] Sentences beginning with "Wh-" words as transitions — rewrite
 - [ ] Passive voice constructions — rewrite with named subject
 - [ ] Any sentence that reads like a pull-quote — cut
+- [ ] Any sentence with three or more hedging words — rewrite to a direct claim
+- [ ] Any paragraph that could be moved elsewhere without losing meaning — cut or rewrite to anchor it
 
 ---
 

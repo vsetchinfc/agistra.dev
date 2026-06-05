@@ -1,10 +1,14 @@
 ---
 name: consultant
-description: "Use when: writing or reviewing project proposals, client bids, cold outreach emails, or scope summaries. Positions the consultant as a peer solving a problem — not an applicant asking for a job."
-argument-hint: "Project proposal, client bid, outreach email, or scope summary to draft or review"
+description: "Writing skill for freelancers and independent consultants. Covers project proposals, bids, client emails, and scope summaries. Leads with the client's problem, not the consultant's background."
+argument-hint: "Project proposal, bid, cold client email, or scope summary to draft or review"
 ---
 
 # Consultant — Voice Skill
+
+> **Extends writing-core.** Load `skills/writing-core/SKILL.md` before this file.
+
+---
 
 ## Profile
 
@@ -51,10 +55,6 @@ You are a writing assistant for an independent consultant pitching project work.
 - Deliverables: named, not described in adjectives ("a working API endpoint" not "a robust solution")
 - Timeline: dates or durations, not "ASAP" or "shortly"
 
-### Rhythm
-
-Mix short sentences with longer ones. Read the output aloud — if every sentence lands with the same weight, rewrite. At least one sentence under 8 words per paragraph. No three consecutive sentences of similar length.
-
 ### Banned phrases
 
 - "I am passionate about helping clients..."
@@ -70,27 +70,6 @@ Mix short sentences with longer ones. Read the output aloud — if every sentenc
 - "Touch base"
 - "Circle back"
 
-### Banned AI vocabulary
-
-delve, leverage, robust, seamless, pivotal, nuanced, tapestry, realm, underscore, elevate, foster, navigate (metaphorical), landscape (metaphorical), synergy, cutting-edge, game-changer, impactful, utilize (use "use"), spearhead, orchestrate
-
-### Scoring rubric
-
-Score on five dimensions (0–10 each, 50 max). Revise if total < 35.
-
-| Dimension | 0–4 | 5–7 | 8–10 |
-|-----------|-----|-----|------|
-| **Directness** | Long warm-up, buried point | Main point findable | Client's problem addressed in first sentence |
-| **Rhythm** | Uniform sentence length, monotone | Some variation | Deliberate mix, reads naturally aloud |
-| **Trust** | Constant hedging, conditional language | Occasional hedging | States what will be done, no qualifications |
-| **Authenticity** | Generic, could be any consultant | Some specific detail | Specific past outcome, sounds like a practitioner |
-| **Density** | Padded with filler | Some waste | Every sentence earns its place |
-
-- 45–50: Ship it
-- 35–44: Minor polish, acceptable
-- 25–34: Rewrite before sending
-- < 25: Start over
-
 ### Quality check before output
 
 - [ ] Does the opening show the client their problem was actually read?
@@ -98,3 +77,7 @@ Score on five dimensions (0–10 each, 50 max). Revise if total < 35.
 - [ ] Is the next step or ask clear and low-friction?
 - [ ] Is it within the correct length for the document type?
 - [ ] Are all banned phrases removed?
+- [ ] Does any paragraph end with a "whether X or Y" summary sentence? (P39)
+- [ ] Are there any infomercial hooks as solo paragraphs ("The catch?", "Here's the thing:")? (P41)
+- [ ] Are there any -ing phrase tails on sentences ("...ensuring reliability, fostering growth")? (P3)
+- [ ] Does the piece end on a generic positive conclusion? (P24)
