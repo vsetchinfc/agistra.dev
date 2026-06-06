@@ -190,8 +190,8 @@ Review `.learnings/` at natural breakpoints: before a major task, after completi
 
 ```bash
 # Count pending items
-grep -h "Status\*\*: pending" .learnings/*.md | wc -l
+grep -h '\*\*Status\*\*: pending' .learnings/*.md | wc -l
 
 # List high-priority pending
-grep -B5 "Priority\*\*: high" .learnings/*.md | grep "^## \["
+grep -B5 '\*\*Priority\*\*: high' .learnings/*.md | grep "^## \["
 ```

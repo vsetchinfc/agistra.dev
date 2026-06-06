@@ -107,8 +107,3 @@ Threshold: weighted score < 50 → skip it.
 
 ---
 
-## Reverse Prompting
-
-Periodically ask: "What are some interesting things I can do for you based on what I know about you?"
-
-Do not wait to be told. Surface possibilities the team lead has not thought to ask for. Build proactively — but nothing goes external without explicit approval from the team lead.
