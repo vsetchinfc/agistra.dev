@@ -88,6 +88,49 @@ Extract:
 
 If the BD/delivery question depends on unsettled technical architecture, load `architecture-mode` first. Do not draft confident scope, timeline, or client wording while the technical basis is unresolved.
 
+## Worked Example
+
+### Example — Scope summary for a consulting engagement
+
+```markdown
+## Planner Draft
+
+**Purpose:** Scope and effort estimate for an AI agent workflow build
+**Audience:** Team-lead internal
+**Commitment Status:** Draft only. Team lead approval required before external use.
+
+### Scope Summary
+Build and deploy three AI agents (Architect, Builder, Tester) using the setchin-agent-profiles framework into the client's existing VS Code + GitHub workflow. Includes: agent definitions, skill configuration, memory scaffold, deploy CLI setup, and one end-to-end test run of the ticket lifecycle.
+
+### Exclusions
+- CI/CD pipeline changes
+- Custom skill authoring beyond the standard library
+- Ongoing maintenance or hosted infrastructure
+
+### Assumptions
+- Client has an existing Node.js/npm environment — **verify before commit**
+- Client uses GitHub for issue tracking — **verify before commit**
+- One-week timeline assumes availability of a technical contact for 2 hrs/day
+
+### Delivery Risks
+| Risk | Impact | Mitigation | Owner |
+| ---- | ------ | ---------- | ----- |
+| Client environment incompatible with deploy CLI | Blocks setup | Pre-qualify environment in discovery call | Team lead |
+| Scope creep into custom skill authoring | +2–3 days | Explicitly exclude in engagement letter | Team lead |
+| No existing ticket workflow | Delays lifecycle test | Agree on a minimal GitHub Projects board | Consultant |
+
+### Confidence
+Medium — timeline estimate assumes smooth environment setup. Add 2-day buffer if environment has not been pre-qualified.
+
+### Team Lead Decisions Needed
+- Approve or adjust the exclusions list before sharing with client
+- Confirm whether custom skill authoring is in scope (affects price)
+- Sign off on the confidence level before committing to a delivery date
+
+### Draft Wording
+"We will set up your AI agent workflow — including agent definitions, skill configuration, and an end-to-end test of the ticket lifecycle — within one week, assuming your team can provide 2 hours of availability per day for environment access and feedback."
+```
+
 ## Exit Criteria
 
 Planner mode is complete when Architect has produced an internal team-lead-reviewable draft, surfaced assumptions and risks, and made clear what the team lead must approve before anything external happens.

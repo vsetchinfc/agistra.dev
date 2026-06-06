@@ -30,7 +30,7 @@ Read your agent identity and follow the per-agent delta below after running the 
 
 Every agent runs these steps. Per-agent sections below specify only the variables (which file, what to promote, who to dispatch).
 
-1. **Review session memory** — read all files in `/memories/session/`.
+1. **Review session memory** — read `memory/working-buffer.md` if it exists (session context captured during the session by the Working Buffer Protocol in `proactive-agent`).
 2. **Review relevant durable memory touched this session** — inspect the live repo memory file plus any user-memory or repo-memory topics updated during the session; skip unrelated memory topics.
 3. **Identify promotable patterns, carry-forward items, and compaction candidates** — using the agent's promotion focus (see per-agent deltas).
 4. **Promote durable items** — append to the targets listed in the agent's per-agent delta, preserving source labels when helpful.
@@ -82,8 +82,8 @@ Every agent runs these steps. Per-agent sections below specify only the variable
 
 **Promotion targets:**
 
-- Session corrections from the team lead → `/memories/repo/<project>.md` every run
-- Cross-project architectural patterns → `/memories/<topic>.md` when the pattern recurs across 2+ projects
+- Session corrections from the team lead → `memory/architect.md` (WARM/COLD tiers) every run
+- Cross-project architectural patterns → auto-memory (user-level memory files) when the pattern recurs across 2+ projects
 - Dreaming-managed transient captures → compacted in their original memory file after checkpoint (only when explicitly marked)
 
 **Dispatch behaviour:**
@@ -100,8 +100,8 @@ Every agent runs these steps. Per-agent sections below specify only the variable
 
 **Promotion targets:**
 
-- Project conventions and verified practices → `/memories/repo/<project>.md` every run
-- Cross-project coding patterns → `/memories/<topic>.md` when the pattern recurs across 2+ projects
+- Project conventions and verified practices → `memory/builder.md` (WARM/COLD tiers) every run
+- Cross-project coding patterns → auto-memory (user-level memory files) when the pattern recurs across 2+ projects
 - Dreaming-managed transient captures → compacted in their original memory file after checkpoint (only when explicitly marked)
 
 **Dispatch behaviour:**
@@ -118,8 +118,8 @@ Every agent runs these steps. Per-agent sections below specify only the variable
 
 **Promotion targets:**
 
-- Recurring QA failure patterns → `/memories/repo/<project>.md` every run
-- Environment-specific gotchas → `/memories/repo/<project>.md` every run
+- Recurring QA failure patterns → `memory/tester.md` (WARM/COLD tiers) every run
+- Environment-specific gotchas → `memory/tester.md` (WARM/COLD tiers) every run
 - Dreaming-managed transient captures → compacted in their original memory file after checkpoint (only when explicitly marked)
 
 (Tester does not promote to user memory — QA intelligence is project-scoped.)
@@ -138,7 +138,7 @@ Every agent runs these steps. Per-agent sections below specify only the variable
 
 **Promotion targets:**
 
-- Stable routing classification patterns → `/memories/repo/<project>.md` every run
+- Stable routing classification patterns → `memory/router.md` (WARM/COLD tiers) every run
 - Resolved ambiguous message types → same as above
 - Dreaming-managed transient captures → compacted in their original memory file after checkpoint (only when explicitly marked)
 

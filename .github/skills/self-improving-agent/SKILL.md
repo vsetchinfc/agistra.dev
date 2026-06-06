@@ -6,7 +6,7 @@ argument-hint: "Correction, unexpected error, capability gap, or recurring patte
 
 # Self-Improving Agent
 
-Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent). Enables the agent to capture corrections, errors, and knowledge gaps during sessions and promote durable learnings into permanent project memory.
+Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent) — MIT License. Enables the agent to capture corrections, errors, and knowledge gaps during sessions and promote durable learnings into permanent project memory.
 
 ## When to Log
 
@@ -164,9 +164,9 @@ When a learning applies across multiple files or features, or prevents a recurri
 
 | Promotion target | What goes there |
 | ---------------- | --------------- |
-| `/memories/repo/<project>.md` | Project facts, conventions, verified practices |
+| `memory/<agent>.md` COLD section | Project facts, conventions, verified practices |
 | `AGENTS.md` in the workspace | Workflow improvements, automation rules |
-| `/memories/` user memory | Cross-project patterns and preferences |
+| `~/.claude/projects/.../memory/` auto-memory | Cross-project patterns and preferences |
 
 ### Promotion threshold
 
@@ -190,8 +190,8 @@ Review `.learnings/` at natural breakpoints: before a major task, after completi
 
 ```bash
 # Count pending items
-grep -h "Status\*\*: pending" .learnings/*.md | wc -l
+grep -h '\*\*Status\*\*: pending' .learnings/*.md | wc -l
 
 # List high-priority pending
-grep -B5 "Priority\*\*: high" .learnings/*.md | grep "^## \["
+grep -B5 '\*\*Priority\*\*: high' .learnings/*.md | grep "^## \["
 ```

@@ -12,7 +12,7 @@ This workspace is an **Agistra hub** — it holds planning, memory, and task que
 | Path | Purpose |
 |------|---------|
 | `projects/<project>/` | Task files for a project — one Markdown file per task |
-| `memory/<agent>.md` | Live HOT/WARM/COLD agent memory (gitignored — local only) |
+| `memory/<agent>.md` | Live HOT/WARM/COLD agent memory (tracked in repo — commit between sessions to persist state) |
 | `memory/archive/` | Daily memory snapshots from end-of-day `dreaming` |
 | `.cursor/agents/` | Cursor agent profiles (generated — do not edit directly) |
 | `.github/skills/` | Raw skill definitions used by `dispatch` for context injection |

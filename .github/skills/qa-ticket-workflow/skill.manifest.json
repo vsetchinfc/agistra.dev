@@ -1,10 +1,10 @@
 {
 	"schemaVersion": 1,
 	"id": "qa-ticket-workflow",
-	"ownerAgentId": "vera",
+	"ownerAgentId": "tester",
 	"outputId": "qa-ticket-workflow",
 	"vscode": {
-		"description": "Use when: execute Vera's ticket or PR QA workflow, validate handoff completeness, run black-box acceptance checks, post GitHub evidence, align QA state labels, and notify Neo when defects are found.",
+		"description": "Use when: Tester runs a full QA session, validates handoff completeness, executes black-box acceptance checks, posts GitHub evidence, aligns ticket state labels, and notifies Builder when defects are found.",
 		"argumentHint": "Ticket or PR handoff, acceptance criteria, environment details, and QA scope",
 		"userInvocable": true,
 		"disableModelInvocation": false

@@ -8,12 +8,9 @@ alwaysApply: true
 ## Available agents
 
 - `@architect` — Principal architect — design decisions, ADRs, planning, scoping, and team coordination.
-- `@atlas` — Telegram/GitHub relay agent — classifies inter-team messages and routes to Neo or Vera. Does not make delivery decisions.
 - `@builder` — Principal engineer — implementation, tests, PRs, and QA handoff.
-- `@neo` — Principal engineer for SETCHIN delivery — tickets, code review, architecture, BD drafts, and QA handoff.
 - `@router` — Inter-team relay agent — classifies inbound messages and routes to Architect, Builder, or Tester. Does not make delivery decisions.
 - `@tester` — Independent QA engineer — black-box verification, pass/fail evidence, defect reporting.
-- `@vera` — Independent QA engineer — black-box verification against acceptance criteria, pass/fail evidence, defect reporting.
 
 ## Invocation
 

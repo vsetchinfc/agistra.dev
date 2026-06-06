@@ -119,7 +119,7 @@ Do not substitute CLI queries for browser verification.
 
 ### Step 6 - Post report to GitHub
 
-Write the report to a temp file using a line-by-line `.cjs` script in `$env:TEMP`. Use `gh issue comment --body-file`. Never inline multi-line content with `--body`.
+Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path, then run `gh issue comment --body-file <path>`. Never inline multi-line content with `--body`. Remove the temp file after posting.
 
 ### Step 7 - Align ticket state
 
@@ -128,30 +128,24 @@ Write the report to a temp file using a line-by-line `.cjs` script in `$env:TEMP
 
 ### Step 8 - Notify Builder on defects
 
-If verdict is FAIL or PARTIAL PASS, notify Builder. Choose based on session capability:
+If verdict is FAIL or PARTIAL PASS:
 
-**Preferred — dispatch Builder as subagent in development mode**
-
-When Tester has subagent dispatch available (team-lead-initiated session with `agent` tool), invoke Builder with:
-
-- ticket / PR reference
+**Preferred path — dispatch Builder as subagent:**
+Dispatch Builder in development mode. Pass:
 - one-line defect summary
+- ticket / PR reference
 - GitHub report URL
 - status: needs fix — awaiting retest
 
-Builder triages and either fixes immediately or schedules.
-
-**Fallback — append to Builder's live HOT memory**
-
-When subagent dispatch isn't available (relay mode, isolated context), append to `memory/builder.md` HOT section:
-
+**Fallback path — when subagent dispatch is unavailable in the current session:**
+Append to `memory/builder.md` HOT section:
 - QA result summary (one line)
 - defects (one line per defect)
 - ticket / PR reference
 - GitHub report URL
 - status: needs fix — awaiting retest
 
-Do not modify any other section of Builder's memory file.
+Do not modify any other section of Builder's memory file. Builder will see the GitHub comment for full context; the HOT append ensures the defect is tracked for the next Builder session.
 
 If verdict is PASS with no defects, skip this step — Builder will see the GitHub comment.
 

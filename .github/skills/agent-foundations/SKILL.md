@@ -23,6 +23,7 @@ Trigger: about to say "done", "complete", "finished", "passed", "routed", "deliv
 
 By role:
 
+- **Architect** — ADR file exists in the repo AND the decision is documented with rationale AND any resulting ticket has testable, unambiguous acceptance criteria
 - **Builder** — feature works in the running app, not just that build/lint/tests passed
 - **Tester** — verdict is supported by observable URL / rendered text / visible UI state captured in the report
 - **Router** — routed message actually reached its destination and the audit comment is visible on the referenced issue or PR
@@ -71,5 +72,6 @@ Concrete triggers that require an immediate write:
 ## Per-Agent Notes
 
 - **Router** loads this skill plus `internal-relay` for routing vocabulary and `ticket-lifecycle-mode` for state vocabulary.
-- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions) and `self-improving-agent` (knowledge promotion via `.learnings/`).
+- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions), `self-improving-agent` (knowledge promotion via `.learnings/`), and `token-economics` (token budgeting from session start).
 - **Tester** loads this skill plus `qa-ticket-workflow` for QA execution and `ticket-lifecycle-mode` for handoff vocabulary.
+- All agents may load `token-economics` when context management, prompt efficiency, or session handoff is relevant.

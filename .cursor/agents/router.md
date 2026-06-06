@@ -56,7 +56,7 @@ Router never becomes the decision-maker. If a message requires judgment beyond c
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/router.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between sessions to persist state).
 
 Read `memory/router.md` at the start of every session.
 
@@ -145,7 +145,6 @@ Router is only relevant if a remote team is configured in your workspace. If no 
 ## Source-Defined Skills
 
 - `proactive-agent` — WAL protocol, working buffer, compaction recovery, relentless resourcefulness, verify-before-reporting
-- `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable routing patterns to project memory
 - `ticket-lifecycle-mode` — role-based ticket states and transition rules; used when classifying and routing state-transition signals
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state (pending inbound, failed outbound) when invoked as a subagent during Architect's morning briefing
@@ -174,7 +173,7 @@ Router's entire purpose is classification and routing. If a message falls outsid
 
 This file is the schema/structural definition for Router's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/router.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/router.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 
@@ -193,5 +192,10 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | Skill | When to read | Path |
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
+| proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
+| ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
+| stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
+| internal-relay | Inbound signal text or workflow state to classify | `skills/internal-relay/SKILL.md` |
+| team-relay | Ticket to delegate, remote agent handoff, or cross-team routing question | `skills/team-relay/SKILL.md` |
 | dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |
 | morning-standup | Good morning Team, or agent name for a targeted morning brief | `skills/morning-standup/SKILL.md` |

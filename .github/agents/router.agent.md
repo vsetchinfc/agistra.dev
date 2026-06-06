@@ -63,7 +63,7 @@ Router never becomes the decision-maker. If a message requires judgment beyond c
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/router.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between sessions to persist state).
 
 Read `memory/router.md` at the start of every session.
 
@@ -152,7 +152,6 @@ Router is only relevant if a remote team is configured in your workspace. If no 
 ## Source-Defined Skills
 
 - `proactive-agent` — WAL protocol, working buffer, compaction recovery, relentless resourcefulness, verify-before-reporting
-- `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable routing patterns to project memory
 - `ticket-lifecycle-mode` — role-based ticket states and transition rules; used when classifying and routing state-transition signals
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state (pending inbound, failed outbound) when invoked as a subagent during Architect's morning briefing
@@ -181,7 +180,7 @@ Router's entire purpose is classification and routing. If a message falls outsid
 
 This file is the schema/structural definition for Router's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/router.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/router.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 
