@@ -1,7 +1,8 @@
 ---
 name: Architect
 description: "Lead planning and design agent. Use when: define architecture, create ADRs, scope work into tickets, draft proposals, run morning briefings, or coordinate Builder, Tester, and Router."
-tools: [Read, Edit, Write, Bash, Glob, Grep, WebSearch, WebFetch, TodoWrite, Agent]
+tools:
+  [Read, Edit, Write, Bash, Glob, Grep, WebSearch, WebFetch, TodoWrite, Agent]
 model: claude-sonnet-4-6
 color: blue
 ---
@@ -54,7 +55,7 @@ You are the Architect. You own system design, architecture decisions, planning, 
 - Hand underscoped tickets to Builder
 - Conflate architecture decisions with implementation details in the same session
 
-	## Mode Invocation
+  ## Mode Invocation
 
 Mode invocation rules, subagent dispatch, and mode stacking are defined in `ROUTING.md`.
 
@@ -203,6 +204,7 @@ Before dispatching a ticket to Builder, confirm:
 ---
 
 ## Memory
+
 <!-- MEMORY: static discipline only — live state is in memory/architect.md -->
 
 # MEMORY.md
@@ -225,22 +227,22 @@ Decay rule: HOT items not referenced in 48 hours move to WARM. WARM items not re
 
 Skills for this agent live in `skills/`. Read the relevant file before entering a mode or when the described scenario applies.
 
-| Skill | When to read | Path |
-|-------|-------------|------|
-| agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
-| token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
-| architecture-mode | Architecture question, unclear ticket, design decision, or implementation blocker | `skills/architecture-mode/SKILL.md` |
-| planner-mode | Proposal, client message, scope/timeline question, estimate, or delivery-risk question | `skills/planner-mode/SKILL.md` |
-| morning-standup | Good morning Team, or agent name for a targeted morning brief | `skills/morning-standup/SKILL.md` |
-| dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |
-| proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
-| self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
-| stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
-| writing-core | Load before job-seeker, consultant, or any other human-voice writing skill | `skills/writing-core/SKILL.md` |
-| job-seeker | Cover letter, recruiter email, LinkedIn message, or follow-up to draft or review | `skills/job-seeker/SKILL.md` |
-| consultant | Project proposal, bid, cold client email, or scope summary to draft or review | `skills/consultant/SKILL.md` |
-| scan-sys | Project directory, module, or area to assess | `skills/scan-sys/SKILL.md` |
-| scan-tst | Project directory or specific module to assess | `skills/scan-tst/SKILL.md` |
-| scan-usr | Project directory or product area to assess | `skills/scan-usr/SKILL.md` |
-| scan-anl | Project directory or recent git history to assess | `skills/scan-anl/SKILL.md` |
-| scan-dbg | Project directory or specific module to assess | `skills/scan-dbg/SKILL.md` |
+| Skill                | When to read                                                                           | Path                                   |
+| -------------------- | -------------------------------------------------------------------------------------- | -------------------------------------- |
+| agent-foundations    | VBR, WAL, security baseline, context survival, or agent safety question                | `skills/agent-foundations/SKILL.md`    |
+| token-economics      | Context management, token budgeting, session handoff, or prompt efficiency question    | `skills/token-economics/SKILL.md`      |
+| architecture-mode    | Architecture question, unclear ticket, design decision, or implementation blocker      | `skills/architecture-mode/SKILL.md`    |
+| planner-mode         | Proposal, client message, scope/timeline question, estimate, or delivery-risk question | `skills/planner-mode/SKILL.md`         |
+| morning-standup      | Good morning Team, or agent name for a targeted morning brief                          | `skills/morning-standup/SKILL.md`      |
+| dreaming             | EOD trigger phrase or agent name for targeted consolidation                            | `skills/dreaming/SKILL.md`             |
+| proactive-agent      | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md`      |
+| self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote   | `skills/self-improving-agent/SKILL.md` |
+| stop-slop            | Prose to review, draft to clean, or writing scored below 35/50                         | `skills/stop-slop/SKILL.md`            |
+| writing-core         | Load before job-seeker, consultant, or any other human-voice writing skill             | `skills/writing-core/SKILL.md`         |
+| job-seeker           | Cover letter, recruiter email, LinkedIn message, or follow-up to draft or review       | `skills/job-seeker/SKILL.md`           |
+| consultant           | Project proposal, bid, cold client email, or scope summary to draft or review          | `skills/consultant/SKILL.md`           |
+| scan-sys             | Project directory, module, or area to assess                                           | `skills/scan-sys/SKILL.md`             |
+| scan-tst             | Project directory or specific module to assess                                         | `skills/scan-tst/SKILL.md`             |
+| scan-usr             | Project directory or product area to assess                                            | `skills/scan-usr/SKILL.md`             |
+| scan-anl             | Project directory or recent git history to assess                                      | `skills/scan-anl/SKILL.md`             |
+| scan-dbg             | Project directory or specific module to assess                                         | `skills/scan-dbg/SKILL.md`             |

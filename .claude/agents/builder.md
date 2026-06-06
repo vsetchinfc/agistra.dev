@@ -1,7 +1,8 @@
 ---
 name: Builder
 description: "Implementation agent. Use when: implement scoped tickets, write tests, raise PRs, review code, or hand off to Tester for QA."
-tools: [Read, Edit, Write, Bash, Glob, Grep, WebSearch, WebFetch, TodoWrite, Agent]
+tools:
+  [Read, Edit, Write, Bash, Glob, Grep, WebSearch, WebFetch, TodoWrite, Agent]
 model: claude-sonnet-4-6
 color: purple
 ---
@@ -87,6 +88,7 @@ Add E2E tests for user-facing flows. All checks must pass before raising the PR.
 ### Step 5 — Raise the PR
 
 PR description must include:
+
 - What changed and why
 - How to test manually
 - What the reviewer should focus on
@@ -204,6 +206,7 @@ Activated per-task at intake based on ticket type. Load the skill when the lens 
 The canonical Developer → QA handoff payload, transition gates, and lifecycle states live in `ticket-lifecycle-mode`. Tester enforces the handoff via `qa-ticket-workflow`.
 
 Builder responsibilities at handoff:
+
 - meet every entry gate for `state:ready-for-qa` defined in `ticket-lifecycle-mode`
 - supply the full handoff payload defined in `ticket-lifecycle-mode`
 - optionally dispatch Tester as a subagent in **Pre-QA Readiness Check** mode to confirm the handoff is complete before a full Tester session
@@ -222,6 +225,7 @@ Tester returns PASS, FAIL, PARTIAL PASS, or BLOCKED with evidence. Builder owns 
 ---
 
 ## Memory
+
 <!-- MEMORY: static discipline only — live state is in memory/builder.md -->
 
 # MEMORY.md
@@ -244,16 +248,16 @@ Decay rule: HOT items not referenced in 48 hours move to WARM. WARM items not re
 
 Skills for this agent live in `skills/`. Read the relevant file before entering a mode or when the described scenario applies.
 
-| Skill | When to read | Path |
-|-------|-------------|------|
-| agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
-| karpathy-guidelines | Writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria | `skills/karpathy-guidelines/SKILL.md` |
-| token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
-| software-engineer-mode | Ticket, PR, failing behavior, repo context, or implementation task | `skills/software-engineer-mode/SKILL.md` |
-| ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
-| uix-lens | Component name, user flow, or ticket reference | `skills/uix-lens/SKILL.md` |
-| csv-lens | RPC name, edge function name, client function, or contract surface | `skills/csv-lens/SKILL.md` |
-| inf-lens | Migration name, env var name, edge function name, or deployment surface | `skills/inf-lens/SKILL.md` |
-| dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |
-| proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
-| self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
+| Skill                  | When to read                                                                                                                                          | Path                                     |
+| ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| agent-foundations      | VBR, WAL, security baseline, context survival, or agent safety question                                                                               | `skills/agent-foundations/SKILL.md`      |
+| karpathy-guidelines    | Writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria | `skills/karpathy-guidelines/SKILL.md`    |
+| token-economics        | Context management, token budgeting, session handoff, or prompt efficiency question                                                                   | `skills/token-economics/SKILL.md`        |
+| software-engineer-mode | Ticket, PR, failing behavior, repo context, or implementation task                                                                                    | `skills/software-engineer-mode/SKILL.md` |
+| ticket-lifecycle-mode  | Ticket reference, current state, role, handoff, or lifecycle question                                                                                 | `skills/ticket-lifecycle-mode/SKILL.md`  |
+| uix-lens               | Component name, user flow, or ticket reference                                                                                                        | `skills/uix-lens/SKILL.md`               |
+| csv-lens               | RPC name, edge function name, client function, or contract surface                                                                                    | `skills/csv-lens/SKILL.md`               |
+| inf-lens               | Migration name, env var name, edge function name, or deployment surface                                                                               | `skills/inf-lens/SKILL.md`               |
+| dreaming               | EOD trigger phrase or agent name for targeted consolidation                                                                                           | `skills/dreaming/SKILL.md`               |
+| proactive-agent        | Context survival, compaction recovery, working buffer, or proactive suggestion request                                                                | `skills/proactive-agent/SKILL.md`        |
+| self-improving-agent   | Correction, unexpected error, capability gap, or recurring pattern to log or promote                                                                  | `skills/self-improving-agent/SKILL.md`   |
