@@ -244,5 +244,5 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | scan-sys | Project directory, module, or area to assess | `skills/scan-sys/SKILL.md` |
 | scan-tst | Project directory or specific module to assess | `skills/scan-tst/SKILL.md` |
 | scan-usr | Project directory or product area to assess | `skills/scan-usr/SKILL.md` |
-| scan-anl | Project directory or recent git history to assess | `skills/scan-anl/SKILL.md` |
+| scan-anl | Project delivery health: CI/CD automation, commit patterns, or working tree state | `skills/scan-anl/SKILL.md` |
 | scan-dbg | Project directory or specific module to assess | `skills/scan-dbg/SKILL.md` |

@@ -23,6 +23,7 @@ Trigger: about to say "done", "complete", "finished", "passed", "routed", "deliv
 
 By role:
 
+- **Architect** — ADR file exists in the repo AND the decision is documented with rationale AND any resulting ticket has testable, unambiguous acceptance criteria
 - **Builder** — feature works in the running app, not just that build/lint/tests passed
 - **Tester** — verdict is supported by observable URL / rendered text / visible UI state captured in the report
 - **Router** — routed message actually reached its destination and the audit comment is visible on the referenced issue or PR
