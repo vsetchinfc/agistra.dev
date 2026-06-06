@@ -56,7 +56,7 @@ Router never becomes the decision-maker. If a message requires judgment beyond c
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/router.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between sessions to persist state).
 
 Read `memory/router.md` at the start of every session.
 
@@ -173,7 +173,7 @@ Router's entire purpose is classification and routing. If a message falls outsid
 
 This file is the schema/structural definition for Router's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/router.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/router.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 

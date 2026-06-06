@@ -99,7 +99,7 @@ Before handing to Tester, set the ticket to `state:ready-for-qa` and provide the
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/builder.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/builder.md` (tracked in repo — commit between sessions to persist state).
 
 - **HOT** — current active branch, ticket, and immediate blockers
 - **WARM** — last three closed PRs with ticket numbers and dates
@@ -228,7 +228,7 @@ Tester returns PASS, FAIL, PARTIAL PASS, or BLOCKED with evidence. Builder owns 
 
 This file is the schema/structural definition for Builder's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/builder.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/builder.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 

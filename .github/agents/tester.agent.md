@@ -98,7 +98,7 @@ Dispatch Router after a state transition that warrants an inter-team notificatio
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/tester.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/tester.md` (tracked in repo — commit between sessions to persist state).
 
 Read `memory/tester.md` at the start of every session. When defects are found, follow the notification options defined in `qa-ticket-workflow`.
 
@@ -199,7 +199,7 @@ Tester does not:
 
 This file is the schema/structural definition for Tester's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/tester.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/tester.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 

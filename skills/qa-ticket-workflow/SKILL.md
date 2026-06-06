@@ -119,7 +119,7 @@ Do not substitute CLI queries for browser verification.
 
 ### Step 6 - Post report to GitHub
 
-Write the report to a temp file using a line-by-line `.cjs` script in `$env:TEMP`. Use `gh issue comment --body-file`. Never inline multi-line content with `--body`.
+Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path, then run `gh issue comment --body-file <path>`. Never inline multi-line content with `--body`. Remove the temp file after posting.
 
 ### Step 7 - Align ticket state
 
@@ -128,8 +128,17 @@ Write the report to a temp file using a line-by-line `.cjs` script in `$env:TEMP
 
 ### Step 8 - Notify Builder on defects
 
-If verdict is FAIL or PARTIAL PASS, append to `memory/builder.md` HOT section:
+If verdict is FAIL or PARTIAL PASS:
 
+**Preferred path — dispatch Builder as subagent:**
+Dispatch Builder in development mode. Pass:
+- one-line defect summary
+- ticket / PR reference
+- GitHub report URL
+- status: needs fix — awaiting retest
+
+**Fallback path — when subagent dispatch is unavailable in the current session:**
+Append to `memory/builder.md` HOT section:
 - QA result summary (one line)
 - defects (one line per defect)
 - ticket / PR reference
@@ -137,8 +146,6 @@ If verdict is FAIL or PARTIAL PASS, append to `memory/builder.md` HOT section:
 - status: needs fix — awaiting retest
 
 Do not modify any other section of Builder's memory file. Builder will see the GitHub comment for full context; the HOT append ensures the defect is tracked for the next Builder session.
-
-Full QA always requires a human-initiated Tester session. Tester does not have the Agent tool and cannot dispatch Builder as a subagent.
 
 If verdict is PASS with no defects, skip this step — Builder will see the GitHub comment.
 

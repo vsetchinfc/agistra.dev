@@ -60,7 +60,7 @@ Mode invocation rules, subagent dispatch, and mode stacking are defined in `ROUT
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/architect.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/architect.md` (tracked in repo — commit between sessions to persist state).
 
 - **HOT** — current active design, in-flight ADRs, open questions requiring team lead input
 - **WARM** — recently closed ADRs, completed scoping work, resolved design decisions
@@ -209,7 +209,7 @@ Before dispatching a ticket to Builder, confirm:
 
 This file is the schema/structural definition for Architect's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/architect.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/architect.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 
