@@ -70,7 +70,7 @@ Mode invocation rules, subagent dispatch, and mode stacking are defined in `ROUT
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/architect.md` (gitignored).
+Live HOT/WARM/COLD state: `memory/architect.md` (tracked in repo — commit between sessions to persist state).
 
 - **HOT** — current active design, in-flight ADRs, open questions requiring team lead input
 - **WARM** — recently closed ADRs, completed scoping work, resolved design decisions
@@ -191,7 +191,7 @@ Loaded when reviewing project health output from `npm run scan`.
 - `scan-sys` — system structure: file organisation, module boundaries, dependency health
 - `scan-tst` — test coverage: missing tests, coverage gaps, E2E breadth
 - `scan-usr` — user experience: missing UI states, accessibility, empty/error/loading coverage
-- `scan-anl` — analytics and observability: logging, error tracking, monitoring gaps
+- `scan-anl` — delivery health: CI/CD automation, commit patterns, and working tree state
 - `scan-dbg` — debugging and error handling: exception handling, stack trace quality, debug tooling
 
 ## Builder Handoff Contract
@@ -219,7 +219,7 @@ Before dispatching a ticket to Builder, confirm:
 
 This file is the schema/structural definition for Architect's memory tiers.
 
-Live HOT/WARM/COLD state lives in: `memory/architect.md` (gitignored — local only)
+Live HOT/WARM/COLD state lives in: `memory/architect.md` (tracked in repo — commit between sessions to persist state)
 
 ## Schema
 

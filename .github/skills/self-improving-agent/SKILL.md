@@ -164,9 +164,9 @@ When a learning applies across multiple files or features, or prevents a recurri
 
 | Promotion target | What goes there |
 | ---------------- | --------------- |
-| `/memories/repo/<project>.md` | Project facts, conventions, verified practices |
+| `memory/<agent>.md` COLD section | Project facts, conventions, verified practices |
 | `AGENTS.md` in the workspace | Workflow improvements, automation rules |
-| `/memories/` user memory | Cross-project patterns and preferences |
+| `~/.claude/projects/.../memory/` auto-memory | Cross-project patterns and preferences |
 
 ### Promotion threshold
 
