@@ -54,7 +54,7 @@ If the short name doesn't resolve (hub folder not in workspace), use the explici
 
 ## Edit rules
 
-- Edit agent profiles in the **source repo** (`setchin-agent-profiles`), then redeploy with `npm run deploy -- <hub-path>`.
+- Edit agent profiles in the **source profiles repo**, then redeploy with `npm run deploy -- <hub-path>`.
 - Edit task files directly in `projects/<project>/`.
 - Never edit `.cursor/agents/` or `.github/skills/` files by hand — they are generated.
-- `memory/` files are local-only. Each agent reads its own memory file at session start.
+- `memory/` files are tracked in the repo — commit between sessions to persist agent state.

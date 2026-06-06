@@ -100,7 +100,7 @@ If the BD/delivery question depends on unsettled technical architecture, load `a
 **Commitment Status:** Draft only. Team lead approval required before external use.
 
 ### Scope Summary
-Build and deploy three AI agents (Architect, Builder, Tester) using the setchin-agent-profiles framework into the client's existing VS Code + GitHub workflow. Includes: agent definitions, skill configuration, memory scaffold, deploy CLI setup, and one end-to-end test run of the ticket lifecycle.
+Build and deploy three AI agents (Architect, Builder, Tester) using the agistra agent framework into the client's existing VS Code + GitHub workflow. Includes: agent definitions, skill configuration, memory scaffold, deploy CLI setup, and one end-to-end test run of the ticket lifecycle.
 
 ### Exclusions
 - CI/CD pipeline changes
