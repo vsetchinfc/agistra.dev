@@ -1,6 +1,6 @@
 ---
 name: proactive-agent
-description: "Context-survival and proactive-iteration extensions. Always-on. Covers Working Buffer Protocol, Compaction Recovery, Relentless Resourcefulness, Self-Improvement Guardrails, and Reverse Prompting."
+description: "Context-survival and proactive-iteration extensions. Always-on. Covers Working Buffer Protocol, Compaction Recovery, Relentless Resourcefulness, and Self-Improvement Guardrails."
 argument-hint: "Context survival, compaction recovery, working buffer, or proactive suggestion request"
 ---
 
@@ -18,7 +18,7 @@ These behaviours are always-on, not mode-gated. Load this skill to review or ref
 
 The working buffer is the crisis backstop — it activates at 60%. `token-economics` is the upstream discipline that delays or avoids that crisis. Load it to apply token budgeting from session start.
 
-When context reaches 60%, every exchange must be logged to `memory/working-buffer.md`:
+When the session is clearly growing long — a rough signal is after many extended exchanges, or when you notice responses requiring significant context re-establishment — log every subsequent exchange to `memory/working-buffer.md`:
 
 ```
 # Working Buffer (Danger Zone Log)
@@ -49,9 +49,9 @@ Auto-trigger when:
 Recovery steps:
 
 1. Read `memory/working-buffer.md` — raw danger-zone exchanges
-2. Read `SESSION-STATE.md` — active task state
+2. Read `memory/<agent>.md` — current HOT/WARM/COLD state
 3. Read today's and yesterday's daily notes
-4. Extract and clear: pull important context from buffer into SESSION-STATE.md
+4. Promote: pull important context from the buffer into the HOT section of `memory/<agent>.md`
 5. Present: "Recovered from working buffer. Last task was X. Continue?"
 
 Do NOT ask "what were we discussing?" — the buffer has the conversation.
@@ -60,7 +60,9 @@ Do NOT ask "what were we discussing?" — the buffer has the conversation.
 
 ## Relentless Resourcefulness
 
-Non-negotiable. When something doesn't work:
+Applies to **technical implementation problems** — failing commands, broken builds, unclear errors, tool failures. For scope questions, architecture decisions, or security-adjacent choices, escalate to the team lead immediately. Do not exhaust alternatives on decisions that belong to a human.
+
+Non-negotiable for technical problems. When something doesn't work:
 
 1. Try a different approach immediately
 2. Then another. And another.
@@ -94,16 +96,13 @@ Priority ordering: **Stability > Explainability > Reusability > Scalability > No
 
 ### VFM Protocol (Value-First Modification)
 
-Score a proposed change before making it:
+Before proposing a change to agent behavior, ask three questions:
 
-| Signal | Weight | Question |
-| ------ | ------ | -------- |
-| High Frequency | 3× | Will this be used daily? |
-| Failure Reduction | 3× | Does this turn failures into successes? |
-| User Burden | 2× | Can the team lead say 1 word instead of explaining? |
-| Self Cost | 2× | Does this save tokens or time for future sessions? |
+1. Will this be used daily, or only in rare cases?
+2. Does this prevent a failure that has already happened?
+3. Does this reduce the team lead's effort in a concrete way?
 
-Threshold: weighted score < 50 → skip it.
+If the answer to all three is "no" or "maybe", skip it. One strong "yes" is the bar — not a weighted total.
 
 ---
 

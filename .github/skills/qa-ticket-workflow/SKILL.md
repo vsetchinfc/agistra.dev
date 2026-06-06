@@ -128,22 +128,7 @@ Write the report to a temp file using a line-by-line `.cjs` script in `$env:TEMP
 
 ### Step 8 - Notify Builder on defects
 
-If verdict is FAIL or PARTIAL PASS, notify Builder. Choose based on session capability:
-
-**Preferred — dispatch Builder as subagent in development mode**
-
-When Tester has subagent dispatch available (team-lead-initiated session with `agent` tool), invoke Builder with:
-
-- ticket / PR reference
-- one-line defect summary
-- GitHub report URL
-- status: needs fix — awaiting retest
-
-Builder triages and either fixes immediately or schedules.
-
-**Fallback — append to Builder's live HOT memory**
-
-When subagent dispatch isn't available (relay mode, isolated context), append to `memory/builder.md` HOT section:
+If verdict is FAIL or PARTIAL PASS, append to `memory/builder.md` HOT section:
 
 - QA result summary (one line)
 - defects (one line per defect)
@@ -151,7 +136,9 @@ When subagent dispatch isn't available (relay mode, isolated context), append to
 - GitHub report URL
 - status: needs fix — awaiting retest
 
-Do not modify any other section of Builder's memory file.
+Do not modify any other section of Builder's memory file. Builder will see the GitHub comment for full context; the HOT append ensures the defect is tracked for the next Builder session.
+
+Full QA always requires a human-initiated Tester session. Tester does not have the Agent tool and cannot dispatch Builder as a subagent.
 
 If verdict is PASS with no defects, skip this step — Builder will see the GitHub comment.
 

@@ -172,6 +172,7 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
 - `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
+- `writing-core` — prose voice and structural discipline: burstiness, perplexity, and community-sourced AI-tell patterns; load before any long-form writing task
 - `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
 - `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
 
@@ -236,6 +237,10 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |
 | proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
 | self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
+| stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
+| writing-core | Load before job-seeker, consultant, or any other human-voice writing skill | `skills/writing-core/SKILL.md` |
+| job-seeker | Cover letter, recruiter email, LinkedIn message, or follow-up to draft or review | `skills/job-seeker/SKILL.md` |
+| consultant | Project proposal, bid, cold client email, or scope summary to draft or review | `skills/consultant/SKILL.md` |
 | scan-sys | Project directory, module, or area to assess | `skills/scan-sys/SKILL.md` |
 | scan-tst | Project directory or specific module to assess | `skills/scan-tst/SKILL.md` |
 | scan-usr | Project directory or product area to assess | `skills/scan-usr/SKILL.md` |

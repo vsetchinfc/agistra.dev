@@ -180,6 +180,7 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
 - `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
+- `writing-core` — prose voice and structural discipline: burstiness, perplexity, and community-sourced AI-tell patterns; load before any long-form writing task
 - `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
 - `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
 

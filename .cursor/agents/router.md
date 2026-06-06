@@ -195,5 +195,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
+| internal-relay | Inbound signal text or workflow state to classify | `skills/internal-relay/SKILL.md` |
+| team-relay | Ticket to delegate, remote agent handoff, or cross-team routing question | `skills/team-relay/SKILL.md` |
 | dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |
 | morning-standup | Good morning Team, or agent name for a targeted morning brief | `skills/morning-standup/SKILL.md` |
