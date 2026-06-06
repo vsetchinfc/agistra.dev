@@ -1,31 +1,36 @@
-#!/bin/bash
-# Memory discipline check — invoked by stop hooks after each agent session.
-# Reminds the agent to update HOT memory if real work was done but memory was not written.
+#!/usr/bin/env bash
+# memory-check.sh — Stop hook for Claude Code.
+# Called automatically after every agent session.
 #
-# Exit codes:
-#   0 = no action needed (memory updated, or nothing significant changed)
-#   2 = feed reminder back to the agent (work done, memory not updated)
+# If git diff shows files were changed but no memory/ files were touched,
+# exit 2 so Claude Code feeds a reminder back to the agent before closing.
 
-MEMORY_DIR="${MEMORY_DIR:-memory}"
+set -euo pipefail
 
-# Check if memory files were updated this session (unstaged or staged, excluding archives)
-MEMORY_CHANGED=$(git diff --name-only HEAD -- "${MEMORY_DIR}/" 2>/dev/null | grep -v "/archive/")
-MEMORY_STAGED=$(git diff --cached --name-only -- "${MEMORY_DIR}/" 2>/dev/null | grep -v "/archive/")
-
-if [ -n "$MEMORY_CHANGED" ] || [ -n "$MEMORY_STAGED" ]; then
-  # Memory was written this session — nothing to do
+# Nothing to check if this isn't a git repo
+if ! git rev-parse --git-dir > /dev/null 2>&1; then
   exit 0
 fi
 
-# Check if any other work was done (proxy for a substantial session)
-ANY_CHANGED=$(git diff --name-only HEAD -- 2>/dev/null)
-ANY_STAGED=$(git diff --cached --name-only -- 2>/dev/null)
+# Collect tracked changes relative to HEAD
+status=$(git status --porcelain 2>/dev/null || true)
 
-if [ -z "$ANY_CHANGED" ] && [ -z "$ANY_STAGED" ]; then
-  # Nothing changed at all — likely a read-only or lookup session
+if [ -z "$status" ]; then
+  # No changes — nothing to remember
   exit 0
 fi
 
-# Real work happened but memory was not updated
-echo "Memory files unchanged this session. If decisions, corrections, or new context were established, update HOT in memory/<agent>.md before closing."
+# memory/ may be excluded from git tracking — check filesystem mtime instead.
+# Any memory/*.md modified in the last 4 hours counts as updated this session.
+if find memory/ -maxdepth 1 -name "*.md" -mmin -240 2>/dev/null | grep -q .; then
+  exit 0
+fi
+
+# Work happened but memory was not updated — remind the agent
+echo "" >&2
+echo "⚠️  Memory check: files were changed this session but memory/ was not updated." >&2
+echo "   Before closing, update the HOT section in memory/<agent>.md with any" >&2
+echo "   decisions, corrections, or new context from this session." >&2
+echo "   (WAL protocol — write first, respond second.)" >&2
+echo "" >&2
 exit 2
