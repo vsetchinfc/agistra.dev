@@ -6,7 +6,7 @@ argument-hint: "Correction, unexpected error, capability gap, or recurring patte
 
 # Self-Improving Agent
 
-Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent). Enables the agent to capture corrections, errors, and knowledge gaps during sessions and promote durable learnings into permanent project memory.
+Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent) — MIT License. Enables the agent to capture corrections, errors, and knowledge gaps during sessions and promote durable learnings into permanent project memory.
 
 ## When to Log
 

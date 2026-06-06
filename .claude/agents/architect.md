@@ -189,6 +189,7 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable patterns to project memory
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
 - `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
 - `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
@@ -247,6 +248,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | Skill | When to read | Path |
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
+| token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
 | architecture-mode | Architecture question, unclear ticket, design decision, or implementation blocker | `skills/architecture-mode/SKILL.md` |
 | planner-mode | Proposal, client message, scope/timeline question, estimate, or delivery-risk question | `skills/planner-mode/SKILL.md` |
 | morning-standup | Good morning Team, or agent name for a targeted morning brief | `skills/morning-standup/SKILL.md` |

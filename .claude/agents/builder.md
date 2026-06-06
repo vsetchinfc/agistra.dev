@@ -190,6 +190,8 @@ Specialist modes are invoked as source-defined skills inside Builder's workspace
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state when invoked as a subagent during Architect's morning briefing
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `karpathy-guidelines` — implementation guardrails: think before coding, simplicity first, surgical changes, goal-driven execution
+- `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 
 ### Domain Lens Skills
 
@@ -247,6 +249,8 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | Skill | When to read | Path |
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
+| karpathy-guidelines | Writing, reviewing, or refactoring code to avoid overcomplication, make surgical changes, surface assumptions, and define verifiable success criteria | `skills/karpathy-guidelines/SKILL.md` |
+| token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
 | software-engineer-mode | Ticket, PR, failing behavior, repo context, or implementation task | `skills/software-engineer-mode/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | uix-lens | Component name, user flow, or ticket reference | `skills/uix-lens/SKILL.md` |

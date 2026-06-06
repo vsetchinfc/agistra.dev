@@ -6,7 +6,7 @@ argument-hint: "Context survival, compaction recovery, working buffer, or proact
 
 # Proactive Agent
 
-Adapted from [halthelobster/proactive-agent v3.1.0](https://clawhub.ai/halthelobster/proactive-agent). Context-survival and proactive-iteration extensions, loaded on top of `agent-foundations` (which holds WAL, VBR, and the security baseline).
+Adapted from [halthelobster/proactive-agent v3.1.0](https://clawhub.ai/halthelobster/proactive-agent) — MIT License. Context-survival and proactive-iteration extensions, loaded on top of `agent-foundations` (which holds WAL, VBR, and the security baseline).
 
 ## When to Apply
 
@@ -15,6 +15,8 @@ These behaviours are always-on, not mode-gated. Load this skill to review or ref
 ---
 
 ## Working Buffer Protocol
+
+The working buffer is the crisis backstop — it activates at 60%. `token-economics` is the upstream discipline that delays or avoids that crisis. Load it to apply token budgeting from session start.
 
 When context reaches 60%, every exchange must be logged to `memory/working-buffer.md`:
 

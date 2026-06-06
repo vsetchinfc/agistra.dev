@@ -170,6 +170,7 @@ Builder dispatches tickets to Tester at `state:ready-for-qa`. Architect owns sco
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state when invoked as a subagent during Architect's morning briefing
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 
 ## Lifecycle Role Bindings
 

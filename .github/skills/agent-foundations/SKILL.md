@@ -71,5 +71,6 @@ Concrete triggers that require an immediate write:
 ## Per-Agent Notes
 
 - **Router** loads this skill plus `internal-relay` for routing vocabulary and `ticket-lifecycle-mode` for state vocabulary.
-- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions) and `self-improving-agent` (knowledge promotion via `.learnings/`).
+- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions), `self-improving-agent` (knowledge promotion via `.learnings/`), and `token-economics` (token budgeting from session start).
 - **Tester** loads this skill plus `qa-ticket-workflow` for QA execution and `ticket-lifecycle-mode` for handoff vocabulary.
+- All agents may load `token-economics` when context management, prompt efficiency, or session handoff is relevant.

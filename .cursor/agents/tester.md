@@ -163,6 +163,7 @@ Builder dispatches tickets to Tester at `state:ready-for-qa`. Architect owns sco
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state when invoked as a subagent during Architect's morning briefing
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 
 ## Lifecycle Role Bindings
 
@@ -210,6 +211,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | Skill | When to read | Path |
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
+| token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
 | qa-ticket-workflow | Ticket reference, handoff payload, acceptance criteria, or QA execution question | `skills/qa-ticket-workflow/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | dreaming | EOD trigger phrase or agent name for targeted consolidation | `skills/dreaming/SKILL.md` |

@@ -198,6 +198,8 @@ Specialist modes are invoked as source-defined skills inside Builder's workspace
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state when invoked as a subagent during Architect's morning briefing
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
+- `karpathy-guidelines` — implementation guardrails: think before coding, simplicity first, surgical changes, goal-driven execution
+- `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 
 ### Domain Lens Skills
 
