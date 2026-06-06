@@ -1,5 +1,5 @@
 ---
-description: Enforces correct agent session startup order — profile file first, then memory, then task work
+description: Enforces correct agent session startup order and end-of-session memory discipline
 alwaysApply: true
 ---
 
@@ -53,3 +53,11 @@ Neither substitutes for the other.
 @tester    Read <hub>/.cursor/agents/tester.md    then <hub>/memory/tester.md.    Then: QA projects/<project>/task_N_todo_<slug>.md
 @router    Read <hub>/.cursor/agents/router.md    then <hub>/memory/router.md.    Then: classify and route: [inbound message]
 ```
+
+## Session end — memory discipline
+
+Before closing a session, check whether any decisions, corrections, or new context were established. If yes, update the HOT section in `memory/<agent>.md` before closing.
+
+Do not wait for the team lead to ask. Write first, respond second — this is the WAL protocol defined in `skills/agent-foundations/SKILL.md`.
+
+If nothing significant happened (lookup session, read-only work), explicitly acknowledge: "No significant context to save this session."
