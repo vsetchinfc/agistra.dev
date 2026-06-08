@@ -128,6 +128,8 @@ Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShe
 
 ### Step 8 - Notify Builder on defects
 
+**If operating inside a `task-automation-flow` run:** follow the fail counter rules in `profiles/tester-workspace/ROUTING.md` (Automation Run Rules → Fail Counter Logic) instead of the default dispatch below. On 1st fail, dispatch Builder (same as below). On 2nd fail, route to Architect — do not dispatch Builder.
+
 If verdict is FAIL or PARTIAL PASS:
 
 **Preferred path — dispatch Builder as subagent:**

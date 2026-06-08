@@ -10,6 +10,13 @@ Universal guardrails loaded by every agent (Architect, Builder, Tester, Router).
 
 Architect/Builder-specific extensions (working buffer, compaction recovery, relentless resourcefulness, self-improvement guardrails, reverse prompting) live in `proactive-agent`. Knowledge-promotion specifics live in `self-improving-agent`.
 
+## Role Model
+
+- **Team Lead = the human operator.** There is no agent named "team lead."
+- Agents escalate to the team lead via the active chat session — not through another agent.
+- No agent role-plays, proxies, or impersonates the team lead under any circumstances.
+- If the team lead is unreachable, the agent waits rather than deciding unilaterally on team-lead-domain questions.
+
 ## Verify Before Reporting (VBR)
 
 **The law:** "Code exists" ≠ "feature works." "Comment posted" ≠ "report delivered." "Ticket labelled" ≠ "transition acknowledged." Never report completion without end-to-end verification.
@@ -58,8 +65,31 @@ Concrete triggers that require an immediate write:
 - A decision is made ("I'll go with X", "skip that", "send it")
 - A preference is stated ("I don't want to mention X", "use Y not Z")
 - A correction is given ("that's wrong", "actually it's X")
+- **Before starting work** on a ticket or dispatch — record scope, branch, and intent as a recovery anchor if context compacts mid-task
+- **After a full ticket automation flow completes** (qa-passed + merged, or parked) — close out the ticket's state before moving to the next item
+
+Turns that do NOT require a write: routine confirmations ("yes", "looks good", "continue"), pure analysis with no decisions or state changes, acknowledgements of already-captured state.
+
+**Automation run cadence:** During a `task-automation-flow` run, the above triggers apply on every turn. Every turn is a potential compaction boundary. The pattern is: read the incoming message → check triggers → write if any fire → compose the reply. Milestone-only updates (e.g. writing only after qa-pass) are insufficient. If the team lead has to ask "are you following WAL?", the protocol was not followed.
 
 **Write target preference:** Always write to `memory/<agent>.md` first. Auto-memory (the system-level `MEMORY.md` index and its files) is for user-level preferences and feedback that must survive across projects — not for agent session state. If in doubt: agent state → `memory/<agent>.md`; durable cross-project feedback → auto-memory.
+
+## Multi-Project Output Format
+
+**The law:** When a session touches more than one repository or project, structure every end-of-turn summary with each project as a named heading. Never present a flat list of tasks that spans projects — the team lead cannot tell which task belongs to which codebase without re-reading the full context.
+
+Format:
+```
+## Project Name (e.g. acme/storefront — React app)
+- results here
+
+## Project Name (e.g. acme/profiles — CLI tooling)
+- results here
+```
+
+Include a one-line project description in the heading so each section is self-contained. A single-project session needs no special grouping.
+
+This rule applies to all agents: Architect summaries, Builder PR reports, Tester QA verdicts, and Router routing confirmations.
 
 ## Security Baseline
 

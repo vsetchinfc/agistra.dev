@@ -220,11 +220,16 @@ Actively search for and call out these failure patterns early:
 
 ## ADR Format — Michael Nygard Default
 
+For the full ADR documentation standard — when to write an ADR, storage path, no-delete rule, inline comment discipline, and API documentation standards — load `skills/documentation-and-adrs/SKILL.md`. The format below is kept here for quick reference; `documentation-and-adrs` is authoritative on format details.
+
 ```markdown
 # ADR-NNN: [Decision title in imperative mood]
 
 ## Status
 [Proposed | Accepted | Deprecated | Superseded by ADR-NNN]
+
+## Date
+YYYY-MM-DD
 
 ## Context
 [What is the problem? What forces are at play? What constraints exist?

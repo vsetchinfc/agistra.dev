@@ -20,6 +20,16 @@ Profiles should bind themselves to one or more lifecycle roles. The skill stays 
 
 One profile may bind to multiple roles. For example, a single engineer may act as both `Developer` and `Developer Lead` in the direct lane.
 
+## Automation Fields
+
+These fields extend the ticket definition. All base ticket fields are defined in the Developer → QA Handoff Payload section below.
+
+Every ticket must include the following required field before it may be dispatched for implementation.
+
+| Field | Values | Set by | Notes |
+| ----- | ------ | ------ | ----- |
+| `verifier` | `Tester` \| `Architect` \| `Automated` | `Developer Lead` at ticket creation | Drives the post-completion branch in `task-automation-flow`. A ticket without a verifier is underscoped — do not dispatch. |
+
 ## Canonical Ticket States
 
 | State | Meaning | Typical owner |
@@ -33,6 +43,17 @@ One profile may bind to multiple roles. For example, a single engineer may act a
 
 After `state:qa-passed`, the `Team Lead` decides whether the work is closed or moved to another workflow state outside this shared baseline.
 
+## QA Fail Labels
+
+These labels are applied to the GitHub issue by the active verifier (`QA` when `verifier: Tester`; otherwise the `Developer Lead` acting as verifier) during a `task-automation-flow` run to track the fail counter. They are independent of lifecycle state labels.
+
+| Label | Applied when | Applied by |
+| ----- | ------------ | ---------- |
+| `qa-fail-1` | QA fails for the first time on a ticket | active verifier |
+| `qa-fail-2` | QA fails for the second time on the same ticket | active verifier |
+
+When progressing from `qa-fail-1` to `qa-fail-2`, remove the `qa-fail-1` label before applying `qa-fail-2`. These labels do not replace lifecycle state labels — both sets coexist on the issue.
+
 ## Transition Permissions
 
 | From | To | Allowed role | Gate |
@@ -41,14 +62,16 @@ After `state:qa-passed`, the `Team Lead` decides whether the work is closed or m
 | `state:ready-for-implementation` | `state:in-progress` | `Developer` | implementation has started |
 | `state:in-progress` | `state:ready-for-review` | `Developer` | work is complete and ready for accountable review |
 | `state:ready-for-review` | `state:changes-requested` | `Developer Lead` | review found engineering defects or missing requirements |
+| `state:ready-for-review` | `state:qa-passed` | `Developer Lead` (acting as verifier) | only when `verifier: Architect` — Developer Lead has reviewed engineering quality and verified all ACs; no separate QA phase required |
 | `state:ready-for-review` or `state:in-progress` | `state:ready-for-qa` | `Developer Lead` | engineering acceptance and QA handoff complete |
-| `state:ready-for-qa` | `state:qa-passed` | `QA` | QA PASS with evidence |
-| `state:ready-for-qa` | `state:changes-requested` | `QA` | QA FAIL or PARTIAL PASS requiring engineering work |
+| `state:ready-for-qa` | `state:qa-passed` | `Developer Lead` (acting as verifier) | only when `verifier: Automated` — automated gates pass and Developer Lead spot-check is complete |
+| `state:ready-for-qa` | `state:qa-passed` | `QA` | only when `verifier: Tester` — QA PASS with evidence |
+| `state:ready-for-qa` | `state:changes-requested` | `QA` | only when `verifier: Tester` — QA FAIL or PARTIAL PASS requiring engineering work |
 | `state:qa-passed` | closed or next state | `Team Lead` | approval or next-direction decision |
 
 `Relay` does not own implementation-quality transitions. Relay classifies, routes, and audits — it does not declare engineering acceptance, QA pass, or closure.
 
-`state:qa-passed` is a QA-only state. A `Developer Lead` completing an engineering review must advance to `state:ready-for-qa`, never directly to `state:qa-passed`. The local ticket record and GitHub labels must be updated together when the state changes.
+`state:qa-passed` is normally reached via `QA`. The sole exception is when the ticket's verifier field is set to `Architect`: in that case the `Developer Lead` (acting as verifier) transitions directly from `state:ready-for-review` to `state:qa-passed` after reviewing engineering quality and verifying all ACs — no separate QA phase is required. In all other verifier paths, a `Developer Lead` completing an engineering review must advance to `state:ready-for-qa`, never directly to `state:qa-passed`. The local ticket record and GitHub labels must be updated together when the state changes.
 
 ## Typical Direct Lane Flow
 
