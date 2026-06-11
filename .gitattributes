@@ -1,0 +1,3 @@
+# Personal files — always keep local branch version on merge
+memory/*.md                           merge=ours
+.cursor/rules/workspace-identity.mdc  merge=ours

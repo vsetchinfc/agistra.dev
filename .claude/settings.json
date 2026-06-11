@@ -1,15 +1,16 @@
 {
-  "hooks": {
-    "Stop": [
-      {
-        "matcher": "",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash tools/memory-check.sh"
-          }
-        ]
-      }
-    ]
-  }
+	"hooks": {
+		"Stop": [
+			{
+				"matcher": "",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "bash tools/memory-check.sh"
+					}
+				]
+			}
+		]
+	},
+	"enableAllProjectMcpServers": true
 }

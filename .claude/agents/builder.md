@@ -311,3 +311,4 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | task-automation-flow | Trigger phrase, ticket reference, verifier type, or fail counter question | `skills/task-automation-flow/SKILL.md` |
 | test-driven-development | TDD workflow, test-first implementation, bug-fix with failing test, or test discipline question | `skills/test-driven-development/SKILL.md` |
 | debugging-and-error-recovery | debugging loop, build failure, test failure, runtime error, or error recovery question | `skills/debugging-and-error-recovery/SKILL.md` |
+| browser-automation | URL to verify, UI state to capture, form to fill, or integration endpoint to exercise | `skills/browser-automation/SKILL.md` |

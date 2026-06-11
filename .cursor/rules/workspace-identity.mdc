@@ -6,20 +6,13 @@ alwaysApply: true
 
 ## Workspace Identity
 
-- **Name:** Vlad
-- **Role:** Director | CEO | CTO
-- **Organisation:** SETCHIN Consulting
+- **Name:** Your Name
+- **Role:** Your Role
+- **Organisation:** Your Organisation
 
 ## Agent Display Names
 
-- **architect:** Argo
-- **builder:** Neo
-- **tester:** Vera
-- **router:** Atlas
-
-## Remote Team
-
-- **Remote team name:** Viktor's Team
-- **Remote agent name:** Max
-- **Telegram handle:** atlas_vs_ai_bot
-- **Telegram bot token:** see workspace.config.json → remoteTeam.telegram.botToken
+- **architect:** architect
+- **builder:** builder
+- **tester:** tester
+- **router:** router
