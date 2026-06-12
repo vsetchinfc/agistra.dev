@@ -1,1 +1,3 @@
 workspace.config.json
+.claude/settings.local.json
+/relay/
