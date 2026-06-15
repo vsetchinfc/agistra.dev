@@ -2,6 +2,14 @@
 
 ## HOT
 
+- **vladsetchin.me rebuild (2026-06-16)** — 4 PRs raised against `vladsetchin.me-astro` (develop branch):
+  - PR #18 `feat/issue-9-astro-foundation` — Astro scaffold, design tokens, theme toggle, CI deploy — state: ready-for-review
+  - PR #19 `feat/issue-10-11-home-blog` — home one-pager + blog with RSS — state: ready-for-review (merge conflicts resolved on develop)
+  - PR #20 `feat/issue-12-13-14-comments-portfolio-services` — Giscus + portfolio + services — state: ready-for-review
+  - PR #22 `feat/issue-15-seo` — SEO meta/OG/sitemap/robots/404/JSON-LD — state: ready-for-review
+  - Task #8 / issue #16 — newsletter — blocked (owner provider decision)
+  - Repo: `vsetchinfc/vladsetchin.me` | local: `d:\dev\vladsetchin.me`
+
 - task_42 setchin-agent-profiles — Daemon trace log per-day rotating files — issue #84 — branch `feat/issue-84-daemon-trace-log` — PR #86 — state: ready-for-qa (retest) — verifier: Tester — missing test file added commit b3cdea4 pushed 2026-06-13
 - task_41 setchin-agent-profiles — scan-dbg + scan-anl quality pass — issue #76 — branch `feat/issue-76-scan-dbg-scan-anl-quality-pass-clean` — PR #79 — state: ready-for-review — verifier: Architect
 
