@@ -90,19 +90,17 @@ export function saveHealth(projectsDir, projectName, perspectives, overall) {
  * Returns [{ filename, content }]
  */
 export function generateTasks({ allFindings, projectName, projectsDir }) {
-	const existingFiles = fs.existsSync(projectsDir)
-		? fs.readdirSync(projectsDir).filter(f => f.match(/^task_\d+_(?:todo|done)_/))
-		: [];
+	const existingFiles = collectExistingTaskFiles(projectsDir);
 
-	const existingIds = new Set(existingFiles.map(f => readFindingId(projectsDir, f)).filter(Boolean));
+	const existingIds = new Set(existingFiles.map(({ dir, filename }) => readFindingId(dir, filename)).filter(Boolean));
 	const newFindings = allFindings.filter(f => !existingIds.has(f.id));
 
 	if (newFindings.length === 0) return [];
 
 	newFindings.sort((a, b) => (PRIORITY_ORDER[a.priority] ?? 3) - (PRIORITY_ORDER[b.priority] ?? 3));
 
-	const maxNum = existingFiles.reduce((max, f) => {
-		const m = f.match(/^task_(\d+)_/);
+	const maxNum = existingFiles.reduce((max, { filename }) => {
+		const m = filename.match(/^task_(\d+)_/);
 		return m ? Math.max(max, parseInt(m[1], 10)) : max;
 	}, 0);
 
@@ -116,6 +114,23 @@ export function generateTasks({ allFindings, projectName, projectsDir }) {
 
 function round(n) { return Math.round(n * 100) / 100; }
 
+function collectExistingTaskFiles(projectsDir) {
+	const pattern = /^task_\d+_(?:todo|done)_/;
+	const entries = [];
+	if (fs.existsSync(projectsDir)) {
+		for (const filename of fs.readdirSync(projectsDir)) {
+			if (pattern.test(filename)) entries.push({ dir: projectsDir, filename });
+		}
+	}
+	const doneDir = path.join(projectsDir, 'done');
+	if (fs.existsSync(doneDir)) {
+		for (const filename of fs.readdirSync(doneDir)) {
+			if (pattern.test(filename)) entries.push({ dir: doneDir, filename });
+		}
+	}
+	return entries;
+}
+
 function makeSlug(title) {
 	return title.toLowerCase()
 		.replace(/[^a-z0-9\s]/g, '')
@@ -125,9 +140,9 @@ function makeSlug(title) {
 		.join('-');
 }
 
-function readFindingId(projectsDir, filename) {
+function readFindingId(dir, filename) {
 	try {
-		const content = fs.readFileSync(path.join(projectsDir, filename), 'utf-8');
+		const content = fs.readFileSync(path.join(dir, filename), 'utf-8');
 		const m = content.match(/^finding-id:\s+(.+)$/m);
 		return m ? m[1].trim() : null;
 	} catch { return null; }

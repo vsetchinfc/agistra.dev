@@ -187,12 +187,22 @@ Router inbound from [remote team]:
 When dispatching outbound to the remote team:
 
 ```text
-[Remote team agent],
+Router, notify [remote team agent]:
   Ticket: #N
   State: [current state]
   Action: [what is expected from the remote team]
   Context: [one line if needed]
 ```
+
+After validation, Router calls `relay_send` with the composed message (Claude Code / Cursor). On GitHub Copilot, where relay MCP is not yet available, post via the daemon HTTP API instead:
+
+```bash
+curl -sS -X POST "http://127.0.0.1:17391/outbound" \
+  -H "Content-Type: application/json" \
+  -d '{"text":"Ticket #N in state:ready-for-qa, please pick up first-pass QA."}'
+```
+
+Start the daemon first: `npm run relay -- --hub <hub-path>` (from the profiles repo until hub deploy copies `cli/relay/`).
 
 ---
 
@@ -203,6 +213,10 @@ When dispatching outbound to the remote team:
 - `Glob` - locate routing configuration files and relay artefacts
 - `Grep` - search message content, ticket references, and routing context
 - `Agent` - dispatch Architect, Builder, or Tester based on message classification
+- `mcp__relay__relay_send` - post a validated outbound message to the remote team via the relay daemon
+- `mcp__relay__relay_status` - check relay daemon health before sending outbound notifications
+- `mcp__relay__relay_inbox_peek` - fetch the next parsed inbound job from the relay daemon inbox
+- `mcp__relay__relay_inbox_ack` - mark an inbound relay job as processed after Router handles it
 
 ---
 
@@ -234,6 +248,16 @@ Additional relay and messaging skills are configured by the wizard based on your
 - Router never transitions ticket states unilaterally — only agents that own the work do so.
 - Router dispatches agents; agents own the state transitions.
 - The team lead holds the `Team Lead` role and is the final authority on any relay action requiring judgment.
+
+## Model Tier
+
+Router always uses the **economy tier** (Haiku) on every platform — never Sonnet or Opus.
+
+- **Source of truth:** `profiles/router-workspace/agent.manifest.json` → `claude.model` / `cursor.model`
+- **Headless auto-dispatch:** `cli/lib/models.js` `resolveRouterModel()` reads the manifest and passes `--model` explicitly to every `claude -p` spawn. Never rely on the IDE default.
+- **Subagents spawned by Router** (Architect, Builder, Tester) keep their own manifest models (Sonnet); only the Router session is economy tier.
+
+If the deployed `.claude/agents/router.md` model field differs from the manifest, `npm run doctor` will warn and `npm run deploy` will fix it.
 
 ## Boundary
 

@@ -81,6 +81,33 @@ The team lead should never have to say "try harder."
 
 ---
 
+## Batch Checkpoint Rule
+
+During any automation run involving multiple sequential agent dispatches, write a WAL checkpoint after every ≤5 completed steps — not only at milestones like qa-passed or merged.
+
+### Checkpoint format
+
+Write to `memory/architect.md` HOT section:
+
+```
+## Automation Checkpoint — [timestamp]
+Completed: task_N (outcome), task_M (outcome)
+Remaining: task_P, task_Q, task_R
+Next dispatch: task_P
+```
+
+### Recovery pattern
+
+On session resume after an interruption (rate limit, session end, compaction):
+
+1. Read HOT section — look for the most recent Automation Checkpoint entry.
+2. If found: dispatch from `Next dispatch`. Do not re-run completed items.
+3. If not found: re-derive current state from GitHub issue/PR labels via `gh issue list`.
+
+The ≤5 cadence is a hard ceiling, not a target. Write earlier if a significant state change (fail, park, escalation) occurs before the 5-step mark.
+
+---
+
 ## Self-Improvement Guardrails
 
 ### ADL Protocol (Anti-Drift Limits)

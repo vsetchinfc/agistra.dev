@@ -6,7 +6,7 @@ argument-hint: "Project directory or specific module to assess"
 
 # Debug Perspective (DBG)
 
-Evaluates how much latent technical debt and reliability risk exists in the production codebase. Assigns a score from 0.0 to 1.0 across two dimensions.
+Evaluates how much latent technical debt and reliability risk exists in the production codebase. Assigns a score from 0.0 to 1.0 across five dimensions.
 
 ## Dimensions
 
@@ -22,10 +22,25 @@ Evaluates how much latent technical debt and reliability risk exists in the prod
 - 6+ calls = medium-priority finding
 - Test files are excluded
 
+**Error handling hygiene** — Are errors surfaced rather than silently swallowed?
+- Look for: `catch {}` with no logging, `catch (e) {}` that swallows the error, `.catch(() => {})` no-ops
+- Score: 1.0 if no silent swallows, 0.5 if 1–3 found, 0.0 if 4+
+- Finding priority: high (silent swallows hide production failures)
+
+**Type-safety escapes** — Are type bypasses minimised?
+- Look for: `as any`, `// @ts-ignore`, `// @ts-nocheck`, `// eslint-disable`
+- Score: max(0, 1 - count / 5)
+- Finding priority: medium
+
+**Observable failure modes** — Can operators see failures from outside the module?
+- Heuristic: presence of structured logging, error event emission, or health-check endpoints
+- Score: 1.0 if at least one observable output exists per module boundary, 0.5 if partial, 0.0 if none
+- Finding priority: medium
+
 ## Scoring
 
 ```
-dbg_score = (todo_score + log_score) / 2
+dbg_score = (todo_score + log_score + error_score + typesafe_score + observable_score) / 5
 ```
 
 Score interpretation:
@@ -41,6 +56,9 @@ Score interpretation:
 | TODO/FIXME markers with FIXME/BUG type | high |
 | TODO/FIXME markers (TODO/HACK only) | medium |
 | > 5 console.log calls in production code | medium |
+| Silent error swallows in catch blocks | high |
+| Type-safety escape hatches (as any, @ts-ignore) | medium |
+| No observable failure output in module | medium |
 
 ## Agent Analysis Guide
 
@@ -50,8 +68,10 @@ When performing a manual DBG analysis:
 2. Group markers by severity — FIXME/BUG are active defects or known failures, TODO are deferred work
 3. For each FIXME/BUG: determine if it is blocking user-facing functionality
 4. Search for console.log/warn/error in production source — these should be replaced by a structured logger
-5. Check error handling: look for catch blocks that silently swallow errors (`catch {}` with no logging)
-6. Look for `as any` or `// @ts-ignore` — each one is a type-safety escape hatch hiding a potential bug
-7. Identify functions that can throw but have no error path documentation
+5. Check error handling: look for catch blocks that silently swallow errors (`catch {}` with no logging, `.catch(() => {})` no-ops)
+6. Look for `as any`, `// @ts-ignore`, `// @ts-nocheck`, or `// eslint-disable` — each one is a type-safety escape hatch hiding a potential bug
+7. Identify whether each module boundary has at least one observable failure output: structured logging, error event emission, or a health-check endpoint
 
-Output: ranked list of debug findings — FIXME/BUG first, then TODO density by module, then logging and type-safety escapes.
+Output: ranked list of debug findings — FIXME/BUG first, then TODO density by module, then silent swallows, then logging and type-safety escapes, then observability gaps.
+
+When debugging failures are found, apply the Root Before Repair (RBR) protocol from `skills/agent-foundations/SKILL.md` — confirm root cause with evidence before proposing a fix.

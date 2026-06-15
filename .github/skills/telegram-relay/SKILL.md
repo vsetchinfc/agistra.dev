@@ -6,7 +6,7 @@ argument-hint: "Inbound Telegram message, remote agent request, outbound state t
 
 # Telegram Relay
 
-Use this skill when Router needs to bridge your team and the remote team across Telegram. The skill defines Router's behaviour rules on top of a Telegram relay infrastructure. It does NOT implement the bridge — that lives in the Telegram bot/runtime layer configured for your workspace.
+Use this skill when Router needs to bridge your team and the remote team across Telegram. The skill defines Router's behaviour rules on top of the hub relay daemon (`cli/relay/`). Router calls `relay_send` for outbound; inbound arrives as parsed jobs via `relay_inbox_peek` (task_33).
 
 ## Scope
 
@@ -16,6 +16,8 @@ Use this skill when Router needs to bridge your team and the remote team across 
 ## Channel
 
 - One shared Telegram group where Router (your team's bot) and the remote agent both operate.
+- **Inbound addressing:** remote team messages must start with Router's configured display name (from `agents.router.displayName`, e.g. `Atlas, …`) or `Router, …` when no display name is set. The relay daemon ignores group messages without this salutation.
+- **Outbound addressing:** every `relay_send` body is prefixed with the remote agent's name (from `remoteTeam.agentName`, e.g. `Max, …`) by the daemon when missing.
 - The team lead is in the channel for awareness; team-lead-only escalations go via `memory/router.md` HOT and surface at morning-standup or end-of-day dreaming.
 
 ## Inbound — Remote Agent to Your Team
@@ -69,7 +71,7 @@ If the remote agent requests actual test execution, Tester's response is a queue
 
 ### Reply composition
 
-Router takes the subagent response, applies the information-classification check (see below), then hands the message back to the runtime to post. The reply attributes the originating agent (e.g., `"Builder: ..."`, `"Tester: ..."`).
+Router takes the subagent response, applies the information-classification check (see below), then calls `relay_send({ text })` to post. The reply attributes the originating agent (e.g., `"Builder: ..."`, `"Tester: ..."`).
 
 ## Outbound — Builder / Tester to Remote Agent
 
@@ -79,11 +81,11 @@ Outbound is **state-machine driven**, not free-form messaging. Builder or Tester
 
 | State transition | Sending agent | Notification template |
 | ---------------- | ------------- | --------------------- |
-| any → `state:ready-for-implementation` on a delegated ticket | Builder | "Ticket #N ready for remote agent to implement. `<link>`" |
-| any → `state:ready-for-qa` on a delegated ticket | Builder | "Ticket #N in state:ready-for-qa, please pick up first-pass QA. `<link>`" |
-| `state:ready-for-qa` → `state:changes-requested` (Tester-side defect) | Tester | "Ticket #N retest failed, defects on report. `<link>`" |
-| `state:ready-for-qa` → `state:qa-passed` | Tester | "Ticket #N retest passed clean." |
-| any → `state:blocked` requiring remote team input | Builder | "Ticket #N blocked on `<reason>`. Need `<input>`." |
+| any → `state:ready-for-implementation` on a delegated ticket | Builder | "Max, Ticket #N ready for remote agent to implement. `<link>`" |
+| any → `state:ready-for-qa` on a delegated ticket | Builder | "Max, Ticket #N in state:ready-for-qa, please pick up first-pass QA. `<link>`" |
+| `state:ready-for-qa` → `state:changes-requested` (Tester-side defect) | Tester | "Max, Ticket #N retest failed, defects on report. `<link>`" |
+| `state:ready-for-qa` → `state:qa-passed` | Tester | "Max, Ticket #N retest passed clean." |
+| any → `state:blocked` requiring remote team input | Builder | "Max, Ticket #N blocked on `<reason>`. Need `<input>`." |
 
 Transitions on non-delegated tickets do not generate Telegram notifications.
 
@@ -97,7 +99,7 @@ Router, notify remote agent:
   Context: [one short line if needed]
 ```
 
-### Validation checklist before Router hands the message back to runtime
+### Validation checklist before Router sends outbound
 
 - ticket exists and is in the claimed state
 - the state transition is on the trigger table above
@@ -105,6 +107,33 @@ Router, notify remote agent:
 - no secrets, no credentials, no scope/price/timeline language (information-classification check)
 
 If any check fails, return an error to the dispatching agent. The dispatching agent appends a retry note to its own HOT memory.
+
+### Outbound send sequence (after validation passes)
+
+1. Optionally call `relay_status` — confirm daemon is reachable (`ok: true`).
+2. Compose the message from the trigger-table template for the claimed state transition.
+3. Call `relay_send({ text: "<composed message>" })` — daemon auto-prefixes `remoteTeam.agentName` (e.g. `Max, …`) if Router omitted it.
+4. Return the tool result (message id or error) to the dispatching agent.
+
+Example (Builder dispatch → Router outbound):
+
+```text
+Dispatch from Builder:
+  Router, notify Max:
+    Ticket: #58
+    State: state:ready-for-qa
+    Action: please pick up first-pass QA
+    Context: relay stack E2E probe
+
+Router actions:
+  1. Validate ticket #58 is delegated and transition is on trigger table
+  2. relay_status → ok
+  3. relay_send({ text: "Ticket #58 in state:ready-for-qa, please pick up first-pass QA. <link>" })
+     → daemon sends: "Max, Ticket #58 in state:ready-for-qa, please pick up first-pass QA. <link>"
+  4. Reply to Builder: sent (message_id …) or error with retry note
+```
+
+See `docs/relay-outbound-runbook.md` for full manual E2E steps.
 
 ## Information Classification
 
@@ -128,7 +157,7 @@ The ticket itself is the audit. Builder and Tester comment on the ticket in thei
 | ------- | -------- |
 | Unknown sender | Do NOT reply on channel. Append to `memory/router.md` HOT; surfaces to the team lead at morning-standup or dreaming. |
 | Telegram unreachable inbound | Runtime queues. Router takes no action until invoked with a parsed message. |
-| Telegram unreachable outbound | Return error to the dispatching agent. The dispatching agent appends a retry note to its own HOT. |
+| Telegram unreachable outbound | `relay_send` returns error. Return error to the dispatching agent. The dispatching agent appends a retry note to its own HOT. |
 | Ambiguous reference (e.g., "the ticket") | Ask one concise clarifying question via the runtime; no subagent spawn until resolved. |
 | Classification failure | Escalate to Router HOT; surfaces at next standup or dreaming. No guess. |
 

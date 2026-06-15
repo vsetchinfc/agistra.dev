@@ -18,6 +18,8 @@ const consultingRoot = path.resolve(__dirname, '..');
 // sibling project repos live at: workspaceRoot/<project-name>/
 const workspaceRoot = path.resolve(consultingRoot, '..');
 
+const BOOLEAN_FLAGS = new Set(['advance', 'list', 'launch', 'dry-run']);
+
 function parseArgs(argv) {
 	const result = {};
 	for (let i = 0; i < argv.length; i++) {
@@ -25,13 +27,20 @@ function parseArgs(argv) {
 		if (arg.startsWith('--')) {
 			const key = arg.slice(2);
 			const next = argv[i + 1];
-			result[key] = (next && !next.startsWith('--')) ? next : true;
-			if (next && !next.startsWith('--')) i++;
+			if (BOOLEAN_FLAGS.has(key)) {
+				result[key] = true;
+			} else {
+				result[key] = (next && !next.startsWith('--')) ? next : true;
+				if (next && !next.startsWith('--')) i++;
+			}
 		} else if (!result._command) {
 			result._command = arg;
 		} else if (!result._project) {
 			// second positional = project name (enables: npm run scan vscode-ai-fleet)
 			result._project = arg;
+		} else if (!result._task) {
+			// third positional = task number or slug (enables: npm run advance -- <project> 35)
+			result._task = arg;
 		}
 	}
 	return result;
@@ -52,7 +61,7 @@ if (command === 'dispatch') {
 	const advance = args.advance === true;
 	const list    = args.list    === true;
 	const launch  = args.launch  === true;
-	const task    = typeof args.task === 'string' ? args.task : null;
+	const task    = typeof args.task === 'string' ? args.task : args._task ?? null;
 	dispatch({ projectsRoot, skillsRoot, project, advance, list, launch, projectRoot, task });
 
 } else if (command === 'scan') {
@@ -64,7 +73,9 @@ if (command === 'dispatch') {
 		'Usage:',
 		'  node cli/index.js dispatch [<project>]                           # show current increment prompt',
 		'  node cli/index.js dispatch <project> --list                     # show all project queues',
-		'  node cli/index.js dispatch <project> --advance                  # mark done, show next',
+		'  node cli/index.js dispatch <project> --advance                  # mark lowest todo done, show next',
+		'  node cli/index.js dispatch <project> --advance --task <N>     # mark task N done, show next',
+		'  node cli/index.js dispatch <project> --advance <N>            # same (npm: advance -- <project> <N>)',
 		'  node cli/index.js dispatch <project> --launch                   # launch Claude in the project dir',
 		'  node cli/index.js dispatch <project> --task <num-or-slug>         # dispatch a specific task',
 		'  node cli/index.js scan     <project>             # scan project and generate increments',
@@ -73,7 +84,7 @@ if (command === 'dispatch') {
 		'Or via npm scripts:',
 		'  npm run list',
 		'  npm run dispatch <project>',
-		'  npm run advance  <project>',
+		'  npm run advance  <project> [taskN]',
 		'  npm run launch   <project>',
 		'  npm run scan     <project>',
 		'',

@@ -11,9 +11,6 @@
     "scan": "node cli/index.js scan",
     "relay": "node cli/relay/telegram-relay/daemon.js --hub .",
     "relay:status": "node cli/relay/telegram-relay/status.js --hub .",
-    "relay:stop": "node cli/relay/telegram-relay/stop.js --hub .",
-    "test": "node --test test/**/*.test.js test/**/**/*.test.js",
-    "deploy:dist": "node --check cli/relay/core/logger.js cli/relay/core/config.js cli/relay/adapters/claude-code.js cli/relay/telegram-relay/daemon.js",
     "export": "python tools/export-letter.py",
     "export:all": "python tools/export-letter.py --all"
   }

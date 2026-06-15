@@ -10,9 +10,9 @@ import { acquireDaemonLock } from './lock.js';
 import { startPoller } from './poll.js';
 import { createHttpServer } from './http.js';
 import { InboundQueue } from '../core/queue.js';
+import { createDaemonLogger } from '../core/logger.js';
 import { postInboundComment, shouldNotifyGithub } from '../adapters/github.js';
 import { shouldDispatchClaude, dispatchRouter, resetStaleJobs } from '../adapters/claude-code.js';
-import { createDaemonLogger } from '../core/logger.js';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
@@ -28,8 +28,6 @@ try {
 	process.exit(1);
 }
 
-const logger = createDaemonLogger(hubRoot);
-
 let lock;
 try {
 	lock = acquireDaemonLock({ hubRoot });
@@ -37,6 +35,8 @@ try {
 	process.stderr.write(`relay daemon: ${err.message}\n`);
 	process.exit(1);
 }
+
+const logger = createDaemonLogger(hubRoot);
 
 const queue = new InboundQueue({ hubRoot });
 

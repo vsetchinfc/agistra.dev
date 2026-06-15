@@ -5,6 +5,7 @@ import {
 	findTaskByQuery,
 	listAllTasks,
 	changeTaskStatus,
+	projectDirFromTaskPath,
 	buildDispatchPrompt,
 } from './lib/tasks.js';
 
@@ -16,7 +17,7 @@ import {
  *   projectsRoot  string   root dir containing project subdirectories
  *   skillsRoot    string   root dir containing skill directories
  *   project       string   target a specific project by name (optional)
- *   advance       boolean  rename current _todo_ → _done_, then show next
+ *   advance       boolean  rename current _todo_ → _done_ in done/, then show next
  *   list          boolean  show all projects and their pending task counts
  *   launch        boolean  start claude in projectRoot instead of printing prompt
  *   projectRoot   string   absolute path to the sibling project repo (used with launch)
@@ -56,7 +57,7 @@ export function dispatch({ projectsRoot, skillsRoot, project, advance, list, lau
 		const donePath = changeTaskStatus(taskPath);
 		process.stderr.write(`\n[dispatch] Done: ${path.basename(donePath)}\n`);
 
-		const next = findCurrentTask(path.dirname(donePath));
+		const next = findCurrentTask(projectDirFromTaskPath(taskPath));
 		if (!next) {
 			process.stderr.write('[dispatch] All tasks complete for this project.\n\n');
 			return;

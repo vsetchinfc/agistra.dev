@@ -107,10 +107,13 @@ export function acquireDispatchLock({ hubRoot, fsMod = fs }) {
  * @param {string} options.profilesRoot  Absolute path to setchin-agent-profiles repo root.
  * @param {typeof nodeSpawn} [options.spawnFn]   Injectable for testing.
  * @param {typeof fs} [options.fsMod]             Injectable for testing.
+ * @param {() => Date} [options.nowFn]            Injectable clock for logger (testing).
  * @returns {boolean} true when a spawn was started, false when skipped.
  */
-export async function dispatchRouter({ job, config, hubRoot, profilesRoot, spawnFn = nodeSpawn, fsMod = fs }) {
-	const logger = createDaemonLogger(hubRoot, { fsMod });
+export async function dispatchRouter({ job, config, hubRoot, profilesRoot, spawnFn = nodeSpawn, fsMod = fs, nowFn }) {
+	const loggerOpts = nowFn ? { fsMod, nowFn } : { fsMod };
+	const logger = createDaemonLogger(hubRoot, loggerOpts);
+
 	const lock = acquireDispatchLock({ hubRoot, fsMod });
 	if (!lock.acquired) {
 		logger.log(`job=${job.id} skipped — lock held`);
@@ -189,4 +192,3 @@ export function resetStaleJobs({ queue, processingTimeoutSec, hubRoot, fsMod = f
 
 	return resetCount;
 }
-

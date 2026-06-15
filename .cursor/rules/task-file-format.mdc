@@ -53,10 +53,18 @@ Files move through states by filename prefix rename:
 ```
 task_N_todo_<slug>.md       ← not started
 task_N_in_progress_<slug>.md  ← Builder active
-task_N_done_<slug>.md       ← QA passed, closed
+task_N_done_<slug>.md       ← QA passed, closed (lives in projects/<project>/done/)
 ```
 
-Use `npm run advance -- <project>` to advance the current task automatically.
+Use `npm run advance -- <project>` to advance the lowest pending task automatically (renames `_todo_` → `_done_` and moves the file into `done/`).
+
+Target a specific task by number or slug:
+
+```bash
+npm run advance -- setchin-agent-profiles 35
+npm run advance -- setchin-agent-profiles relay-wizard
+node cli/index.js dispatch setchin-agent-profiles --advance --task 35
+```
 
 ## Who does what
 

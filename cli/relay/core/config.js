@@ -14,13 +14,13 @@ const DEFAULT_DAEMON_PORT = 17391;
  * @property {number} dispatchTimeoutSec
  * @property {number} recoveryPollSec
  * @property {number} processingTimeoutSec
+ * @property {number} logRetentionDays
  * @property {boolean} remoteTeamEnabled
  * @property {string[]} allowedSenders
  * @property {string} routerDisplayName
  * @property {string} remoteAgentName
  * @property {string} routerTelegramHandle
  * @property {string} [githubTrackingIssue]
- * @property {number} logRetentionDays
  */
 
 /**
@@ -67,6 +67,9 @@ export function loadRelayConfig({ hubRoot, fsMod = fs }) {
 		dispatchTimeoutSec: Number(relay.dispatchTimeoutSec) || 300,
 		recoveryPollSec: Number(relay.recoveryPollSec) || 60,
 		processingTimeoutSec: Number(relay.processingTimeoutSec) || 600,
+		logRetentionDays: (Number.isFinite(Number(relay.logRetentionDays)) && Number(relay.logRetentionDays) > 0)
+			? Number(relay.logRetentionDays)
+			: 30,
 		remoteTeamEnabled: Boolean(raw?.remoteTeam?.enabled),
 		allowedSenders: Array.isArray(relay.allowedSenders)
 			? relay.allowedSenders.map(String)
@@ -75,7 +78,6 @@ export function loadRelayConfig({ hubRoot, fsMod = fs }) {
 		remoteAgentName: raw?.remoteTeam?.agentName ?? 'remote agent',
 		routerTelegramHandle: raw?.remoteTeam?.telegram?.handle ?? '',
 		githubTrackingIssue: relay.github?.trackingIssue ?? '',
-		logRetentionDays: Number(relay.logRetentionDays) > 0 ? Number(relay.logRetentionDays) : 30,
 	};
 }
 

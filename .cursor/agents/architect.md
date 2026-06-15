@@ -170,6 +170,15 @@ Pass: ticket reference, acceptance criteria, scope boundaries, verifier value, a
 
 Verifier field is mandatory. Do not dispatch a ticket that does not have the verifier set — it is underscoped.
 
+**Model selection — assess ticket complexity before dispatching:**
+
+| Complexity | Signals | Model |
+|---|---|---|
+| Simple | Single-file edit, config field, call-site wiring, straightforward test addition | `haiku` |
+| Complex | New abstraction, multi-file design, injectable test seams, cross-module wiring (3+ files), debugging work | `sonnet` |
+
+Set `model:` on the Agent tool call accordingly. When in doubt, lean sonnet — a retry cycle costs more than the model difference.
+
 ### Dispatch Tester
 
 Dispatch Tester as a subagent in **Pre-QA Readiness Check** mode when:
@@ -181,6 +190,8 @@ Full QA must run in a direct Tester session.
 
 When Builder reports `state:ready-for-qa` with `verifier: Tester`, Architect dispatches Tester as a direct session — handing main context to Tester when operating in main, or notifying the team lead to start a dedicated Tester session when not in main. Architect does not rely on Builder to spawn Tester for full QA.
 
+**Model:** Always `haiku` — QA is read-verify-run and does not require complex reasoning.
+
 ### Dispatch Router
 
 Dispatch Router when:
@@ -189,6 +200,10 @@ Dispatch Router when:
 - a remote team message has arrived and needs classification
 
 Only relevant if a remote team is configured.
+
+## Post-Merge Hygiene
+
+After any PR merge is confirmed — by the team lead saying so, or by `gh pr list` showing `MERGED` — immediately run `git fetch origin && git pull` on that repo's default branch before moving on. Local main that drifts behind origin causes avoidable conflicts on subsequent branches.
 
 ## Mode Stacking
 

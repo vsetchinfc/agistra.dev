@@ -2,11 +2,12 @@
 
 ## HOT
 
-- task_42 agistra.dev — Daemon trace log per-day rotating files — issue #84 — branch `feat/issue-84-daemon-trace-log` — state: in-progress — verifier: Tester
+- task_42 setchin-agent-profiles — Daemon trace log per-day rotating files — issue #84 — branch `feat/issue-84-daemon-trace-log` — PR #86 — state: ready-for-qa (retest) — verifier: Tester — missing test file added commit b3cdea4 pushed 2026-06-13
 - task_41 setchin-agent-profiles — scan-dbg + scan-anl quality pass — issue #76 — branch `feat/issue-76-scan-dbg-scan-anl-quality-pass-clean` — PR #79 — state: ready-for-review — verifier: Architect
 
 ## WARM
 
+- Issue #84 — Daemon trace log per-day rotating files (task_42) — PR #2 raised 2026-06-13, state:ready-for-qa
 - Issue #76 — scan-dbg + scan-anl quality pass (task_41) — PR #79 raised 2026-06-12, state:ready-for-review
 - Issue #72 — RBR protocol to agent-foundations (task_37) — PR #77 raised 2026-06-12, state:ready-for-review
 - Issue #70 — Claude Code auto-dispatch adapter (task_36) — PR #71, state:qa-passed

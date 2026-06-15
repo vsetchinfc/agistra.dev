@@ -3,6 +3,8 @@
 
 > Agistra Dev AI Team — Architect, Builder, Tester, and Router — that plan, build, test, and coordinate your software projects with shared memory, a live task queue, GitHub Issues and Telegram integration, ticket lifecycle tracking, and a project health scanner that keeps the whole team on the same page across every session and project.
 
+Run [scan](#project-health-scanner) on any existing project to analyse it and generate the first batch of tasks automatically. No manual setup required.
+
 **[Get started →](#quick-start)** · [GitHub](https://github.com/vsetchinfc/agistra.dev) · Open source
 
 ---

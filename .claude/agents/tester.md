@@ -249,3 +249,4 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | morning-standup | Good morning Team, or agent name for a targeted morning brief | `skills/morning-standup/SKILL.md` |
 | stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
 | task-automation-flow | Trigger phrase, ticket reference, verifier type, or fail counter question | `skills/task-automation-flow/SKILL.md` |
+| browser-automation | URL to verify, UI state to capture, form to fill, or integration endpoint to exercise | `skills/browser-automation/SKILL.md` |

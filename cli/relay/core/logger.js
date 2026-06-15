@@ -1,98 +1,95 @@
 /**
- * Daemon trace logger — per-day rotating log files in relay/logs/.
+ * Daemon trace logger — per-day rotating log files under relay/logs/.
  *
- * Log path: <hubRoot>/relay/logs/dispatch-YYYY-MM-DD.log  (UTC date)
- * Date is resolved on each log() call so midnight auto-rotates without a timer.
+ * Log path: <hubRoot>/relay/logs/dispatch-YYYY-MM-DD.log (UTC date)
+ * The date is resolved on each log() call — midnight UTC auto-rotates
+ * with no timer required.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 
-const LOG_FILENAME_PATTERN = /^dispatch-(\d{4}-\d{2}-\d{2})\.log$/;
+const LOG_FILENAME_RE = /^dispatch-(\d{4}-\d{2}-\d{2})\.log$/;
 
 /**
- * Return YYYY-MM-DD in UTC for the given timestamp (or now).
+ * Format a Date as a UTC date string: YYYY-MM-DD
  *
- * @param {number} [nowMs]  Override Date.now() for testing.
+ * @param {Date} d
  * @returns {string}
  */
-function utcDateString(nowMs = Date.now()) {
-	return new Date(nowMs).toISOString().slice(0, 10);
+function toUtcDateStr(d) {
+	const yyyy = d.getUTCFullYear();
+	const mm   = String(d.getUTCMonth() + 1).padStart(2, '0');
+	const dd   = String(d.getUTCDate()).padStart(2, '0');
+	return `${yyyy}-${mm}-${dd}`;
 }
 
 /**
- * Resolve the log file path for a given UTC date.
+ * Create a daemon logger scoped to a hub root.
  *
- * @param {string} logsDir
- * @param {string} dateStr   YYYY-MM-DD
- * @returns {string}
- */
-export function resolveLogPath(logsDir, dateStr) {
-	return path.join(logsDir, `dispatch-${dateStr}.log`);
-}
-
-/**
- * Create a daemon logger that writes to relay/logs/dispatch-YYYY-MM-DD.log.
- *
- * @param {string} hubRoot  Absolute hub root.
- * @param {object} [options]
- * @param {typeof fs} [options.fsMod]  Injectable for testing.
- * @param {() => number} [options.nowFn]  Injectable clock for testing.
+ * @param {string} hubRoot  Absolute path to the hub workspace directory.
+ * @param {object} [opts]
+ * @param {() => Date} [opts.nowFn]   Injectable clock; defaults to `() => new Date()`.
+ * @param {typeof fs}  [opts.fsMod]   Injectable fs module; defaults to `node:fs`.
  * @returns {{ log: (message: string) => void, pruneOldLogs: (olderThanMs: number) => number }}
  */
-export function createDaemonLogger(hubRoot, { fsMod = fs, nowFn = () => Date.now() } = {}) {
+export function createDaemonLogger(hubRoot, { nowFn = () => new Date(), fsMod = fs } = {}) {
 	const logsDir = path.join(hubRoot, 'relay', 'logs');
 
-	function ensureLogsDir() {
-		fsMod.mkdirSync(logsDir, { recursive: true });
-	}
-
+	/**
+	 * Append a timestamped message to today's UTC log file.
+	 * Creates relay/logs/ if absent. Non-fatal on write error.
+	 *
+	 * @param {string} message
+	 */
 	function log(message) {
 		try {
-			ensureLogsDir();
-			const dateStr = utcDateString(nowFn());
-			const logPath = resolveLogPath(logsDir, dateStr);
-			fsMod.appendFileSync(logPath, `[${new Date(nowFn()).toISOString()}] ${message}\n`);
+			fsMod.mkdirSync(logsDir, { recursive: true });
+			const now = nowFn();
+			const dateStr = toUtcDateStr(now);
+			const logPath = path.join(logsDir, `dispatch-${dateStr}.log`);
+			fsMod.appendFileSync(logPath, `[${now.toISOString()}] ${message}\n`);
 		} catch {
-			// non-fatal — logging errors must not break the daemon
+			// non-fatal — don't let logging errors break the daemon
 		}
 	}
 
 	/**
-	 * Delete log files in relay/logs/ matching dispatch-YYYY-MM-DD.log whose
-	 * date is older than Date.now() - olderThanMs. Skips today's file.
-	 * Non-fatal on individual delete errors.
+	 * Delete log files older than `olderThanMs` milliseconds.
+	 * Skips files whose parsed date is today (UTC). Non-fatal on individual delete error.
 	 *
 	 * @param {number} olderThanMs
 	 * @returns {number} Count of files deleted.
 	 */
 	function pruneOldLogs(olderThanMs) {
 		let deleted = 0;
-		const todayStr = utcDateString(nowFn());
-		const threshold = nowFn() - olderThanMs;
+		const todayStr = toUtcDateStr(nowFn());
+		const cutoff = nowFn().getTime() - olderThanMs;
 
-		let entries;
+		let files;
 		try {
-			entries = fsMod.readdirSync(logsDir);
+			files = fsMod.readdirSync(logsDir);
 		} catch {
-			// relay/logs does not exist yet — nothing to prune
+			// Directory absent or unreadable — nothing to prune
 			return 0;
 		}
 
-		for (const entry of entries) {
-			const match = LOG_FILENAME_PATTERN.exec(entry);
+		for (const file of files) {
+			const match = LOG_FILENAME_RE.exec(file);
 			if (!match) continue;
-			const fileDateStr = match[1];
-			if (fileDateStr === todayStr) continue; // never delete today's file
 
-			const fileTs = new Date(`${fileDateStr}T00:00:00Z`).getTime();
-			if (fileTs < threshold) {
-				try {
-					fsMod.unlinkSync(path.join(logsDir, entry));
-					deleted++;
-				} catch {
-					// non-fatal — skip unreadable or locked files
-				}
+			const dateStr = match[1];
+			if (dateStr === todayStr) continue;
+
+			// Parse the file date as UTC midnight
+			const fileTime = Date.parse(`${dateStr}T00:00:00.000Z`);
+			if (isNaN(fileTime) || fileTime >= cutoff) continue;
+
+			try {
+				fsMod.unlinkSync(path.join(logsDir, file));
+				deleted++;
+			} catch {
+				// non-fatal — skip files that cannot be deleted
 			}
 		}
 

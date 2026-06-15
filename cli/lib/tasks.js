@@ -6,6 +6,21 @@ function taskNum(filename) {
 	return m ? parseInt(m[1], 10) : 0;
 }
 
+function listMdFiles(dir) {
+	if (!fs.existsSync(dir)) return [];
+	return fs.readdirSync(dir).filter(f => f.endsWith('.md'));
+}
+
+/** Project root for a task file (handles tasks already under projects/<name>/done/). */
+export function projectDirFromTaskPath(taskPath) {
+	const dir = path.dirname(taskPath);
+	return path.basename(dir) === 'done' ? path.dirname(dir) : dir;
+}
+
+export function doneTasksDir(projectDir) {
+	return path.join(projectDir, 'done');
+}
+
 /**
  * Parse YAML-like frontmatter from a markdown file.
  * Supports scalar string values and simple string arrays (  - item).
@@ -61,12 +76,20 @@ export function listAllTasks(projectsRoot) {
 		.sort((a, b) => a.name.localeCompare(b.name))
 		.map(e => {
 			const projectDir = path.join(projectsRoot, e.name);
-			const files = fs.readdirSync(projectDir).filter(f => f.endsWith('.md')).sort((a, b) => taskNum(a) - taskNum(b));
+			const rootFiles = listMdFiles(projectDir);
+			const doneFiles = listMdFiles(doneTasksDir(projectDir));
+			const todos = rootFiles
+				.filter(f => f.match(/^task_\d+_todo_/))
+				.sort((a, b) => taskNum(a) - taskNum(b));
+			const dones = [
+				...rootFiles.filter(f => f.match(/^task_\d+_done_/)),
+				...doneFiles.filter(f => f.match(/^task_\d+_done_/)),
+			].sort((a, b) => taskNum(a) - taskNum(b));
 			return {
 				project: e.name,
 				projectDir,
-				todos: files.filter(f => f.match(/^task_\d+_todo_/)),
-				dones: files.filter(f => f.match(/^task_\d+_done_/)),
+				todos,
+				dones,
 			};
 		});
 }
@@ -78,11 +101,18 @@ export function listAllTasks(projectsRoot) {
  */
 export function findTaskByQuery(projectDir, query) {
 	if (!fs.existsSync(projectDir)) return null;
-	const num = parseInt(query, 10);
 	const files = fs.readdirSync(projectDir)
 		.filter(f => f.match(/^task_\d+_todo_/));
-	const match = files.find(f => taskNum(f) === num);
-	return match ? path.join(projectDir, match) : null;
+
+	const num = parseInt(query, 10);
+	if (!Number.isNaN(num)) {
+		const byNum = files.find(f => taskNum(f) === num);
+		if (byNum) return path.join(projectDir, byNum);
+	}
+
+	const needle = String(query).toLowerCase();
+	const bySlug = files.find(f => f.toLowerCase().includes(needle));
+	return bySlug ? path.join(projectDir, bySlug) : null;
 }
 
 /**
@@ -96,11 +126,15 @@ export function loadSkillContent(skillsRoot, skillName) {
 }
 
 /**
- * Rename a task file from _todo to _done in place.
+ * Rename a task file from _todo to _done and move it to projects/<project>/done/.
+ * Legacy _done_ files left in the project root are still listed by listAllTasks.
  * Returns the new (done) file path.
  */
 export function changeTaskStatus(taskPath) {
-	const donePath = taskPath.replace('_todo_', '_done_');
+	const projectDir = projectDirFromTaskPath(taskPath);
+	const doneDir = doneTasksDir(projectDir);
+	fs.mkdirSync(doneDir, { recursive: true });
+	const donePath = path.join(doneDir, path.basename(taskPath).replace('_todo_', '_done_'));
 	fs.renameSync(taskPath, donePath);
 	return donePath;
 }

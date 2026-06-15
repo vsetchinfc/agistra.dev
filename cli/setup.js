@@ -14,7 +14,8 @@ import { stdin as input, stdout as output } from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { wireTelegramMcp } from './wizard.js';
+import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
+import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
 
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
@@ -173,6 +174,8 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 		const prevTgHandle = prevRemoteTeam.telegram?.handle ?? '';
 		const prevTgGroupId = prevTelegram.relay_group_id ?? '';
 		const prevBotToken = prevTelegram.bot_token ?? '';
+		const prevRelay = prev.relay ?? {};
+		const prevTrackingIssue = prevRelay.github?.trackingIssue ?? '';
 
 		// ── Prompts ────────────────────────────────────────────────────────────────
 
@@ -234,11 +237,38 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 			configureGithub = await askYN('Generate GitHub Copilot instructions?', true);
 		}
 
+		let relayBlock = { ...prevRelay };
+
+		if (platforms.github && remoteTeam.enabled) {
+			line('GitHub relay ');
+			const trackingIssue = await ask(
+				'Relay tracking issue (owner/repo#N)',
+				prevTrackingIssue,
+			);
+			if (trackingIssue) {
+				relayBlock.github = { trackingIssue };
+			}
+			if (!platforms.claude && !platforms.cursor) {
+				relayBlock.primaryRuntime = 'github';
+			}
+			process.stdout.write(
+				'  Install workflow: copy cli/relay/adapters/github-action.yml to .github/workflows/relay-notify.yml\n',
+			);
+		}
+
+		if (platforms.claude && remoteTeam.enabled && !relayBlock.primaryRuntime) {
+			relayBlock.primaryRuntime = 'claude-code';
+			if (relayBlock.autoDispatch === undefined) {
+				relayBlock.autoDispatch = false;
+			}
+		}
+
 		const config = {
 			user: { name: userName, role: userRole },
 			org: orgName,
 			remoteTeam,
 			...(telegramMcp ? { telegram: telegramMcp } : {}),
+			...(Object.keys(relayBlock).length > 0 ? { relay: relayBlock } : {}),
 		};
 
 		// Preserve existing agents block (preserves display names across re-runs)
@@ -257,16 +287,22 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 			gitignoreCovers = gi.split('\n').some(l => l.trim() === 'workspace.config.json');
 		}
 
-		// Wire Telegram MCP into detected platform configs
+		// Wire relay MCP into detected platform configs
 		if (telegramMcp) {
 			const targets = [
 				...(platforms.claude ? ['claude-code'] : []),
 				...(platforms.cursor ? ['cursor'] : []),
 			];
-			line('Telegram MCP ');
-			const { wrote } = wireTelegramMcp({ config, workspaceRoot: cliOutputRoot, targets });
+			line('Relay MCP ');
+			const { wrote } = wireRelayMcp({ config, workspaceRoot: cliOutputRoot, targets });
 			if (wrote.length > 0) {
 				for (const f of wrote) process.stdout.write(`  MCP wired → ${f}\n`);
+			}
+			if (platforms.claude) {
+				const settingsPath = path.join(cliOutputRoot, '.claude', 'settings.json');
+				const existing = readJsonSafe(settingsPath, fsMod) ?? { enableAllProjectMcpServers: true };
+				writeJsonSafe(settingsPath, mergeRelaySessionStartHook(existing), fsMod);
+				process.stdout.write(`  Relay autostart hook → ${settingsPath}\n`);
 			}
 		}
 

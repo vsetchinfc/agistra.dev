@@ -31,6 +31,29 @@ Every ticket has acceptance criteria. Architect specifies the verifier when crea
 
 The verifier is recorded on the GitHub issue at ticket creation and drives the post-completion branch in the flow.
 
+## Permission Preflight
+
+Before dispatching any subagent — single or batch — confirm the required tools are permitted in the current session. A subagent that lacks a required tool fails silently; the pipeline produces no output and the failure is invisible until the user inspects.
+
+### Required tool sets
+
+| Agent | Minimum required tools |
+|-------|----------------------|
+| Builder | Read, Edit, Write, Bash, Glob, Grep |
+| Tester | Read, Bash, Glob, Grep |
+| Router | Read, Bash, Glob, Grep, mcp__relay__* (when relay is configured) |
+
+### Preflight protocol
+
+Run before every dispatch — both single-agent and batch:
+
+1. Identify required tools for each agent type in the dispatch.
+2. Confirm all required tools are permitted in the current session context.
+3. If any required tool is blocked: **halt**. Report which tools are missing and surface to the team lead. Do not proceed silently.
+4. Log the preflight outcome (pass/fail + blocked tool list if any) before issuing the first dispatch.
+
+The preflight step does not require team lead involvement when all tools pass — it is a guard, not a gate.
+
 ## Happy Path
 
 ### verifier: Tester
@@ -288,6 +311,8 @@ All agents write to their own memory file before every response during an automa
 - Tester writes to `memory/tester.md`
 
 Each write must reflect the current ticket state and any decisions made in that turn. An agent that has not updated its memory file has not completed its turn.
+
+During batch runs, apply the Batch Checkpoint Rule from `proactive-agent`: write a progress checkpoint after every ≤5 completed steps so a resumed session continues from the last checkpoint rather than restarting.
 
 ## Hard Rules
 
