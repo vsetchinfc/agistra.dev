@@ -10,6 +10,17 @@
 					}
 				]
 			}
+		],
+		"SessionStart": [
+			{
+				"matcher": "",
+				"hooks": [
+					{
+						"type": "command",
+						"command": "node tools/ensure-relay-daemon.js"
+					}
+				]
+			}
 		]
 	},
 	"enableAllProjectMcpServers": true

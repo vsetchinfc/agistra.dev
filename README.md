@@ -1,7 +1,8 @@
 # Agistra Dev (V1.0.0)
 
-
 > Agistra Dev AI Team — Architect, Builder, Tester, and Router — that plan, build, test, and coordinate your software projects with shared memory, a live task queue, GitHub Issues and Telegram integration, ticket lifecycle tracking, and a project health scanner that keeps the whole team on the same page across every session and project.
+
+Run [scan](#project-health-scanner) on any existing project to analyse it and generate the first batch of tasks automatically. No manual setup required.
 
 **[Get started →](#quick-start)** · [GitHub](https://github.com/vsetchinfc/agistra.dev) · Open source
 
@@ -12,6 +13,7 @@
 - [The problem with AI-assisted development today](#the-problem-with-ai-assisted-development-today)
 - [How Agistra solves it](#how-agistra-solves-it)
 - [The team](#the-team)
+- [Built with Agistra](#built-with-agistra)
 - [Quick start](#quick-start)
 - [CLI reference](#cli-reference)
 - [Project health scanner](#project-health-scanner)
@@ -64,6 +66,8 @@ Agistra gives AI a team structure with memory, a shared task queue, and a ticket
 
 **Project health scanner.** Five-perspective automated scoring surfaces what's degrading before it becomes a problem — test coverage, CI/CD gaps, debug hygiene, documentation, infrastructure readiness.
 
+**Human authority at the trust boundaries.** Agents handle the execution loop. You approve scope before Builder starts, own every merge and close decision, and stay the only authority on auth, payments, migrations, and infrastructure. Sensitive work never enters the automated lane. The third consecutive failure on any ticket parks unconditionally — the system stops and waits for your call.
+
 **GitHub Issues + Telegram integration.** Tickets flow from GitHub Issues into the task queue. Telegram relay keeps the remote team in the loop without leaving the workflow.
 
 ---
@@ -81,6 +85,14 @@ Each agent runs in its own Claude Code workspace with its own identity, memory f
 
 ---
 
+## Built with Agistra
+
+![vladsetchin.me preview](assets/vlad.setchin-me.png)
+
+**[vladsetchin.me](https://vladsetchin.me)** — a personal portfolio and blog, planned and built end-to-end through Agistra's own ticket workflow: GitHub issues, task files in `projects/vladsetchin.me/`, feature branches, and PRs, the same loop described above. Design decisions, content passes, and ongoing iteration all run through the same Architect → Builder → Tester lifecycle as any other project added with `npm run scan`.
+
+---
+
 ## Quick start
 
 ### 1. Clone or fork the hub
@@ -89,7 +101,6 @@ Each agent runs in its own Claude Code workspace with its own identity, memory f
 git clone https://github.com/vsetchinfc/agistra.dev.git my-hub
 cd my-hub
 ```
-
 
 ### 2. Claude, Cursor, Github Copilot
 
@@ -254,6 +265,19 @@ memory/
 ```
 
 Agents read their memory file at session start and update it at session end. HOT items surface in the morning briefing. WARM items inform planning. COLD items are archived or dropped.
+
+---
+
+## Where you stay in control
+
+| Decision | Owner | Why |
+| --- | --- | --- |
+| Approve scope before work starts | You | Direction is yours |
+| Auth, payments, migrations, secrets, infra | You | Never delegated |
+| Final merge and close | You | No auto-merge exists |
+| Third consecutive failure on a ticket | You | System parks, waits for your call |
+
+Everything between "approved to start" and "ready to merge" runs autonomously. The gates at either end are yours.
 
 ---
 

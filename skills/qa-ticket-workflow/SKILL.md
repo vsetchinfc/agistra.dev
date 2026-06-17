@@ -117,14 +117,51 @@ Do not substitute CLI queries for browser verification.
 
 ## GitHub And State Actions
 
+**Mandatory:** Steps 6 and 7 apply to every QA session — CLI/tooling tickets included. A verdict is incomplete until the GitHub comment is posted **and** verified (VBR). Chat-only or memory-only reports do not satisfy the workflow.
+
 ### Step 6 - Post report to GitHub
 
-Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path, then run `gh issue comment --body-file <path>`. Never inline multi-line content with `--body`. Remove the temp file after posting.
+Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path. Never inline multi-line content with `--body`. Remove the temp file after posting.
+
+Post destinations (all that apply):
+
+1. **GitHub issue** — when the ticket references an issue number:
+   ```bash
+   gh issue comment <number> --repo <org/repo> --body-file <path>
+   ```
+2. **GitHub PR** — when a PR is open for the work (even if an issue also exists):
+   ```bash
+   gh pr comment <number> --repo <org/repo> --body-file <path>
+   ```
+   Post the same report to both issue and PR when both exist.
+
+**VBR gate:** After posting, verify the comment is visible:
+```bash
+gh issue view <number> --repo <org/repo> --comments
+gh pr view <number> --repo <org/repo> --comments
+```
+Do not report QA complete until the comment URL or rendered text is confirmed.
+
+For CLI/tooling tickets with no deployed URL, set **Environment:** to `local / CLI` and cite command output or test counts as evidence in the Test Steps table.
 
 ### Step 7 - Align ticket state
 
-- PASS -> `state:qa-passed`
-- FAIL or PARTIAL PASS -> `state:changes-requested`
+**GitHub issue labels** (when issue exists — follow `task-automation-flow` / `profiles/tester-workspace/ROUTING.md`):
+
+- PASS → apply `state:qa-passed` (remove prior state labels)
+- FAIL or PARTIAL PASS → apply `state:changes-requested` and the appropriate `qa-fail-*` label
+
+**Local hub ticket file** (when a task file path was provided, e.g. `projects/<project>/task_N_ready-for-qa_<slug>.md`):
+
+1. Append a `## QA Report` section to the ticket file with the same report content (verdict, AC table, date).
+2. Rename the file to reflect the new state:
+   - PASS → `task_N_done_<slug>.md`
+   - FAIL or PARTIAL PASS → `task_N_changes-requested_<slug>.md`
+   - BLOCKED → leave as `ready-for-qa` and note blocker in the QA Report section
+
+Update the frontmatter `status:` field to match (`state:qa-passed`, `state:changes-requested`, etc.).
+
+**memory/tester.md:** Append a one-line HOT entry with verdict, ticket/PR refs, and GitHub comment URL.
 
 ### Step 8 - Notify Builder on defects
 

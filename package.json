@@ -3,11 +3,14 @@
   "type": "module",
   "scripts": {
     "setup": "node cli/setup.js --output .",
+    "doctor": "node cli/doctor.js",
     "list": "node cli/index.js dispatch --list",
     "dispatch": "node cli/index.js dispatch",
     "advance": "node cli/index.js dispatch --advance",
     "launch": "node cli/index.js dispatch --launch",
     "scan": "node cli/index.js scan",
+    "relay": "node cli/relay/telegram-relay/daemon.js --hub .",
+    "relay:status": "node cli/relay/telegram-relay/status.js --hub .",
     "export": "python tools/export-letter.py",
     "export:all": "python tools/export-letter.py --all"
   }

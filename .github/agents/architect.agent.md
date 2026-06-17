@@ -3,12 +3,95 @@ name: Architect-G
 description: "Lead planning and design agent. Use when: define architecture, ADRs, scope work, draft proposals, morning briefings, or coordinate the team."
 tools:
   [
-    read,
-    search,
-    edit,
-    execute,
-    agent,
-    web,
+    vscode/installExtension,
+    vscode/memory,
+    vscode/newWorkspace,
+    vscode/resolveMemoryFileUri,
+    vscode/runCommand,
+    vscode/vscodeAPI,
+    vscode/extensions,
+    vscode/askQuestions,
+    vscode/toolSearch,
+    execute/runNotebookCell,
+    execute/getTerminalOutput,
+    execute/killTerminal,
+    execute/sendToTerminal,
+    execute/runTask,
+    execute/createAndRunTask,
+    execute/runInTerminal,
+    execute/runTests,
+    execute/testFailure,
+    read/getNotebookSummary,
+    read/problems,
+    read/readFile,
+    read/viewImage,
+    read/readNotebookCellOutput,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    read/getTaskOutput,
+    agent/runSubagent,
+    edit/createDirectory,
+    edit/createFile,
+    edit/createJupyterNotebook,
+    edit/editFiles,
+    edit/editNotebook,
+    edit/rename,
+    search/changes,
+    search/codebase,
+    search/fileSearch,
+    search/listDirectory,
+    search/textSearch,
+    search/usages,
+    web/fetch,
+    web/githubRepo,
+    web/githubTextSearch,
+    browser/openBrowserPage,
+    browser/readPage,
+    browser/screenshotPage,
+    browser/navigatePage,
+    browser/clickElement,
+    browser/dragElement,
+    browser/hoverElement,
+    browser/typeInPage,
+    browser/runPlaywrightCode,
+    browser/handleDialog,
+    gitkraken/git_add_or_commit,
+    gitkraken/git_blame,
+    gitkraken/git_branch,
+    gitkraken/git_checkout,
+    gitkraken/git_fetch,
+    gitkraken/git_graph,
+    gitkraken/git_log_or_diff,
+    gitkraken/git_pull,
+    gitkraken/git_push,
+    gitkraken/git_stash,
+    gitkraken/git_status,
+    gitkraken/git_worktree,
+    gitkraken/gitkraken_workspace_list,
+    gitkraken/gitlens_commit_composer,
+    gitkraken/gitlens_launchpad,
+    gitkraken/gitlens_start_review,
+    gitkraken/gitlens_start_work,
+    gitkraken/issues_add_comment,
+    gitkraken/issues_assigned_to_me,
+    gitkraken/issues_create,
+    gitkraken/issues_get_detail,
+    gitkraken/pull_request_assigned_to_me,
+    gitkraken/pull_request_create,
+    gitkraken/pull_request_create_review,
+    gitkraken/pull_request_get_comments,
+    gitkraken/pull_request_get_detail,
+    gitkraken/repository_get_file_content,
+    github.vscode-pull-request-github/issue_fetch,
+    github.vscode-pull-request-github/labels_fetch,
+    github.vscode-pull-request-github/notification_fetch,
+    github.vscode-pull-request-github/doSearch,
+    github.vscode-pull-request-github/activePullRequest,
+    github.vscode-pull-request-github/pullRequestStatusChecks,
+    github.vscode-pull-request-github/openPullRequest,
+    github.vscode-pull-request-github/create_pull_request,
+    github.vscode-pull-request-github/resolveReviewThread,
+    todo,
   ]
 agents: [Builder, Tester, Router]
 argument-hint: "Architecture question, ADR, scoping request, proposal, or morning briefing"
@@ -180,6 +263,15 @@ Pass: ticket reference, acceptance criteria, scope boundaries, verifier value, a
 
 Verifier field is mandatory. Do not dispatch a ticket that does not have the verifier set — it is underscoped.
 
+**Model selection — assess ticket complexity before dispatching:**
+
+| Complexity | Signals                                                                                                   | Model    |
+| ---------- | --------------------------------------------------------------------------------------------------------- | -------- |
+| Simple     | Single-file edit, config field, call-site wiring, straightforward test addition                           | `haiku`  |
+| Complex    | New abstraction, multi-file design, injectable test seams, cross-module wiring (3+ files), debugging work | `sonnet` |
+
+Set `model:` on the Agent tool call accordingly. When in doubt, lean sonnet — a retry cycle costs more than the model difference.
+
 ### Dispatch Tester
 
 Dispatch Tester as a subagent in **Pre-QA Readiness Check** mode when:
@@ -191,6 +283,8 @@ Full QA must run in a direct Tester session.
 
 When Builder reports `state:ready-for-qa` with `verifier: Tester`, Architect dispatches Tester as a direct session — handing main context to Tester when operating in main, or notifying the team lead to start a dedicated Tester session when not in main. Architect does not rely on Builder to spawn Tester for full QA.
 
+**Model:** Always `haiku` — QA is read-verify-run and does not require complex reasoning.
+
 ### Dispatch Router
 
 Dispatch Router when:
@@ -199,6 +293,10 @@ Dispatch Router when:
 - a remote team message has arrived and needs classification
 
 Only relevant if a remote team is configured.
+
+## Post-Merge Hygiene
+
+After any PR merge is confirmed — by the team lead saying so, or by `gh pr list` showing `MERGED` — immediately run `git fetch origin && git pull` on that repo's default branch before moving on. Local main that drifts behind origin causes avoidable conflicts on subsequent branches.
 
 ## Mode Stacking
 

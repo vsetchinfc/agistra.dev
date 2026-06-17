@@ -187,7 +187,10 @@ export function analyzeUsr(root) {
 export function analyzeAnl(root) {
 	const findings = [];
 
-	const hasCi = fs.existsSync(path.join(root, '.github', 'workflows'));
+	// CI/CD — improved: check for test step presence
+	const workflowsDir = path.join(root, '.github', 'workflows');
+	const hasCi = fs.existsSync(workflowsDir);
+	let ciScore = 0;
 	if (!hasCi) {
 		findings.push({
 			id: 'anl-no-ci',
@@ -196,28 +199,53 @@ export function analyzeAnl(root) {
 			description: 'No .github/workflows/ found. Automated checks catch regressions before they reach production.',
 			skill: 'scan-anl', agent: 'architect', mode: 'architecture',
 		});
+	} else {
+		// Check if any workflow file includes a test-run step
+		let hasTestStep = false;
+		try {
+			for (const f of fs.readdirSync(workflowsDir)) {
+				if (!/\.(yml|yaml)$/.test(f)) continue;
+				const content = fs.readFileSync(path.join(workflowsDir, f), 'utf-8');
+				if (/\btest\b/i.test(content)) { hasTestStep = true; break; }
+			}
+		} catch {}
+		if (hasTestStep) {
+			ciScore = 1.0;
+		} else {
+			ciScore = 0.5;
+			findings.push({
+				id: 'anl-ci-no-test-step',
+				priority: 'medium',
+				title: 'CI pipeline is missing a test-run step',
+				description: 'A CI workflow exists but no test step was detected. Add a test step to catch regressions automatically.',
+				skill: 'scan-anl', agent: 'architect', mode: 'architecture',
+			});
+		}
 	}
 
+	// Commit quality — fix rate
 	let commitScore = 1.0;
+	let recentMsgs = [];
 	try {
 		const out = execSync('git log -20 --pretty=format:%s', { cwd: root, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
-		const msgs = out.trim().split('\n').filter(Boolean);
-		if (msgs.length >= 3) {
-			const fixes = msgs.filter(m => /\bfix\b/i.test(m)).length;
-			const fixRate = fixes / msgs.length;
+		recentMsgs = out.trim().split('\n').filter(Boolean);
+		if (recentMsgs.length >= 3) {
+			const fixes = recentMsgs.filter(m => /\bfix\b/i.test(m)).length;
+			const fixRate = fixes / recentMsgs.length;
 			if (fixRate > 0.5) {
 				commitScore = r(1 - fixRate);
 				findings.push({
 					id: 'anl-high-fix-rate',
 					priority: 'medium',
 					title: 'High bug-fix rate in recent commits',
-					description: `${fixes} of ${msgs.length} recent commits are fixes (${Math.round(fixRate * 100)}%). Signals weak test coverage or recurring design debt.`,
+					description: `${fixes} of ${recentMsgs.length} recent commits are fixes (${Math.round(fixRate * 100)}%). Signals weak test coverage or recurring design debt.`,
 					skill: 'scan-anl', agent: 'architect', mode: 'architecture',
 				});
 			}
 		}
 	} catch {}
 
+	// Working tree cleanliness
 	let cleanScore = 1.0;
 	try {
 		const out = execSync('git status --porcelain', { cwd: root, encoding: 'utf-8', stdio: ['pipe', 'pipe', 'ignore'] });
@@ -234,8 +262,59 @@ export function analyzeAnl(root) {
 		}
 	} catch {}
 
-	const ciScore = hasCi ? 1 : 0;
-	return { id: 'anl', name: 'Analytics', score: r((ciScore + commitScore + cleanScore) / 3), findings };
+	// Commit message quality — vague message fraction
+	const VAGUE_PATTERN = /^\s*(fix|wip|update|changes|stuff|misc|minor|patch|tweak|typo|cleanup|temp|todo|test)\s*\.?\s*$/i;
+	let msgQualityScore = 1.0;
+	if (recentMsgs.length >= 3) {
+		const vagueCount = recentMsgs.filter(m => VAGUE_PATTERN.test(m)).length;
+		const vagueRate = vagueCount / recentMsgs.length;
+		if (vagueRate > 0.4) {
+			msgQualityScore = 0.0;
+			findings.push({
+				id: 'anl-vague-commits',
+				priority: 'low',
+				title: 'High proportion of vague commit messages',
+				description: `${vagueCount} of ${recentMsgs.length} recent commits have vague messages (${Math.round(vagueRate * 100)}%). Use descriptive messages to aid future triage.`,
+				skill: 'scan-anl', agent: 'builder', mode: 'engineering',
+			});
+		} else if (vagueRate >= 0.1) {
+			msgQualityScore = 0.5;
+		}
+	}
+
+	// Test automation — tests exist and run in CI
+	let testAutomationScore = 0.0;
+	let hasTestScript = false;
+	const pkgPath = path.join(root, 'package.json');
+	if (fs.existsSync(pkgPath)) {
+		try { hasTestScript = !!JSON.parse(fs.readFileSync(pkgPath, 'utf-8')).scripts?.test; } catch {}
+	}
+	const hasMakefile = fs.existsSync(path.join(root, 'Makefile'));
+	const hasTests = hasTestScript || hasMakefile;
+
+	if (hasCi && ciScore === 1.0) {
+		// CI present and has a test step
+		testAutomationScore = 1.0;
+	} else if (hasTests) {
+		testAutomationScore = 0.5;
+		findings.push({
+			id: 'anl-tests-not-in-ci',
+			priority: 'medium',
+			title: 'Tests exist but are not run in CI',
+			description: 'A test script was found but the CI pipeline does not appear to run tests. Wire tests into CI to catch regressions automatically.',
+			skill: 'scan-anl', agent: 'architect', mode: 'architecture',
+		});
+	} else {
+		findings.push({
+			id: 'anl-no-tests',
+			priority: 'medium',
+			title: 'No test suite found',
+			description: 'No test script in package.json or Makefile detected. Add a test suite to validate behaviour automatically.',
+			skill: 'scan-anl', agent: 'tester', mode: 'qa',
+		});
+	}
+
+	return { id: 'anl', name: 'Analytics', score: r((ciScore + commitScore + cleanScore + msgQualityScore + testAutomationScore) / 5), findings };
 }
 
 // ── DBG: Debug / Reliability ──────────────────────────────────────────────────
@@ -243,18 +322,42 @@ export function analyzeAnl(root) {
 export function analyzeDbg(root) {
 	const TODO_PATTERN = /\/\/\s*(TODO|FIXME|HACK|BUG|XXX)[\s:]*(.*)/i;
 	const CONSOLE_PATTERN = /\bconsole\.(log|warn|error|debug)\b/;
+	// Silent catch: catch blocks with empty body or no logging call inside
+	const SILENT_CATCH_PATTERN = /\.catch\s*\(\s*(?:\(\s*\)|[a-zA-Z_$][\w$]*\s*)?\s*=>\s*\{\s*\}|\bcatch\s*(?:\(\s*[^)]*\))?\s*\{\s*\}/;
+	const TYPE_ESCAPE_PATTERN = /\bas\s+any\b|\/\/\s*@ts-ignore|\/\/\s*@ts-nocheck|\/\/\s*eslint-disable/;
+	// Observable output: structured logger, error events, or health endpoints
+	const OBSERVABLE_PATTERN = /logger\.|log\.|emit\s*\(\s*['"]error['"]|\/health|healthCheck|structuredLog/i;
+
 	const todos = [];
 	const consoleLogs = [];
+	let silentCatchCount = 0;
+	let typeEscapeCount = 0;
+	const moduleObservable = new Map(); // dir -> boolean
 
 	walkDir(root, filePath => {
 		if (!SOURCE_EXTS.has(path.extname(filePath))) return;
 		const rel = path.relative(root, filePath);
 		const isTest = /test|spec|__tests__/.test(rel);
+		const dir = path.dirname(filePath);
 		try {
-			fs.readFileSync(filePath, 'utf-8').split('\n').forEach((line, i) => {
+			const content = fs.readFileSync(filePath, 'utf-8');
+			const lines = content.split('\n');
+
+			// Track module-level observability (per directory boundary)
+			if (!isTest) {
+				if (OBSERVABLE_PATTERN.test(content)) {
+					moduleObservable.set(dir, true);
+				} else if (!moduleObservable.has(dir)) {
+					moduleObservable.set(dir, false);
+				}
+			}
+
+			lines.forEach((line, i) => {
 				const m = line.match(TODO_PATTERN);
 				if (m && !isTest) todos.push({ file: rel, line: i + 1, type: m[1].toUpperCase() });
 				if (CONSOLE_PATTERN.test(line) && !isTest) consoleLogs.push({ file: rel, line: i + 1 });
+				if (!isTest && SILENT_CATCH_PATTERN.test(line)) silentCatchCount++;
+				if (!isTest && TYPE_ESCAPE_PATTERN.test(line)) typeEscapeCount++;
 			});
 		} catch {}
 	});
@@ -282,7 +385,44 @@ export function analyzeDbg(root) {
 		});
 	}
 
+	if (silentCatchCount > 0) {
+		findings.push({
+			id: 'dbg-silent-catch',
+			priority: 'high',
+			title: `Fix ${silentCatchCount} silent error swallow(s)`,
+			description: `${silentCatchCount} catch block(s) swallow errors silently. Silent swallows hide production failures — add logging or re-throw.`,
+			skill: 'scan-dbg', agent: 'builder', mode: 'engineering',
+		});
+	}
+
+	if (typeEscapeCount > 0) {
+		findings.push({
+			id: 'dbg-type-escapes',
+			priority: 'medium',
+			title: `Remove ${typeEscapeCount} type-safety escape(s)`,
+			description: `${typeEscapeCount} use(s) of \`as any\`, \`@ts-ignore\`, \`@ts-nocheck\`, or \`eslint-disable\` found. Each one hides a potential bug.`,
+			skill: 'scan-dbg', agent: 'builder', mode: 'engineering',
+		});
+	}
+
+	const unobservableDirs = [...moduleObservable.values()].filter(v => !v).length;
+	const totalDirs = moduleObservable.size;
+	if (totalDirs > 0 && unobservableDirs > 0) {
+		findings.push({
+			id: 'dbg-no-observable-output',
+			priority: 'medium',
+			title: `Add observable failure output to ${unobservableDirs} module(s)`,
+			description: `${unobservableDirs} of ${totalDirs} module(s) have no structured logging, error event emission, or health-check endpoint. Operators cannot detect failures from outside.`,
+			skill: 'scan-dbg', agent: 'builder', mode: 'engineering',
+		});
+	}
+
 	const todoScore = r(Math.max(0, 1 - todos.length / 10));
 	const logScore = r(Math.max(0, 1 - consoleLogs.length / 10));
-	return { id: 'dbg', name: 'Debug', score: r((todoScore + logScore) / 2), findings };
+	const errorScore = silentCatchCount === 0 ? 1.0 : silentCatchCount <= 3 ? 0.5 : 0.0;
+	const typesafeScore = r(Math.max(0, 1 - typeEscapeCount / 5));
+	const observableScore = totalDirs === 0 ? 1.0
+		: r(1 - unobservableDirs / totalDirs);
+
+	return { id: 'dbg', name: 'Debug', score: r((todoScore + logScore + errorScore + typesafeScore + observableScore) / 5), findings };
 }

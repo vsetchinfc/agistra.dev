@@ -1,7 +1,7 @@
 /**
- * wizard.js — Telegram MCP wiring for Claude Code and Cursor targets.
+ * wizard.js — Relay MCP wiring for Claude Code and Cursor targets.
  *
- * Reads workspace.config.json → telegram block and writes mcpServers.telegram
+ * Reads workspace.config.json → telegram block and writes mcpServers.relay
  * into the appropriate platform config files:
  *   - Claude Code: ~/.claude/settings.json
  *   - Cursor:      .cursor/mcp.json  (relative to workspace root)
@@ -25,7 +25,7 @@ const PLUGIN_PATH = path.join(
 	'telegram',
 );
 
-const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), '.claude', 'settings.json');
+export const CLAUDE_SETTINGS_PATH = path.join(os.homedir(), '.claude', 'settings.json');
 
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
@@ -64,10 +64,10 @@ export function buildMcpEntry(pluginPath) {
  * @param {string} filePath  Absolute path to the file.
  * @returns {object|null}  Parsed JSON, or null if the file is absent or unparseable.
  */
-export function readJsonSafe(filePath) {
-	if (!fs.existsSync(filePath)) return null;
+export function readJsonSafe(filePath, fsMod = fs) {
+	if (!fsMod.existsSync(filePath)) return null;
 	try {
-		return JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+		return JSON.parse(fsMod.readFileSync(filePath, 'utf-8'));
 	} catch {
 		return null;
 	}
@@ -89,6 +89,35 @@ export function mergeMcpEntry(existing, entry) {
 }
 
 /**
+ * Merge mcpServers.relay into a config object without duplicating.
+ *
+ * @param {object} existing
+ * @param {object} entry
+ * @returns {object}
+ */
+export function mergeRelayMcpEntry(existing, entry) {
+	if (!existing.mcpServers) {
+		existing.mcpServers = {};
+	}
+	existing.mcpServers.relay = entry;
+	return existing;
+}
+
+/**
+ * Build the MCP server entry for the hub relay daemon.
+ *
+ * @param {string} workspaceRoot Absolute path to the hub root.
+ * @returns {object}
+ */
+export function buildRelayMcpEntry(workspaceRoot) {
+	const serverPath = path.join(workspaceRoot, 'cli', 'relay', 'mcp', 'server.js');
+	return {
+		command: process.execPath,
+		args: [serverPath, '--hub', path.resolve(workspaceRoot)],
+	};
+}
+
+/**
  * Write a JSON object to a file atomically (write then rename).
  *
  * @param {string} filePath  Absolute path to write.
@@ -101,19 +130,53 @@ export function writeJsonSafe(filePath, data, fsMod = fs) {
 	fsMod.writeFileSync(filePath, JSON.stringify(data, null, 2) + '\n', 'utf-8');
 }
 
-// ── Main wiring function ───────────────────────────────────────────────────────
+// ── Main wiring functions ──────────────────────────────────────────────────────
 
 /**
- * Wire Telegram MCP server config into Claude Code and/or Cursor platform files.
+ * Wire relay MCP server config into Claude Code and/or Cursor platform files.
  *
  * @param {object} options
- * @param {object}   options.config       Parsed workspace.config.json.
- * @param {string}   options.workspaceRoot Absolute path to the workspace root.
- * @param {string[]} options.targets       Active targets: ['claude-code', 'cursor'].
- * @param {object}   [options.fsMod]       Injectable fs module for testing.
- * @param {function} [options.execFn]      Injectable exec function for bun check.
- * @param {function} [options.warn]        Injectable warn output function.
- * @returns {{ wrote: string[] }}  List of file paths that were written.
+ * @param {object}   options.config
+ * @param {string}   options.workspaceRoot
+ * @param {string[]} options.targets
+ * @param {object}   [options.fsMod]
+ * @returns {{ wrote: string[] }}
+ */
+export function wireRelayMcp({
+	config,
+	workspaceRoot,
+	targets = [],
+	fsMod = fs,
+}) {
+	const wrote = [];
+
+	const telegram = config?.telegram;
+	if (!telegram || telegram.enabled === false) {
+		return { wrote };
+	}
+
+	const entry = buildRelayMcpEntry(workspaceRoot);
+
+	if (targets.includes('claude-code')) {
+		const existing = readJsonFileSafe(CLAUDE_SETTINGS_PATH, fsMod) ?? {};
+		mergeRelayMcpEntry(existing, entry);
+		writeJsonSafe(CLAUDE_SETTINGS_PATH, existing, fsMod);
+		wrote.push(CLAUDE_SETTINGS_PATH);
+	}
+
+	if (targets.includes('cursor')) {
+		const cursorMcpPath = path.join(workspaceRoot, '.cursor', 'mcp.json');
+		const existing = readJsonFileSafe(cursorMcpPath, fsMod) ?? {};
+		mergeRelayMcpEntry(existing, entry);
+		writeJsonSafe(cursorMcpPath, existing, fsMod);
+		wrote.push(cursorMcpPath);
+	}
+
+	return { wrote };
+}
+
+/**
+ * @deprecated Use wireRelayMcp — see ADR-004. Scheduled for removal after relay stack E2E (task_35).
  */
 export function wireTelegramMcp({
 	config,
@@ -123,15 +186,19 @@ export function wireTelegramMcp({
 	execFn = execFileSync,
 	warn = (msg) => process.stderr.write(msg + '\n'),
 }) {
+	warn(
+		'DEPRECATED: wireTelegramMcp is deprecated; setup now uses wireRelayMcp (ADR-004). ' +
+		'The Claude official Telegram plugin is not the production group relay. ' +
+		'Removal planned after task_35.',
+	);
+
 	const wrote = [];
 
-	// AC1/AC2: Read telegram block; skip if absent or disabled
 	const telegram = config?.telegram;
 	if (!telegram || telegram.enabled === false) {
 		return { wrote };
 	}
 
-	// AC3: Pre-flight bun check
 	if (!isBunAvailable(execFn)) {
 		warn(
 			'WARNING: `bun` was not found on PATH. ' +
@@ -143,7 +210,6 @@ export function wireTelegramMcp({
 
 	const entry = buildMcpEntry(PLUGIN_PATH);
 
-	// AC4: Claude Code target
 	if (targets.includes('claude-code')) {
 		const existing = readJsonFileSafe(CLAUDE_SETTINGS_PATH, fsMod) ?? {};
 		mergeMcpEntry(existing, entry);
@@ -151,7 +217,6 @@ export function wireTelegramMcp({
 		wrote.push(CLAUDE_SETTINGS_PATH);
 	}
 
-	// AC5: Cursor target
 	if (targets.includes('cursor')) {
 		const cursorMcpPath = path.join(workspaceRoot, '.cursor', 'mcp.json');
 		const existing = readJsonFileSafe(cursorMcpPath, fsMod) ?? {};
