@@ -87,7 +87,7 @@ Each agent runs in its own Claude Code workspace with its own identity, memory f
 
 ## Built with Agistra
 
-![vladsetchin.me preview](assets/vlad.setchin-me.png)
+![vladsetchin.me preview](cli/assets/vlad.setchin-me.png)
 
 **[vladsetchin.me](https://vladsetchin.me)** — a personal portfolio and blog, planned and built end-to-end through Agistra's own ticket workflow: GitHub issues, task files in `projects/vladsetchin.me/`, feature branches, and PRs, the same loop described above. Design decisions, content passes, and ongoing iteration all run through the same Architect → Builder → Tester lifecycle as any other project added with `npm run scan`.
 
