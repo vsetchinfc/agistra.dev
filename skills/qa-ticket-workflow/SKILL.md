@@ -98,28 +98,51 @@ Do not substitute CLI queries for browser verification.
 **Run date:** [date]
 
 ### Summary
+
 [1-2 sentences: overall result and key finding]
 
 ### Test Steps
-| # | Step | Expected | Actual | Result |
-| - | ---- | -------- | ------ | ------ |
-| 1 | ... | ... | ... | PASS |
+
+| #   | Step | Expected | Actual | Result |
+| --- | ---- | -------- | ------ | ------ |
+| 1   | ...  | ...      | ...    | PASS   |
 
 ### Defects Found
+
 [List with description, expected, actual, severity - or None]
 
 ### Additional Observations
+
 [Out-of-scope findings, or None]
 
 ### Verdict
+
 [PASS | FAIL | PARTIAL PASS | BLOCKED] - [one sentence justification]
 ```
 
 ## GitHub And State Actions
 
-**Mandatory:** Steps 6 and 7 apply to every QA session — CLI/tooling tickets included. A verdict is incomplete until the GitHub comment is posted **and** verified (VBR). Chat-only or memory-only reports do not satisfy the workflow.
+Steps 6 and 7 apply to every QA session — CLI/tooling tickets included. The VBR gate is the local task file update; the GitHub comment is the mandatory-when-configured mirror step.
 
-### Step 6 - Post report to GitHub
+### Step 6 - Write QA Report to local task file (VBR gate)
+
+**This is the primary VBR gate.** A verdict is not complete until the local task file is updated with the QA report and the state transition is recorded.
+
+1. **Append a `## QA Report` section** to the task file with the same report content (verdict, AC table, date, defects, observations).
+2. **Update the frontmatter**:
+   - Set `status:` to the new lifecycle state
+   - Update `fail-count:` if applicable (increment on FAIL or PARTIAL PASS)
+   - Set `parked: true` if fail-count reaches 3
+3. **Rename the file** to reflect the new state token:
+   - PASS → `task_N_done_<slug>.md` (or `task_N_qa-passed_<slug>.md` if not terminal)
+   - FAIL or PARTIAL PASS → `task_N_changes-requested_<slug>.md`
+   - BLOCKED → leave as `ready-for-qa` and note blocker in the QA Report section
+
+**VBR check:** Verify the local task file now has the `## QA Report` section and the filename reflects the new state before proceeding to Step 7.
+
+### Step 7 - Post report to GitHub (mandatory when tracker configured)
+
+**When a tracker is configured** (presence of `github:` or `github-issue:` field in task frontmatter, or workspace tracker config), posting the GitHub comment is **mandatory**, not optional.
 
 Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path. Never inline multi-line content with `--body`. Remove the temp file after posting.
 
@@ -135,35 +158,35 @@ Post destinations (all that apply):
    ```
    Post the same report to both issue and PR when both exist.
 
-**VBR gate:** After posting, verify the comment is visible:
+**VBR check (mirror write):** After posting, verify the comment is visible:
+
 ```bash
 gh issue view <number> --repo <org/repo> --comments
 gh pr view <number> --repo <org/repo> --comments
 ```
-Do not report QA complete until the comment URL or rendered text is confirmed.
+
+**If the mirror write fails:**
+
+- Append the failure to the task file's `## Log` section (timestamp, attempted action, error)
+- Record the failed outbound in Router's `memory/router.md` HOT section under `failed-outbound` (if Router is active)
+- Reconcile the mirror before the ticket is considered closed
+
+**No tracker configured:** skip this step entirely; the local QA Report is sufficient.
 
 For CLI/tooling tickets with no deployed URL, set **Environment:** to `local / CLI` and cite command output or test counts as evidence in the Test Steps table.
 
-### Step 7 - Align ticket state
+### Step 8 - Align ticket state labels (when tracker configured)
 
-**GitHub issue labels** (when issue exists — follow `task-automation-flow` / `profiles/tester-workspace/ROUTING.md`):
+**When a tracker is configured**, apply GitHub issue labels to mirror the local state:
 
 - PASS → apply `state:qa-passed` (remove prior state labels)
-- FAIL or PARTIAL PASS → apply `state:changes-requested` and the appropriate `qa-fail-*` label
+- FAIL or PARTIAL PASS → apply `state:changes-requested` and the appropriate `qa-fail-*` label (mirroring the local `fail-count:` field)
 
-**Local hub ticket file** (when a task file path was provided, e.g. `projects/<project>/task_N_ready-for-qa_<slug>.md`):
+The local task file was already updated in Step 6; this step only applies the mirror labels.
 
-1. Append a `## QA Report` section to the ticket file with the same report content (verdict, AC table, date).
-2. Rename the file to reflect the new state:
-   - PASS → `task_N_done_<slug>.md`
-   - FAIL or PARTIAL PASS → `task_N_changes-requested_<slug>.md`
-   - BLOCKED → leave as `ready-for-qa` and note blocker in the QA Report section
+**memory/tester.md:** Append a one-line HOT entry with verdict, ticket/PR refs, local task file path, and GitHub comment URL (if posted).
 
-Update the frontmatter `status:` field to match (`state:qa-passed`, `state:changes-requested`, etc.).
-
-**memory/tester.md:** Append a one-line HOT entry with verdict, ticket/PR refs, and GitHub comment URL.
-
-### Step 8 - Notify Builder on defects
+### Step 9 - Notify Builder on defects
 
 **If operating inside a `task-automation-flow` run:** follow the fail counter rules in `profiles/tester-workspace/ROUTING.md` (Automation Run Rules → Fail Counter Logic) instead of the default dispatch below. On 1st fail, dispatch Builder (same as below). On 2nd fail, route to Architect — do not dispatch Builder.
 
@@ -171,23 +194,27 @@ If verdict is FAIL or PARTIAL PASS:
 
 **Preferred path — dispatch Builder as subagent:**
 Dispatch Builder in development mode. Pass:
+
 - one-line defect summary
 - ticket / PR reference
-- GitHub report URL
+- local task file path (with `## QA Report` section appended)
+- GitHub report URL (if posted)
 - status: needs fix — awaiting retest
 
 **Fallback path — when subagent dispatch is unavailable in the current session:**
 Append to `memory/builder.md` HOT section:
+
 - QA result summary (one line)
 - defects (one line per defect)
 - ticket / PR reference
-- GitHub report URL
+- local task file path
+- GitHub report URL (if posted)
 - status: needs fix — awaiting retest
 
-Do not modify any other section of Builder's memory file. Builder will see the GitHub comment for full context; the HOT append ensures the defect is tracked for the next Builder session.
+Do not modify any other section of Builder's memory file. Builder will read the local task file's `## QA Report` section for full context; the HOT append ensures the defect is tracked for the next Builder session.
 
-If verdict is PASS with no defects, skip this step — Builder will see the GitHub comment.
+If verdict is PASS with no defects, skip this step — Builder will see the local task file update and (if posted) the GitHub comment.
 
-### Step 9 - Clean up
+### Step 10 - Clean up
 
 Remove temp report files and summarize the final verdict in chat.

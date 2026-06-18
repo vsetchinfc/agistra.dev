@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { TASK_STATE_TOKENS } from './tasks.js';
 import { analyzeSys, analyzeTst, analyzeUsr, analyzeAnl, analyzeDbg } from './perspectives.js';
 
 const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
@@ -115,7 +116,9 @@ export function generateTasks({ allFindings, projectName, projectsDir }) {
 function round(n) { return Math.round(n * 100) / 100; }
 
 function collectExistingTaskFiles(projectsDir) {
-	const pattern = /^task_\d+_(?:todo|done)_/;
+	// Match all task states from ADR-005 canonical vocabulary
+	const tokenPattern = TASK_STATE_TOKENS.join('|');
+	const pattern = new RegExp(`^task_\\d+_(?:${tokenPattern})_`);
 	const entries = [];
 	if (fs.existsSync(projectsDir)) {
 		for (const filename of fs.readdirSync(projectsDir)) {

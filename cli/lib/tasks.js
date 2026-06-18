@@ -1,6 +1,20 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+/**
+ * Canonical set of task state tokens per ADR-005.
+ * Used in filename patterns and state validation across CLI tools.
+ */
+export const TASK_STATE_TOKENS = [
+	'todo',
+	'in-progress',
+	'ready-for-review',
+	'ready-for-qa',
+	'changes-requested',
+	'qa-passed',
+	'done',
+];
+
 function taskNum(filename) {
 	const m = filename.match(/^task_(\d+)_/);
 	return m ? parseInt(m[1], 10) : 0;
@@ -67,7 +81,11 @@ export function findCurrentTask(projectDir) {
 
 /**
  * List all project directories under projectsRoot with their pending/completed task counts.
- * Returns an array of { project, projectDir, todos: string[], dones: string[] }
+ * Returns an array of { project, projectDir, todos: string[], inFlight: Array<{file, state}>, dones: string[] }
+ * 
+ * - todos: files in todo state only (auto-dispatchable)
+ * - inFlight: files in intermediate states (in-progress, ready-for-review, ready-for-qa, changes-requested, qa-passed) with state token
+ * - dones: files in done state (terminal)
  */
 export function listAllTasks(projectsRoot) {
 	if (!fs.existsSync(projectsRoot)) return [];
@@ -85,24 +103,38 @@ export function listAllTasks(projectsRoot) {
 				...rootFiles.filter(f => f.match(/^task_\d+_done_/)),
 				...doneFiles.filter(f => f.match(/^task_\d+_done_/)),
 			].sort((a, b) => taskNum(a) - taskNum(b));
+
+			// Collect intermediate states with state token
+			const intermediateStates = ['in-progress', 'ready-for-review', 'ready-for-qa', 'changes-requested', 'qa-passed'];
+			const inFlight = [];
+			for (const state of intermediateStates) {
+				const matches = rootFiles.filter(f => f.includes(`_${state}_`));
+				for (const file of matches) {
+					inFlight.push({ file, state });
+				}
+			}
+			inFlight.sort((a, b) => taskNum(a.file) - taskNum(b.file));
+
 			return {
 				project: e.name,
 				projectDir,
 				todos,
+				inFlight,
 				dones,
 			};
 		});
 }
 
 /**
- * Find a specific _todo task by number.
- * e.g. query "6" matches "task_6_todo.md"
+ * Find a specific task by number or slug.
+ * Matches any state token (todo, in-progress, ready-for-review, ready-for-qa, changes-requested, qa-passed, done).
+ * e.g. query "6" matches "task_6_in-progress_feature.md"
  * Returns the absolute file path, or null if not found.
  */
 export function findTaskByQuery(projectDir, query) {
 	if (!fs.existsSync(projectDir)) return null;
 	const files = fs.readdirSync(projectDir)
-		.filter(f => f.match(/^task_\d+_todo_/));
+		.filter(f => f.match(/^task_\d+_(todo|in-progress|ready-for-review|ready-for-qa|changes-requested|qa-passed|done)_/));
 
 	const num = parseInt(query, 10);
 	if (!Number.isNaN(num)) {
@@ -126,17 +158,97 @@ export function loadSkillContent(skillsRoot, skillName) {
 }
 
 /**
- * Rename a task file from _todo to _done and move it to projects/<project>/done/.
- * Legacy _done_ files left in the project root are still listed by listAllTasks.
- * Returns the new (done) file path.
+ * Map lifecycle state to filename token.
+ * Per ADR-005 state vocabulary.
+ * Throws on unknown state to prevent silent bugs.
  */
-export function changeTaskStatus(taskPath) {
+function stateToToken(state) {
+	const map = {
+		'state:ready-for-implementation': 'todo',
+		'state:in-progress': 'in-progress',
+		'state:ready-for-review': 'ready-for-review',
+		'state:ready-for-qa': 'ready-for-qa',
+		'state:changes-requested': 'changes-requested',
+		'state:qa-passed': 'qa-passed',
+		'closed': 'done',
+	};
+	if (!map[state]) {
+		throw new Error(`Unknown lifecycle state: ${state}. Valid states: ${Object.keys(map).join(', ')}`);
+	}
+	return map[state];
+}
+
+/**
+ * Serialize frontmatter object to YAML-like string.
+ */
+function serializeFrontmatter(meta) {
+	const lines = [];
+	for (const [key, value] of Object.entries(meta)) {
+		if (Array.isArray(value)) {
+			lines.push(`${key}:`);
+			for (const item of value) {
+				lines.push(`  - ${item}`);
+			}
+		} else {
+			lines.push(`${key}: ${value}`);
+		}
+	}
+	return lines.join('\n');
+}
+
+/**
+ * Change a task's lifecycle state, updating both frontmatter and filename atomically.
+ * 
+ * @param {string} taskPath - Current task file path
+ * @param {string} [targetState] - New lifecycle state (e.g., 'state:in-progress'). Defaults to 'closed' for backward compatibility.
+ * @param {object} [frontmatterUpdates] - Additional frontmatter fields to update (e.g., { 'fail-count': 1 })
+ * @returns {string} New task file path
+ * 
+ * Legacy behavior (backward compatible):
+ * - changeTaskStatus(path) → moves _todo_ to done/_done_
+ * 
+ * New behavior:
+ * - changeTaskStatus(path, 'state:in-progress') → renames to _in-progress_ and updates frontmatter status
+ * - changeTaskStatus(path, 'state:ready-for-qa', { 'fail-count': 1 }) → updates both status and fail-count
+ */
+export function changeTaskStatus(taskPath, targetState = 'closed', frontmatterUpdates = {}) {
 	const projectDir = projectDirFromTaskPath(taskPath);
-	const doneDir = doneTasksDir(projectDir);
-	fs.mkdirSync(doneDir, { recursive: true });
-	const donePath = path.join(doneDir, path.basename(taskPath).replace('_todo_', '_done_'));
-	fs.renameSync(taskPath, donePath);
-	return donePath;
+	const raw = fs.readFileSync(taskPath, 'utf-8');
+	const { meta, body } = parseFrontmatter(raw);
+
+	// Update frontmatter
+	meta.status = targetState;
+	for (const [key, value] of Object.entries(frontmatterUpdates)) {
+		meta[key] = String(value);
+	}
+
+	// Determine new filename token
+	const token = stateToToken(targetState);
+	const basename = path.basename(taskPath);
+	const match = basename.match(/^(task_\d+)_(todo|in-progress|ready-for-review|ready-for-qa|changes-requested|qa-passed|done)_(.+)$/);
+	if (!match) {
+		throw new Error(`Task filename does not match expected pattern: ${basename}`);
+	}
+	const [, prefix, , slug] = match;
+	const newBasename = `${prefix}_${token}_${slug}`;
+
+	// Determine target directory (done/ for terminal states, project root otherwise)
+	let targetDir = projectDir;
+	if (token === 'done') {
+		targetDir = doneTasksDir(projectDir);
+		fs.mkdirSync(targetDir, { recursive: true });
+	}
+
+	const newPath = path.join(targetDir, newBasename);
+
+	// Write atomically: update content, then rename
+	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${body}`;
+	fs.writeFileSync(taskPath, newContent, 'utf-8');
+	if (taskPath !== newPath) {
+		fs.renameSync(taskPath, newPath);
+	}
+
+	return newPath;
 }
 
 /**

@@ -18,10 +18,10 @@ import {
  *   skillsRoot    string   root dir containing skill directories
  *   project       string   target a specific project by name (optional)
  *   advance       boolean  rename current _todo_ → _done_ in done/, then show next
- *   list          boolean  show all projects and their pending task counts
+ *   list          boolean  show all projects with todos, in-flight tasks (with state), and dones
  *   launch        boolean  start claude in projectRoot instead of printing prompt
  *   projectRoot   string   absolute path to the sibling project repo (used with launch)
- *   task          string   number or slug fragment to target a specific _todo_ task
+ *   task          string   number or slug fragment to target a specific task in any state
  */
 export function dispatch({ projectsRoot, skillsRoot, project, advance, list, launch = false, projectRoot = null, task = null }) {
 	// --list: show the full queue across all projects
@@ -33,13 +33,16 @@ export function dispatch({ projectsRoot, skillsRoot, project, advance, list, lau
 		}
 		console.log('\nProject Queue\n');
 		let anyPending = false;
-		for (const { project: name, todos, dones } of all) {
-			const pending = todos.length;
+		for (const { project: name, todos, inFlight, dones } of all) {
+			const pending = todos.length + inFlight.length;
 			const done = dones.length;
 			const status = pending === 0 ? 'complete' : `${pending} pending`;
 			console.log(`  ${name}  [${status}, ${done} done]`);
 			for (const f of todos) {
 				console.log(`    → ${f}`);
+			}
+			for (const { file, state } of inFlight) {
+				console.log(`    → ${file.replace(`_${state}_`, ` [${state}] `)}`);
 			}
 			if (pending > 0) anyPending = true;
 		}
@@ -96,7 +99,7 @@ function resolveTask(projectsRoot, project, task) {
 		if (task) {
 			const found = findTaskByQuery(projectDir, task);
 			if (!found) {
-				process.stderr.write(`No todo task matching "${task}" in project: ${project}\n`);
+				process.stderr.write(`No task matching "${task}" in project: ${project}\n`);
 			}
 			return found;
 		}
@@ -107,7 +110,7 @@ function resolveTask(projectsRoot, project, task) {
 		return found;
 	}
 
-	// Auto-pick: lowest pending task across all projects
+	// Auto-pick: lowest todo task across all projects (only auto-dispatchable state)
 	const all = listAllTasks(projectsRoot);
 	const first = all.find(p => p.todos.length > 0);
 	if (!first) {

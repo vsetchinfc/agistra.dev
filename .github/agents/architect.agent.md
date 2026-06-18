@@ -2,97 +2,7 @@
 name: Architect-G
 description: "Lead planning and design agent. Use when: define architecture, ADRs, scope work, draft proposals, morning briefings, or coordinate the team."
 tools:
-  [
-    vscode/installExtension,
-    vscode/memory,
-    vscode/newWorkspace,
-    vscode/resolveMemoryFileUri,
-    vscode/runCommand,
-    vscode/vscodeAPI,
-    vscode/extensions,
-    vscode/askQuestions,
-    vscode/toolSearch,
-    execute/runNotebookCell,
-    execute/getTerminalOutput,
-    execute/killTerminal,
-    execute/sendToTerminal,
-    execute/runTask,
-    execute/createAndRunTask,
-    execute/runInTerminal,
-    execute/runTests,
-    execute/testFailure,
-    read/getNotebookSummary,
-    read/problems,
-    read/readFile,
-    read/viewImage,
-    read/readNotebookCellOutput,
-    read/terminalSelection,
-    read/terminalLastCommand,
-    read/getTaskOutput,
-    agent/runSubagent,
-    edit/createDirectory,
-    edit/createFile,
-    edit/createJupyterNotebook,
-    edit/editFiles,
-    edit/editNotebook,
-    edit/rename,
-    search/changes,
-    search/codebase,
-    search/fileSearch,
-    search/listDirectory,
-    search/textSearch,
-    search/usages,
-    web/fetch,
-    web/githubRepo,
-    web/githubTextSearch,
-    browser/openBrowserPage,
-    browser/readPage,
-    browser/screenshotPage,
-    browser/navigatePage,
-    browser/clickElement,
-    browser/dragElement,
-    browser/hoverElement,
-    browser/typeInPage,
-    browser/runPlaywrightCode,
-    browser/handleDialog,
-    gitkraken/git_add_or_commit,
-    gitkraken/git_blame,
-    gitkraken/git_branch,
-    gitkraken/git_checkout,
-    gitkraken/git_fetch,
-    gitkraken/git_graph,
-    gitkraken/git_log_or_diff,
-    gitkraken/git_pull,
-    gitkraken/git_push,
-    gitkraken/git_stash,
-    gitkraken/git_status,
-    gitkraken/git_worktree,
-    gitkraken/gitkraken_workspace_list,
-    gitkraken/gitlens_commit_composer,
-    gitkraken/gitlens_launchpad,
-    gitkraken/gitlens_start_review,
-    gitkraken/gitlens_start_work,
-    gitkraken/issues_add_comment,
-    gitkraken/issues_assigned_to_me,
-    gitkraken/issues_create,
-    gitkraken/issues_get_detail,
-    gitkraken/pull_request_assigned_to_me,
-    gitkraken/pull_request_create,
-    gitkraken/pull_request_create_review,
-    gitkraken/pull_request_get_comments,
-    gitkraken/pull_request_get_detail,
-    gitkraken/repository_get_file_content,
-    github.vscode-pull-request-github/issue_fetch,
-    github.vscode-pull-request-github/labels_fetch,
-    github.vscode-pull-request-github/notification_fetch,
-    github.vscode-pull-request-github/doSearch,
-    github.vscode-pull-request-github/activePullRequest,
-    github.vscode-pull-request-github/pullRequestStatusChecks,
-    github.vscode-pull-request-github/openPullRequest,
-    github.vscode-pull-request-github/create_pull_request,
-    github.vscode-pull-request-github/resolveReviewThread,
-    todo,
-  ]
+  [vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/vscodeAPI, vscode/extensions, vscode/askQuestions, execute/runNotebookCell, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runTask, execute/createAndRunTask, execute/runInTerminal, execute/runTests, execute/testFailure, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/readNotebookCellOutput, read/terminalSelection, read/terminalLastCommand, read/getTaskOutput, agent/runSubagent, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, web/githubTextSearch, browser/openBrowserPage, browser/readPage, browser/screenshotPage, browser/navigatePage, browser/clickElement, browser/dragElement, browser/hoverElement, browser/typeInPage, browser/runPlaywrightCode, browser/handleDialog, gitkraken/git_add_or_commit, gitkraken/git_blame, gitkraken/git_branch, gitkraken/git_checkout, gitkraken/git_fetch, gitkraken/git_graph, gitkraken/git_log_or_diff, gitkraken/git_pull, gitkraken/git_push, gitkraken/git_stash, gitkraken/git_status, gitkraken/git_worktree, gitkraken/gitkraken_workspace_list, gitkraken/gitlens_commit_composer, gitkraken/gitlens_launchpad, gitkraken/gitlens_start_review, gitkraken/gitlens_start_work, gitkraken/issues_add_comment, gitkraken/issues_assigned_to_me, gitkraken/issues_create, gitkraken/issues_get_detail, gitkraken/pull_request_assigned_to_me, gitkraken/pull_request_create, gitkraken/pull_request_create_review, gitkraken/pull_request_get_comments, gitkraken/pull_request_get_detail, gitkraken/repository_get_file_content, github.vscode-pull-request-github/issue_fetch, github.vscode-pull-request-github/labels_fetch, github.vscode-pull-request-github/notification_fetch, github.vscode-pull-request-github/doSearch, github.vscode-pull-request-github/activePullRequest, github.vscode-pull-request-github/pullRequestStatusChecks, github.vscode-pull-request-github/openPullRequest, github.vscode-pull-request-github/create_pull_request, github.vscode-pull-request-github/resolveReviewThread, todo]
 agents: [Builder, Tester, Router]
 argument-hint: "Architecture question, ADR, scoping request, proposal, or morning briefing"
 ---
@@ -265,10 +175,10 @@ Verifier field is mandatory. Do not dispatch a ticket that does not have the ver
 
 **Model selection — assess ticket complexity before dispatching:**
 
-| Complexity | Signals                                                                                                   | Model    |
-| ---------- | --------------------------------------------------------------------------------------------------------- | -------- |
-| Simple     | Single-file edit, config field, call-site wiring, straightforward test addition                           | `haiku`  |
-| Complex    | New abstraction, multi-file design, injectable test seams, cross-module wiring (3+ files), debugging work | `sonnet` |
+| Complexity | Signals | Model |
+|---|---|---|
+| Simple | Single-file edit, config field, call-site wiring, straightforward test addition | `haiku` |
+| Complex | New abstraction, multi-file design, injectable test seams, cross-module wiring (3+ files), debugging work | `sonnet` |
 
 Set `model:` on the Agent tool call accordingly. When in doubt, lean sonnet — a retry cycle costs more than the model difference.
 
