@@ -21,3 +21,4 @@ coverage/
 node_modules/
 relay/
 
+dev-server.log

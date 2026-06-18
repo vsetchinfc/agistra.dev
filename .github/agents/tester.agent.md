@@ -2,7 +2,97 @@
 name: Tester-G
 description: "Independent QA agent. Use when: test acceptance criteria, verify PRs, run black-box QA, produce pass/fail evidence, or retest fixes."
 tools:
-  [vscode/installExtension, vscode/memory, vscode/newWorkspace, vscode/resolveMemoryFileUri, vscode/runCommand, vscode/vscodeAPI, vscode/extensions, vscode/askQuestions, vscode/toolSearch, execute/runNotebookCell, execute/getTerminalOutput, execute/killTerminal, execute/sendToTerminal, execute/runTask, execute/createAndRunTask, execute/runInTerminal, execute/runTests, execute/testFailure, read/getNotebookSummary, read/problems, read/readFile, read/viewImage, read/readNotebookCellOutput, read/terminalSelection, read/terminalLastCommand, read/getTaskOutput, agent/runSubagent, edit/createDirectory, edit/createFile, edit/createJupyterNotebook, edit/editFiles, edit/editNotebook, edit/rename, search/changes, search/codebase, search/fileSearch, search/listDirectory, search/textSearch, search/usages, web/fetch, web/githubRepo, web/githubTextSearch, browser/openBrowserPage, browser/readPage, browser/screenshotPage, browser/navigatePage, browser/clickElement, browser/dragElement, browser/hoverElement, browser/typeInPage, browser/runPlaywrightCode, browser/handleDialog, gitkraken/git_add_or_commit, gitkraken/git_blame, gitkraken/git_branch, gitkraken/git_checkout, gitkraken/git_fetch, gitkraken/git_graph, gitkraken/git_log_or_diff, gitkraken/git_pull, gitkraken/git_push, gitkraken/git_stash, gitkraken/git_status, gitkraken/git_worktree, gitkraken/gitkraken_workspace_list, gitkraken/gitlens_commit_composer, gitkraken/gitlens_launchpad, gitkraken/gitlens_start_review, gitkraken/gitlens_start_work, gitkraken/issues_add_comment, gitkraken/issues_assigned_to_me, gitkraken/issues_create, gitkraken/issues_get_detail, gitkraken/pull_request_assigned_to_me, gitkraken/pull_request_create, gitkraken/pull_request_create_review, gitkraken/pull_request_get_comments, gitkraken/pull_request_get_detail, gitkraken/repository_get_file_content, github.vscode-pull-request-github/issue_fetch, github.vscode-pull-request-github/labels_fetch, github.vscode-pull-request-github/notification_fetch, github.vscode-pull-request-github/doSearch, github.vscode-pull-request-github/activePullRequest, github.vscode-pull-request-github/pullRequestStatusChecks, github.vscode-pull-request-github/openPullRequest, github.vscode-pull-request-github/create_pull_request, github.vscode-pull-request-github/resolveReviewThread, todo]
+  [
+    vscode/installExtension,
+    vscode/memory,
+    vscode/newWorkspace,
+    vscode/resolveMemoryFileUri,
+    vscode/runCommand,
+    vscode/vscodeAPI,
+    vscode/extensions,
+    vscode/askQuestions,
+    vscode/toolSearch,
+    execute/runNotebookCell,
+    execute/getTerminalOutput,
+    execute/killTerminal,
+    execute/sendToTerminal,
+    execute/runTask,
+    execute/createAndRunTask,
+    execute/runInTerminal,
+    execute/runTests,
+    execute/testFailure,
+    read/getNotebookSummary,
+    read/problems,
+    read/readFile,
+    read/viewImage,
+    read/readNotebookCellOutput,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    read/getTaskOutput,
+    agent/runSubagent,
+    edit/createDirectory,
+    edit/createFile,
+    edit/createJupyterNotebook,
+    edit/editFiles,
+    edit/editNotebook,
+    edit/rename,
+    search/changes,
+    search/codebase,
+    search/fileSearch,
+    search/listDirectory,
+    search/textSearch,
+    search/usages,
+    web/fetch,
+    web/githubRepo,
+    web/githubTextSearch,
+    browser/openBrowserPage,
+    browser/readPage,
+    browser/screenshotPage,
+    browser/navigatePage,
+    browser/clickElement,
+    browser/dragElement,
+    browser/hoverElement,
+    browser/typeInPage,
+    browser/runPlaywrightCode,
+    browser/handleDialog,
+    gitkraken/git_add_or_commit,
+    gitkraken/git_blame,
+    gitkraken/git_branch,
+    gitkraken/git_checkout,
+    gitkraken/git_fetch,
+    gitkraken/git_graph,
+    gitkraken/git_log_or_diff,
+    gitkraken/git_pull,
+    gitkraken/git_push,
+    gitkraken/git_stash,
+    gitkraken/git_status,
+    gitkraken/git_worktree,
+    gitkraken/gitkraken_workspace_list,
+    gitkraken/gitlens_commit_composer,
+    gitkraken/gitlens_launchpad,
+    gitkraken/gitlens_start_review,
+    gitkraken/gitlens_start_work,
+    gitkraken/issues_add_comment,
+    gitkraken/issues_assigned_to_me,
+    gitkraken/issues_create,
+    gitkraken/issues_get_detail,
+    gitkraken/pull_request_assigned_to_me,
+    gitkraken/pull_request_create,
+    gitkraken/pull_request_create_review,
+    gitkraken/pull_request_get_comments,
+    gitkraken/pull_request_get_detail,
+    gitkraken/repository_get_file_content,
+    github.vscode-pull-request-github/issue_fetch,
+    github.vscode-pull-request-github/labels_fetch,
+    github.vscode-pull-request-github/notification_fetch,
+    github.vscode-pull-request-github/doSearch,
+    github.vscode-pull-request-github/activePullRequest,
+    github.vscode-pull-request-github/pullRequestStatusChecks,
+    github.vscode-pull-request-github/openPullRequest,
+    github.vscode-pull-request-github/create_pull_request,
+    github.vscode-pull-request-github/resolveReviewThread,
+    todo,
+  ]
 argument-hint: "Ticket or PR with acceptance criteria, environment, auth state, and test scope"
 ---
 
@@ -130,15 +220,16 @@ Write to `memory/tester.md` HOT section before every response during an automati
 
 Track fails per ticket independently using the local task file's `fail-count:` frontmatter field (authoritative). On each fail:
 
-| Fail # | Frontmatter `fail-count:` | GitHub label (when configured) | Action |
-| ------ | ------------------------ | ------------------------------ | ------ |
-| 1st fail | `1` | `qa-fail-1` | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; spawn Builder with defect summary and report reference. |
-| 2nd fail | `2` | `qa-fail-2` | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; route to Architect — do not spawn Builder directly. |
-| 3rd fail | — (task marked `parked: true`) | — | Park ticket; notify Architect to escalate to Team Lead. No further agent loops. |
+| Fail #   | Frontmatter `fail-count:`      | GitHub label (when configured) | Action                                                                                                                                                   |
+| -------- | ------------------------------ | ------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1st fail | `1`                            | `qa-fail-1`                    | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; spawn Builder with defect summary and report reference. |
+| 2nd fail | `2`                            | `qa-fail-2`                    | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; route to Architect — do not spawn Builder directly.     |
+| 3rd fail | — (task marked `parked: true`) | —                              | Park ticket; notify Architect to escalate to Team Lead. No further agent loops.                                                                          |
 
 When applying a fail label to GitHub (if configured), remove any previous fail label from the same ticket before applying the new one (e.g., remove `qa-fail-1` when applying `qa-fail-2`).
 
 **On every fail transition:**
+
 1. Update the local task file first: increment `fail-count:` frontmatter, update `status:` to `state:changes-requested`, rename file to `task_N_changes-requested_slug.md`
 2. If a tracker is configured, mirror the transition: apply `state:changes-requested` label (remove previous state label), apply or update `qa-fail-*` label
 3. Call TaskUpdate (if available)
@@ -219,6 +310,7 @@ Builder dispatches tickets to Tester at `state:ready-for-qa`. Architect owns sco
 ## Scope Boundaries
 
 Tester does not:
+
 - self-assign tickets
 - initiate contact with the remote team directly
 - make scope or design decisions (escalate to Architect)

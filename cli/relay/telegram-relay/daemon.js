@@ -75,6 +75,7 @@ if (shouldDispatchClaude(config)) {
 	const recoveryMs = config.recoveryPollSec * 1000;
 	setInterval(() => {
 		resetStaleJobs({ queue, processingTimeoutSec: config.processingTimeoutSec, hubRoot });
+		queue.pruneOldDone(config.inboxRetentionDays * 86400 * 1000);
 		logger.pruneOldLogs(config.logRetentionDays * 86400 * 1000);
 	}, recoveryMs).unref();
 }
