@@ -168,9 +168,16 @@ Write to `memory/builder.md` HOT section before every response during an automat
 
 On every state transition:
 
-1. Update the GitHub issue label to the new lifecycle state (remove the previous state label, apply the new one).
-2. Call TaskUpdate immediately — do not batch state changes.
-3. Reflect the new state in `memory/builder.md` HOT.
+1. **Update the local task file first** (this is the authoritative write):
+   - Update `status:` frontmatter field to the new lifecycle state
+   - Update `fail-count:` frontmatter field when applicable
+   - Rename the file to reflect the new state token (e.g., `task_N_ready-for-qa_slug.md`)
+2. **If a tracker is configured** (presence of `github:` or `github-issue:` field, or workspace tracker config):
+   - Apply the corresponding lifecycle state label to the GitHub issue (remove the previous state label, apply the new one)
+   - Call TaskUpdate immediately — do not batch state changes
+3. **Reflect the new state** in `memory/builder.md` HOT
+
+When no tracker is configured, skip step 2. The local task file is always updated regardless of tracker configuration.
 
 ### Verifier-Aware Completion Routing
 

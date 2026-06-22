@@ -23,11 +23,11 @@ A ticket without a verifier field is underscoped. Do not dispatch — return to 
 
 Every ticket has acceptance criteria. Architect specifies the verifier when creating the ticket — in this flow, Architect acts as Developer Lead and is responsible for setting the verifier field at ticket creation, consistent with the Developer Lead role defined in `ticket-lifecycle-mode`. There is no "no QA" — only a question of who verifies.
 
-| Verifier | When Architect assigns it | Flow after Builder completes |
-| --- | --- | --- |
-| `Tester` | Full functional verification needed | Builder marks ticket `state:ready-for-qa` and notifies Architect. Architect dispatches Tester as a direct session — handing main context to Tester when operating in main, or notifying the team lead to start a dedicated Tester session when not in main. |
-| `Architect` | Design or structural review sufficient | Builder notifies Architect who reviews — smaller loop |
-| `Automated` | Build + lint + tests are the full acceptance signal | Builder self-certifies; Architect spot-checks before notifying team lead |
+| Verifier    | When Architect assigns it                           | Flow after Builder completes                                                                                                                                                                                                                                |
+| ----------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Tester`    | Full functional verification needed                 | Builder marks ticket `state:ready-for-qa` and notifies Architect. Architect dispatches Tester as a direct session — handing main context to Tester when operating in main, or notifying the team lead to start a dedicated Tester session when not in main. |
+| `Architect` | Design or structural review sufficient              | Builder notifies Architect who reviews — smaller loop                                                                                                                                                                                                       |
+| `Automated` | Build + lint + tests are the full acceptance signal | Builder self-certifies; Architect spot-checks before notifying team lead                                                                                                                                                                                    |
 
 The verifier is recorded on the GitHub issue at ticket creation and drives the post-completion branch in the flow.
 
@@ -37,11 +37,11 @@ Before dispatching any subagent — single or batch — confirm the required too
 
 ### Required tool sets
 
-| Agent | Minimum required tools |
-|-------|----------------------|
-| Builder | Read, Edit, Write, Bash, Glob, Grep |
-| Tester | Read, Bash, Glob, Grep |
-| Router | Read, Bash, Glob, Grep, mcp__relay__* (when relay is configured) |
+| Agent   | Minimum required tools                                            |
+| ------- | ----------------------------------------------------------------- |
+| Builder | Read, Edit, Write, Bash, Glob, Grep                               |
+| Tester  | Read, Bash, Glob, Grep                                            |
+| Router  | Read, Bash, Glob, Grep, mcp**relay**\* (when relay is configured) |
 
 ### Preflight protocol
 
@@ -198,30 +198,33 @@ Team Lead answers
 
 ## Fail Attempt Counter
 
-| Fail # | Who acts | GitHub label |
-| --- | --- | --- |
-| 1st | Tester spawns Builder directly | `qa-fail-1` |
-| 2nd | Architect reviews + corrects (or escalates if decision needed) | `qa-fail-2` |
-| 3rd | Park + escalate to Team Lead unconditionally | — |
+The fail counter is tracked in the task file's `fail-count:` frontmatter field (authoritative) and mirrored to GitHub labels when a tracker is configured.
+
+| Fail # | Frontmatter `fail-count:`      | Who acts                                                       | GitHub label (when configured) |
+| ------ | ------------------------------ | -------------------------------------------------------------- | ------------------------------ |
+| 1st    | `1`                            | Tester spawns Builder directly                                 | `qa-fail-1`                    |
+| 2nd    | `2`                            | Architect reviews + corrects (or escalates if decision needed) | `qa-fail-2`                    |
+| 3rd    | — (task marked `parked: true`) | Park + escalate to Team Lead unconditionally                   | —                              |
 
 Rules:
 
 - The counter is independent per ticket — a fail on Ticket 1 does not affect Ticket 2's counter.
-- The counter resets if the team lead provides new direction and the flow restarts from a parked state. On reset, remove all `qa-fail-*` labels from the GitHub issue before the flow resumes.
-- Labels `qa-fail-1` and `qa-fail-2` are applied to the GitHub issue at the moment of the corresponding fail.
+- The counter is stored in the local task file frontmatter `fail-count:` field.
+- The counter resets if the team lead provides new direction and the flow restarts from a parked state. On reset, set `fail-count: 0` and `parked: false` in the task file frontmatter; if a tracker is configured, remove all `qa-fail-*` labels from the GitHub issue before the flow resumes.
+- When a tracker is configured, the fail-counter labels `qa-fail-1` and `qa-fail-2` are applied to the GitHub issue as a mirror of the local `fail-count:` field at the moment of the corresponding fail.
 
 ## Lifecycle State Mapping
 
 This flow operates within `ticket-lifecycle-mode`.
 
-| Flow event | Lifecycle state |
-| --- | --- |
-| Builder starts implementation (after dispatch) | `state:in-progress` |
-| Builder complete (`verifier: Tester` or `verifier: Automated`) | `state:ready-for-qa` |
-| Builder complete (`verifier: Architect`) | `state:ready-for-review` |
-| Tester fails | `state:changes-requested` |
-| Tester passes all ACs | `state:qa-passed` |
-| Team Lead merges + closes | Team Lead merges and closes — out-of-band action, not a managed label. |
+| Flow event                                                     | Lifecycle state                                                        |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------- |
+| Builder starts implementation (after dispatch)                 | `state:in-progress`                                                    |
+| Builder complete (`verifier: Tester` or `verifier: Automated`) | `state:ready-for-qa`                                                   |
+| Builder complete (`verifier: Architect`)                       | `state:ready-for-review`                                               |
+| Tester fails                                                   | `state:changes-requested`                                              |
+| Tester passes all ACs                                          | `state:qa-passed`                                                      |
+| Team Lead merges + closes                                      | Team Lead merges and closes — out-of-band action, not a managed label. |
 
 Note: For `verifier: Architect`, the intermediate state is `state:ready-for-review` (not `state:ready-for-qa`). On pass, Architect transitions directly from `state:ready-for-review` to `state:qa-passed` — no separate QA phase is required. See the Transition Permissions table in `ticket-lifecycle-mode`.
 
@@ -284,15 +287,28 @@ Each ticket runs its own fail counter independently. A 3rd fail on either ticket
 
 All three rules below are mandatory during an automation run.
 
-### Rule 1 — GitHub issue labels
+### Rule 1 — Local task file (canonical)
 
-Apply GitHub issue labels to record both fail counter state and ticket lifecycle state:
+**Local task files are the canonical system of record.** On every lifecycle transition:
 
-- Fail counter labels: `qa-fail-1` (1st fail), `qa-fail-2` (2nd fail)
-- Ticket state labels: use the canonical state vocabulary from `ticket-lifecycle-mode` — e.g. `state:in-progress`, `state:ready-for-qa`, `state:qa-passed`, `state:changes-requested`
-- Labels are applied by the agent that triggers the transition; they are not deferred
-- When a new state label is applied, remove the previous state label from the issue
-- When advancing from `qa-fail-1` to `qa-fail-2`, remove `qa-fail-1` first. Both labels must never coexist on the same issue.
+1. **Update the local task file first** (this is the authoritative write):
+   - Update `status:` frontmatter field to the new lifecycle state (e.g., `state:in-progress`, `state:ready-for-qa`, `state:qa-passed`, `state:changes-requested`)
+   - Update `fail-count:` frontmatter field when applicable
+   - Set `parked: true` when fail-count reaches 3
+   - Rename the file to reflect the new state token (e.g., `task_N_ready-for-qa_slug.md` → `task_N_changes-requested_slug.md`)
+2. **If a tracker is configured** (presence of `github:` or `github-issue:` field, or workspace tracker config):
+   - **Immediately follow with the mirror update** (this is mandatory, not optional):
+     - Apply the corresponding lifecycle state label to the GitHub issue (remove the previous state label)
+     - Apply or remove fail-counter labels (`qa-fail-1`, `qa-fail-2`) to mirror the `fail-count:` field
+     - Post any required comments (e.g., QA reports, handoff notifications)
+   - **If the mirror write fails:**
+     - Append the failure to the task file's `## Log` section (timestamp, attempted action, error)
+     - Record the failed outbound in Router's `memory/router.md` HOT section under `failed-outbound` (if Router is active)
+     - Reconcile the mirror before the ticket is considered closed
+   - **A transition is not complete** until the mirror write succeeds or the failure is explicitly recorded for retry
+3. **No tracker configured:** local-only; no mirror obligation exists
+
+The CLI function `changeTaskStatus` handles the atomic local write (frontmatter + filename). Agents performing transitions must call the CLI or perform equivalent atomic updates.
 
 ### Rule 2 — Task tracking (TaskCreate / TaskUpdate)
 

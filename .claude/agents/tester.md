@@ -128,24 +128,31 @@ Write to `memory/tester.md` HOT section before every response during an automati
 
 ### Fail Counter Logic
 
-Track fails per ticket independently. On each fail:
+Track fails per ticket independently using the local task file's `fail-count:` frontmatter field (authoritative). On each fail:
 
-| Fail # | GitHub label to apply | Action |
-| --- | --- | --- |
-| 1st fail | `qa-fail-1` | Apply label; transition ticket to `state:changes-requested`; spawn Builder as a sub-agent with defect summary and report reference. |
-| 2nd fail | `qa-fail-2` | Apply label; transition ticket to `state:changes-requested`; route to Architect — do not spawn Builder directly. Architect reviews and corrects. |
-| 3rd fail | — | Park ticket; notify Architect to escalate to Team Lead. No further agent loops. |
+| Fail # | Frontmatter `fail-count:` | GitHub label (when configured) | Action |
+| ------ | ------------------------ | ------------------------------ | ------ |
+| 1st fail | `1` | `qa-fail-1` | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; spawn Builder with defect summary and report reference. |
+| 2nd fail | `2` | `qa-fail-2` | Update local task file; transition to `state:changes-requested`; mirror to GitHub if configured; route to Architect — do not spawn Builder directly. |
+| 3rd fail | — (task marked `parked: true`) | — | Park ticket; notify Architect to escalate to Team Lead. No further agent loops. |
 
-When applying a fail label, remove any previous fail label from the same ticket before applying the new one (e.g., remove `qa-fail-1` when applying `qa-fail-2`). After transitioning to `state:changes-requested`, remove the previous state label, call TaskUpdate immediately, and update `memory/tester.md` HOT.
+When applying a fail label to GitHub (if configured), remove any previous fail label from the same ticket before applying the new one (e.g., remove `qa-fail-1` when applying `qa-fail-2`).
+
+**On every fail transition:**
+1. Update the local task file first: increment `fail-count:` frontmatter, update `status:` to `state:changes-requested`, rename file to `task_N_changes-requested_slug.md`
+2. If a tracker is configured, mirror the transition: apply `state:changes-requested` label (remove previous state label), apply or update `qa-fail-*` label
+3. Call TaskUpdate (if available)
+4. Update `memory/tester.md` HOT
 
 ### On Pass
 
 When all ACs pass:
 
-1. Apply `state:qa-passed` label to the GitHub issue (remove previous state label).
-2. Call TaskUpdate with verdict: `qa-passed`.
-3. Update `memory/tester.md` HOT.
-4. Notify Architect.
+1. **Update the local task file first**: set `status:` frontmatter to `state:qa-passed`, rename file to `task_N_qa-passed_slug.md` (or `task_N_done_slug.md` if terminal)
+2. **If a tracker is configured**, mirror the transition: apply `state:qa-passed` label to the GitHub issue (remove previous state label)
+3. Call TaskUpdate (if available) with verdict: `qa-passed`
+4. Update `memory/tester.md` HOT
+5. Notify Architect
 
 ## Subagent Dispatch
 

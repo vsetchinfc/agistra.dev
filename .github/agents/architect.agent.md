@@ -11,7 +11,6 @@ tools:
     vscode/vscodeAPI,
     vscode/extensions,
     vscode/askQuestions,
-    vscode/toolSearch,
     execute/runNotebookCell,
     execute/getTerminalOutput,
     execute/killTerminal,

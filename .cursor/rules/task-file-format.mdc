@@ -6,20 +6,26 @@ alwaysApply: false
 
 # Task file format
 
-Task files live in `projects/<project>/task_N_todo_<slug>.md`.
+Task files live in `projects/<project>/task_N_<state>_<slug>.md`. Filename structure: `task_N_<state>_slug.md` where `<state>` is one of the lifecycle state tokens.
 
 ## Structure
 
 ```markdown
-# Task N: <Title>
-
-**Agent:** Builder | Architect | Tester | Router
-**Mode:** software-engineer-mode | architecture-mode | qa-mode
-**Priority:** CRITICAL | HIGH | MEDIUM | LOW
-**GitHub Issue:** #N  (optional — link to source issue)
-**Dependencies:** task_N, task_M  (optional — tasks that must complete first)
-
 ---
+agent: builder | tester | architect
+mode: engineering | qa | architecture
+model: claude-sonnet-4-6
+status: state:ready-for-qa          # Authoritative lifecycle state
+verifier: Tester | Architect | Automated
+fail-count: 0                       # QA failure count (0, 1, 2)
+parked: true                        # Set when fail-count reaches 3
+github-issue: 42                    # Optional tracker mirror link
+skills:
+  - software-engineer-mode
+  - ticket-lifecycle-mode
+---
+
+# Task N: <Title>
 
 ## Context
 [Why this task exists, current state, what is broken or missing]
@@ -37,6 +43,12 @@ Task files live in `projects/<project>/task_N_todo_<slug>.md`.
 [How Tester will verify completion — exact steps, evidence required]
 ```
 
+**Required frontmatter fields:** `agent`, `mode`, `model`, `status`, `verifier`, `skills`.
+
+**Optional frontmatter fields:** `fail-count` (defaults to 0), `parked` (defaults to false), `github` / `github-issue` (for tracker mirroring).
+
+The `status:` field is the **source of truth**. The filename infix is a derived index. If they differ, the CLI reconciles the filename to match frontmatter.
+
 ## Acceptance criteria conventions
 
 Good criteria are observable — they describe an outcome that can be verified without reading the code:
@@ -48,23 +60,25 @@ Good criteria are observable — they describe an outcome that can be verified w
 
 ## Lifecycle
 
-Files move through states by filename prefix rename:
+Files move through states by filename prefix rename and frontmatter `status:` update (both updated atomically):
 
 ```
-task_N_todo_<slug>.md       ← not started
-task_N_in_progress_<slug>.md  ← Builder active
-task_N_done_<slug>.md       ← QA passed, closed (lives in projects/<project>/done/)
+task_N_todo_<slug>.md                  ← state:ready-for-implementation (auto-dispatchable)
+task_N_in-progress_<slug>.md           ← state:in-progress
+task_N_ready-for-review_<slug>.md      ← state:ready-for-review
+task_N_ready-for-qa_<slug>.md          ← state:ready-for-qa
+task_N_changes-requested_<slug>.md     ← state:changes-requested
+task_N_qa-passed_<slug>.md             ← state:qa-passed
+task_N_done_<slug>.md                  ← closed (terminal, moves to projects/<project>/done/)
 ```
 
-Use `npm run advance -- <project>` to advance the lowest pending task automatically (renames `_todo_` → `_done_` and moves the file into `done/`).
+All state transitions are managed by `cli/lib/tasks.js` (`changeTaskStatus` function). The CLI updates filename and frontmatter atomically.
 
-Target a specific task by number or slug:
+### Mirror obligation
 
-```bash
-npm run advance -- setchin-agent-profiles 35
-npm run advance -- setchin-agent-profiles relay-wizard
-node cli/index.js dispatch setchin-agent-profiles --advance --task 35
-```
+When a tracker is configured (`github:` / `github-issue:` frontmatter field, or workspace-level tracker config), **every state transition must update both the local file and the tracker record**. Updating only the local file is a protocol violation. A failed mirror write is logged in the task file's `## Log` section and tracked for retry — never silently skipped.
+
+With no tracker configured, no mirror obligation applies.
 
 ## Who does what
 

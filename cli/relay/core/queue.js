@@ -96,6 +96,33 @@ export class InboundQueue {
 		return stale.length;
 	}
 
+	/**
+	 * Delete done jobs whose received_at is older than olderThanMs.
+	 * Pending and processing jobs are never deleted.
+	 * Non-fatal on individual delete errors.
+	 * Returns count of deleted files.
+	 *
+	 * @param {number} olderThanMs
+	 * @returns {number}
+	 */
+	pruneOldDone(olderThanMs) {
+		const now = Date.now();
+		const old = this._listAll().filter(
+			j => j.status === 'done'
+				&& now - new Date(j.received_at).getTime() > olderThanMs,
+		);
+		let count = 0;
+		for (const job of old) {
+			try {
+				this.fsMod.unlinkSync(this._jobPath(job.id));
+				count++;
+			} catch {
+				// non-fatal
+			}
+		}
+		return count;
+	}
+
 	clear() {
 		for (const file of this.fsMod.readdirSync(this.inboxDir)) {
 			if (file.endsWith('.json')) {

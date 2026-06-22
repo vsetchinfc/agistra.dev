@@ -21,11 +21,11 @@ This workspace is an **Agistra hub** — it holds planning, memory, and task que
 
 ## Task file naming
 
-`task_N_todo_<short-slug>.md` — N is sequential (1, 2, 3…), slug is lowercase kebab-case.
+`task_N_<state>_<short-slug>.md` — N is sequential (1, 2, 3…), `<state>` is one of the lifecycle state tokens (todo, in-progress, ready-for-review, ready-for-qa, changes-requested, qa-passed, done), slug is lowercase kebab-case.
 
 Example: `task_12_todo_security-hardening.md`
 
-State is encoded in the filename prefix: `todo` → `in_progress` → `done`.
+State is encoded in both the filename token and the `status:` frontmatter field (frontmatter is authoritative).
 
 ## CLI shortcuts
 

@@ -6,7 +6,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "bash tools/memory-check.sh"
+						"command": "bash \"$CLAUDE_PROJECT_DIR/tools/memory-check.sh\""
 					}
 				]
 			}
@@ -17,7 +17,7 @@
 				"hooks": [
 					{
 						"type": "command",
-						"command": "node tools/ensure-relay-daemon.js"
+						"command": "node \"$CLAUDE_PROJECT_DIR/tools/ensure-relay-daemon.js\""
 					}
 				]
 			}

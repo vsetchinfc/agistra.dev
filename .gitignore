@@ -1,29 +1,24 @@
-workspace.config.json
-.claude/settings.local.json
-
-# Runtime lock files
-relay/.daemon.lock
-
-# Relay logs (rotating per-day logs)
-relay/logs/
-relay/dispatch.log
-
-# Relay inbox (transient queue items)
-relay/inbox/
-
-# Node.js
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-
-# OS artifacts
+# OS/editor noise
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
 
-# Editor swap files
-*.swp
-*.swo
-*~
+# Per-workspace runtime state
+**/.openclaw/
+
+# Workspace config — contains secrets (bot tokens); never commit
+workspace.config.json
+
+# Portable runtime state
+telegram-mcp-server/.env.local
+telegram-mcp-server/queue.db
+
+# Scratch outputs
+tmp/
+dist/
+coverage/
+node_modules/
 relay/
+
+dev-server.log
