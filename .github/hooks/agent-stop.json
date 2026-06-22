@@ -1,0 +1,10 @@
+{
+	"version": 1,
+	"hooks": {
+		"agentStop": [
+			{
+				"command": "bash tools/memory-check-copilot.sh"
+			}
+		]
+	}
+}
