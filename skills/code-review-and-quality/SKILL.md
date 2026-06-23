@@ -143,7 +143,7 @@ For each file changed:
 
 ### Step 4: Label Findings
 
-Label every comment with its severity so the author knows what is required vs optional:
+Label every comment with its severity so the author knows what is required vs optional, and with its confidence tier (see Confidence Tiers below) so the author knows how sure the review is:
 
 | Label | Meaning | Author Action |
 |-------|---------|---------------|
@@ -182,6 +182,31 @@ Check the author's verification story:
 | **Optional** / **Consider** | A suggestion worth thinking about but not required for this change. |
 | **FYI** | Informational only. No action required — context for future reference. |
 
+## Confidence Tiers
+
+Severity and confidence answer different questions, and a finding needs both:
+
+- **Severity** — how bad is this *if it's real*?
+- **Confidence** — how sure am I that it's real?
+
+A Critical finding can still be unconfirmed (a suspected race condition spotted from code shape, never actually reproduced). A trivial style nit can be 100% certain. Neither axis implies the other — set both independently on every finding.
+
+Confidence is graded by the kind of evidence behind the finding, not by an abstract numeric estimate:
+
+| Tier | Evidence basis |
+|------|-----------------|
+| **Confirmed** | Directly reproduced — a failing test, an actual stack trace or build error, or a concrete input/output trace walked through the code that demonstrates the problem. |
+| **Likely** | Strong circumstantial evidence — the code matches a known bug class (e.g. a value the type/contract allows to be null is dereferenced unguarded) or clearly violates a documented project convention with a specific counter-example, but wasn't directly executed or reproduced. |
+| **Speculative** | An inference from code shape alone, with no concrete trace, reproduction, or pattern match — "this could break if X happens" without evidence that X happens here. |
+
+**Reporting rule:**
+
+- **Confirmed** and **Likely** findings are always reported, at whatever severity they carry.
+- **Speculative** findings are reported only when severity is **Critical** or **Required**, and must carry an explicit `(unconfirmed)` tag — never presented as settled fact.
+- **Speculative** findings at **Nit**, **Optional**, or **FYI** severity are suppressed. This is the noise the tiering exists to cut: low-stakes guesses that cost the author more attention than they're worth.
+
+This is a tiering by evidence type, not a percentage score — a reviewer (human or agent) should be able to point at *why* a finding sits in its tier, not just assert a number.
+
 ## Red Flags
 
 - PRs merged without any review
@@ -191,6 +216,7 @@ Check the author's verification story:
 - Large PRs that are "too big to review properly" — split them
 - No regression tests with bug fix PRs
 - Review comments without severity labels — makes it unclear what is required vs optional
+- A Speculative finding presented without the `(unconfirmed)` tag, or any Speculative finding reported at Nit/Optional/FYI severity — exactly the noise the confidence tiers exist to suppress
 - Accepting "I'll fix it later" — it never happens
 - AI-generated code treated as automatically correct — it needs more scrutiny, not less
 
@@ -234,6 +260,10 @@ Check the author's verification story:
 - [ ] Tests pass
 - [ ] Build succeeds
 - [ ] Manual verification done (if applicable)
+
+### Confidence
+- [ ] Every finding carries a confidence tier (Confirmed/Likely/Speculative) alongside its severity
+- [ ] No Speculative finding is reported below Critical/Required without an explicit `(unconfirmed)` tag
 
 ### VBR Gate
 - [ ] All Critical issues resolved

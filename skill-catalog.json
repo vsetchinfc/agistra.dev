@@ -1,0 +1,10 @@
+{
+	"skills": [
+		{
+			"name": "frontend-design",
+			"repo": "anthropics/claude-code",
+			"path": "plugins/frontend-design/skills/frontend-design",
+			"ref": "main"
+		}
+	]
+}
