@@ -229,6 +229,14 @@ npm run install-skill -- frontend-design
 
 This fetches the named skill directly from its declared source into this hub's own `skills/<name>/`. Re-running is idempotent — if nothing changed upstream, it reports `unchanged` rather than rewriting the file. An agent profile that references an optional skill works fine before you install it; the skill is simply treated as not yet available, not as an error.
 
+### Check hub health
+
+```powershell
+npm run doctor
+```
+
+Runs a battery of checks against the hub (config files, `.mcp.json`, agent profiles, relay wiring if enabled, etc.) and prints a pass/fail/warn report. Missing `memory/<agent>.md` files are scaffolded automatically in the same run — the required agent list is derived from whatever agent profiles are actually deployed under `.claude/agents/`, so doctor never invents memory files for agents that aren't installed in this hub. Existing memory files are never touched.
+
 ---
 
 ## Task file format
@@ -277,6 +285,8 @@ memory/
 ```
 
 Agents read their memory file at session start and update it at session end. HOT items surface in the morning briefing. WARM items inform planning. COLD items are archived or dropped.
+
+If a memory file goes missing (e.g. a fresh deploy, or a file deleted by accident), `npm run doctor` scaffolds it automatically the next time it runs — no extra flag or command needed. Files that already exist are left untouched.
 
 ---
 

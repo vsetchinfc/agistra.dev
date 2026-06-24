@@ -18,6 +18,7 @@ import { execFileSync } from 'node:child_process';
 import { CLAUDE_SETTINGS_PATH, readJsonSafe } from './wizard.js';
 import { DEFAULT_DAEMON_PORT } from './relay/core/config.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
+import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
 
 // ── Check result constructors ──────────────────────────────────────────────────
 
@@ -59,8 +60,10 @@ function checkGitignore({ hubRoot, fsMod }) {
 	const missing = [];
 	if (!lines.includes('workspace.config.json')) missing.push('workspace.config.json');
 	if (!lines.includes('.claude/settings.local.json')) missing.push('.claude/settings.local.json');
+	if (!lines.includes('workspace-identity.mdc')) missing.push('workspace-identity.mdc');
+	if (!lines.includes('copilot-instructions.md')) missing.push('copilot-instructions.md');
 	if (missing.length === 0) {
-		return pass(2, '.gitignore entries', 'both personal files covered');
+		return pass(2, '.gitignore entries', 'all personal files covered');
 	}
 	return fail(2, '.gitignore entries', `missing entries: ${missing.join(', ')}`,
 		'run: npm run deploy (redeploy hub to add missing entries)');
@@ -85,14 +88,37 @@ function checkGitattributes({ hubRoot, fsMod }) {
 		'run: npm run deploy (redeploy hub to add missing entries)');
 }
 
-function checkMemoryFiles({ hubRoot, fsMod }) {
-	const required = ['architect.md', 'builder.md', 'tester.md', 'router.md'];
-	const missing = required.filter(f => !fsMod.existsSync(path.join(hubRoot, 'memory', f)));
-	if (missing.length === 0) {
-		return pass(4, 'memory files', 'all 4 agent memory files present');
+/**
+ * Derive the required agent id list for memory-file scaffolding from the
+ * deployed .claude/agents/*.md basenames — the same source check 9
+ * (checkAgentProfiles) already reads. Never hardcoded, never dependent on
+ * the source profilesRoot (a deployed hub does not have it).
+ */
+function discoverDeployedAgentIds({ hubRoot, fsMod }) {
+	const dir = path.join(hubRoot, '.claude', 'agents');
+	if (!fsMod.existsSync(dir)) return [];
+	try {
+		return fsMod.readdirSync(dir)
+			.filter(f => f.endsWith('.md'))
+			.map(f => f.slice(0, -'.md'.length));
+	} catch {
+		return [];
 	}
-	return fail(4, 'memory files', `missing: ${missing.join(', ')}`,
-		'run: npm run deploy (redeploy hub to scaffold memory files)');
+}
+
+function checkMemoryFiles({ hubRoot, fsMod }) {
+	const agentIds = discoverDeployedAgentIds({ hubRoot, fsMod });
+	const memoryRoot = path.join(hubRoot, 'memory');
+	const scaffolded = [];
+	for (const agentId of agentIds) {
+		if (scaffoldMemoryFile({ memoryRoot, agentId, fsMod })) {
+			scaffolded.push(`${agentId}.md`);
+		}
+	}
+	if (scaffolded.length === 0) {
+		return pass(4, 'memory files', `all ${agentIds.length} agent memory file(s) present`);
+	}
+	return pass(4, 'memory files', `${scaffolded.length} file(s) scaffolded: ${scaffolded.join(', ')}`);
 }
 
 function checkMcpJson({ hubRoot, fsMod }) {
