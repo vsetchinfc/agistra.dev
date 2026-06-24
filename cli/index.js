@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { dispatch } from './dispatch.js';
 import { scan } from './scan.js';
+import { findSkillCatalogEntry, installSkillFromCatalog } from './lib/skill-sources.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,7 +54,7 @@ const command = args._command ?? 'dispatch';
 const project = typeof args.project === 'string' ? args.project : args._project;
 
 const projectsRoot = path.resolve(consultingRoot, args['projects-root'] ?? 'projects');
-const skillsRoot   = path.resolve(consultingRoot, args['skills-root']   ?? '.github/skills');
+const skillsRoot   = path.resolve(consultingRoot, args['skills-root']   ?? 'skills');
 const projectsDir  = project ? path.join(projectsRoot, project) : null;
 const projectRoot  = project ? path.join(workspaceRoot, project) : null;
 
@@ -68,6 +69,43 @@ if (command === 'dispatch') {
 	const dryRun = args['dry-run'] === true;
 	scan({ projectRoot, projectName: project, projectsDir, dryRun });
 
+// ── install-skill ─────────────────────────────────────────────────────────────
+//
+// Opt-in, user-initiated fetch of a third-party skill directly from its
+// declared source into the CURRENT WORKING DIRECTORY's own skills/<name>/.
+//
+// This is meant to be run from inside this hub's own checkout. It never
+// writes into, reads from as a destination, or otherwise touches
+// setchin-agent-profiles' own skills/ directory or git history. It is never
+// invoked by `deploy`, `deploy:dist`, or any CI step — see
+// docs/optional-third-party-skills-PRD.md for the full rationale (licensing:
+// third-party skill content is not ours to redistribute).
+
+} else if (command === 'install-skill') {
+	const name = typeof args.name === 'string' ? args.name : args._project;
+	const catalogPath = path.join(consultingRoot, 'skill-catalog.json');
+	const destRoot = path.join(process.cwd(), 'skills');
+
+	if (!name) {
+		process.stderr.write('Usage: node cli/index.js install-skill <name>\n');
+		process.exit(1);
+	}
+
+	const entry = findSkillCatalogEntry(catalogPath, name);
+	if (!entry) {
+		console.error(`Unknown skill "${name}". Not found in skill-catalog.json.`);
+		process.exit(1);
+	}
+
+	installSkillFromCatalog({ entry, destRoot }).then((result) => {
+		if (result.status === 'error') {
+			console.error(`ERROR [install-skill/${result.name}]: ${result.error}`);
+			process.exit(1);
+		}
+		console.log(`[install-skill] ${result.name} → ${path.relative(process.cwd(), path.join(destRoot, result.name))} — ${result.status}`);
+		process.exit(0);
+	});
+
 } else {
 	process.stdout.write([
 		'Usage:',
@@ -80,6 +118,7 @@ if (command === 'dispatch') {
 		'  node cli/index.js dispatch <project> --task <num-or-slug>         # dispatch a specific task',
 		'  node cli/index.js scan     <project>             # scan project and generate increments',
 		'  node cli/index.js scan     <project> --dry-run   # preview without writing files',
+		'  node cli/index.js install-skill <name>           # fetch a third-party skill into this hub\'s skills/',
 		'',
 		'Or via npm scripts:',
 		'  npm run list',
@@ -87,6 +126,7 @@ if (command === 'dispatch') {
 		'  npm run advance  <project> [taskN]',
 		'  npm run launch   <project>',
 		'  npm run scan     <project>',
+		'  npm run install-skill <name>',
 		'',
 	].join('\n'));
 	process.exit(0);

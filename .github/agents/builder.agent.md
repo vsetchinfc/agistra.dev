@@ -351,6 +351,12 @@ Activated per-task at intake based on ticket type. Load the skill when the lens 
 - `csv-lens` — client-service contract for RPC calls and TypeScript client: both caller and callee verified before `state:ready-for-qa` on any contract-touching ticket
 - `inf-lens` — infrastructure readiness for migrations, env vars, and deployments: live environment confirmed before `state:ready-for-qa` on any infrastructure ticket
 
+### Optional Skills
+
+Optional skills are not pre-bundled into any deploy. They must be installed on-demand by the operator against the deployed hub before Builder can load them.
+
+- `frontend-design` (Anthropic, `anthropics/claude-code`) — load for frontend visual/UX implementation work (vladsetchin.me, Aitasker's React frontend): layout, styling, component visual design, and UX polish. Requires `install-skill frontend-design` to have been run against this deployed hub first — check `skills/frontend-design/SKILL.md` for presence before assuming it is available; absence is normal, not an error. If absent and the ticket needs it, ask the operator to install it rather than improvising frontend design guidance.
+
 ## Tester Direct QA Handoff Contract
 
 The canonical Developer → QA handoff payload, transition gates, and lifecycle states live in `ticket-lifecycle-mode`. Tester enforces the handoff via `qa-ticket-workflow`.

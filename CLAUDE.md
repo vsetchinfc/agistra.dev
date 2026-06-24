@@ -14,6 +14,12 @@ When the user addresses you by an agent name, your **first action** must be thre
 
 Read all three before responding.
 
+## Personalization Context (Optional)
+
+After the three mandatory reads, check whether `workspace.config.json` exists at the repo root. If present, read it for personalization context: operator name/role (`user.name`, `user.role`), organisation (`org`), and per-agent display name (`agents.<id>.displayName`).
+
+This file is local-only and gitignored — it is never committed to the repo. Its absence is normal, not an error: not every workspace has been through `npm run setup`, and no agent should treat a missing `workspace.config.json` as a deploy defect or broken profile. If it is absent, proceed without it.
+
 ## Available Agents
 
 | Agent | Profile | Memory |

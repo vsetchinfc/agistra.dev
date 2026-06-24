@@ -2,7 +2,7 @@
 /**
  * doctor.js — Hub health check command.
  *
- * Runs 9 checks and prints a coloured report showing green/warn/fail for each
+ * Runs 13 checks and prints a coloured report showing green/warn/fail for each
  * configuration item. Designed to be run after `npm run setup` to confirm the
  * hub is correctly configured before starting a work session.
  *
@@ -217,6 +217,26 @@ function checkAgentProfiles({ hubRoot, fsMod }) {
 	return pass(9, 'agent profiles', `${entries.length} agent profile(s) found in .claude/agents/`);
 }
 
+function checkCodexAgentProfiles({ hubRoot, fsMod }) {
+	const dir = path.join(hubRoot, '.codex', 'agents');
+	if (!fsMod.existsSync(dir)) {
+		return fail(10, 'codex agent profiles', '.codex/agents/ directory not found',
+			'run: npm run deploy (redeploy hub)');
+	}
+	let entries;
+	try {
+		entries = fsMod.readdirSync(dir).filter(f => f.endsWith('.toml'));
+	} catch {
+		return fail(10, 'codex agent profiles', 'could not read .codex/agents/',
+			'run: npm run deploy (redeploy hub)');
+	}
+	if (entries.length === 0) {
+		return fail(10, 'codex agent profiles', '.codex/agents/ is empty',
+			'run: npm run deploy (redeploy hub)');
+	}
+	return pass(10, 'codex agent profiles', `${entries.length} Codex agent profile(s) found in .codex/agents/`);
+}
+
 function isAutoDispatchEnabled(config) {
 	return config?.relay?.autoDispatch === true;
 }
@@ -224,13 +244,13 @@ function isAutoDispatchEnabled(config) {
 function checkAutoDispatchClaude({ hubRoot, fsMod, execFn }) {
 	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
 	if (skipReason || !isAutoDispatchEnabled(config)) {
-		return skip(10, 'auto-dispatch: claude', 'autoDispatch not enabled — check skipped');
+		return skip(11, 'auto-dispatch: claude', 'autoDispatch not enabled — check skipped');
 	}
 	try {
 		execFn('claude', ['--version'], { stdio: 'pipe' });
-		return pass(10, 'auto-dispatch: claude', '`claude` found on PATH');
+		return pass(11, 'auto-dispatch: claude', '`claude` found on PATH');
 	} catch {
-		return fail(10, 'auto-dispatch: claude', '`claude` not found on PATH',
+		return fail(11, 'auto-dispatch: claude', '`claude` not found on PATH',
 			'install Claude Code CLI: https://claude.ai/download');
 	}
 }
@@ -238,48 +258,48 @@ function checkAutoDispatchClaude({ hubRoot, fsMod, execFn }) {
 function checkAutoDispatchRouterProfile({ hubRoot, fsMod }) {
 	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
 	if (skipReason || !isAutoDispatchEnabled(config)) {
-		return skip(11, 'auto-dispatch: router profile', 'autoDispatch not enabled — check skipped');
+		return skip(12, 'auto-dispatch: router profile', 'autoDispatch not enabled — check skipped');
 	}
 	const profilePath = path.join(hubRoot, '.claude', 'agents', 'router.md');
 	if (fsMod.existsSync(profilePath)) {
-		return pass(11, 'auto-dispatch: router profile', '.claude/agents/router.md found');
+		return pass(12, 'auto-dispatch: router profile', '.claude/agents/router.md found');
 	}
-	return fail(11, 'auto-dispatch: router profile', '.claude/agents/router.md not found',
+		return fail(12, 'auto-dispatch: router profile', '.claude/agents/router.md not found',
 		'run: npm run deploy (redeploy hub to install router profile)');
 }
 
 function checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }) {
 	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
 	if (skipReason || !isRemoteTeamEnabled(config)) {
-		return skip(12, 'router model tier', 'remoteTeam not enabled — check skipped');
+		return skip(13, 'router model tier', 'remoteTeam not enabled — check skipped');
 	}
 	const profilePath = path.join(hubRoot, '.claude', 'agents', 'router.md');
 	if (!fsMod.existsSync(profilePath)) {
-		return skip(12, 'router model tier', '.claude/agents/router.md absent — skipping model check');
+		return skip(13, 'router model tier', '.claude/agents/router.md absent — skipping model check');
 	}
 	let deployedModel;
 	try {
 		deployedModel = parseProfileModel(fsMod.readFileSync(profilePath, 'utf-8'));
 	} catch {
-		return skip(12, 'router model tier', 'could not read router profile — skipping model check');
+		return skip(13, 'router model tier', 'could not read router profile — skipping model check');
 	}
 	let expectedModel;
 	try {
 		expectedModel = resolveRouterModel(profilesRoot, fsMod);
 	} catch {
-		return skip(12, 'router model tier', 'router manifest unavailable — skipping model check');
+		return skip(13, 'router model tier', 'router manifest unavailable — skipping model check');
 	}
 	if (!deployedModel) {
-		return warn(12, 'router model tier',
+		return warn(13, 'router model tier',
 			'deployed router.md has no model field — economy tier not enforced',
 			`run: npm run deploy (expected model: ${expectedModel})`);
 	}
 	if (deployedModel !== expectedModel) {
-		return warn(12, 'router model tier',
+		return warn(13, 'router model tier',
 			`deployed model (${deployedModel}) ≠ manifest economy tier (${expectedModel})`,
 			'run: npm run deploy (redeploy to update router model)');
 	}
-	return pass(12, 'router model tier', `router uses economy model ${deployedModel}`);
+		return pass(13, 'router model tier', `router uses economy model ${deployedModel}`);
 }
 
 /**
@@ -329,6 +349,7 @@ export async function runChecks({
 		checkRelayMcp({ hubRoot, fsMod }),
 		checkTelegramConfig({ hubRoot, fsMod }),
 		checkAgentProfiles({ hubRoot, fsMod }),
+		checkCodexAgentProfiles({ hubRoot, fsMod }),
 		checkAutoDispatchClaude({ hubRoot, fsMod, execFn }),
 		checkAutoDispatchRouterProfile({ hubRoot, fsMod }),
 		checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }),
