@@ -217,6 +217,16 @@ Preview what `scan` would generate without writing files:
 node cli/index.js scan <project> --dry-run
 ```
 
+### Install an optional skill
+
+Some agents reference optional skills that aren't bundled by default — for example, Builder's `frontend-design` skill. Install one when you need it:
+
+```powershell
+npm run install-skill -- frontend-design
+```
+
+This fetches the named skill directly from its declared source into this hub's own `skills/<name>/`. Re-running is idempotent — if nothing changed upstream, it reports `unchanged` rather than rewriting the file. An agent profile that references an optional skill works fine before you install it; the skill is simply treated as not yet available, not as an error.
+
 ---
 
 ## Task file format

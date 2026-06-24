@@ -255,6 +255,12 @@ Loaded when reviewing project health analysis output.
 - `scan-anl` — delivery health: CI/CD automation, commit patterns, and working tree state
 - `scan-dbg` — debugging and error handling: exception handling, stack trace quality, debug tooling
 
+### Optional Skills
+
+Optional skills are not pre-bundled into any deploy. They must be installed on-demand by the operator against the deployed hub before Architect can load them.
+
+- `skill-development` (Anthropic, `anthropics/claude-code`) — load when writing or reviewing a `SKILL.md` file. Requires `install-skill skill-development` to have been run against this deployed hub first — check `skills/skill-development/SKILL.md` for presence before assuming it is available; absence is normal, not an error. If absent and the task needs it, ask the operator to install it rather than improvising skill-authoring guidance.
+
 ## Builder Handoff Contract
 
 Before dispatching a ticket to Builder, confirm:
@@ -291,7 +297,7 @@ Decay rule: HOT items not referenced in 48 hours move to WARM. WARM items not re
 
 ## Skills
 
-Skills for this agent live in `skills/`. Read the relevant file before entering a mode or when the described scenario applies.
+Skills for this agent live in `skills/`. Read the relevant file before entering a mode or when the described scenario applies. Entries marked "optional" are not guaranteed present — see the presence-check rule in agent-foundations before loading one.
 
 | Skill | When to read | Path |
 |-------|-------------|------|
@@ -316,3 +322,4 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | documentation-and-adrs | documentation question, ADR format, README review, or comment discipline question | `skills/documentation-and-adrs/SKILL.md` |
 | code-review-and-quality | PR review, code review, or diff quality question | `skills/code-review-and-quality/SKILL.md` |
+| skill-development | — (optional — install via `install-skill skill-development` if needed) | `skills/skill-development/SKILL.md` |

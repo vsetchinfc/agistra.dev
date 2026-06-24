@@ -17,6 +17,13 @@ import { fileURLToPath } from 'node:url';
 import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
 import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Source-repo profiles/ dir, relative to this script's own location (not cliOutputRoot).
+// Present when running `npm run setup` from inside the setchin-agent-profiles repo itself.
+// Absent in a deployed hub (profiles/ is a source-repo-only concept there).
+const SOURCE_PROFILES_ROOT = path.resolve(__dirname, '..', 'profiles');
+
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
 /**
@@ -31,6 +38,59 @@ export function detectPlatforms(root) {
 		cursor: fs.existsSync(path.join(root, '.cursor', 'agents')),
 		github: fs.existsSync(path.join(root, '.github', 'agents')),
 	};
+}
+
+/**
+ * Discover known agent IDs at runtime, without hardcoding the list.
+ *
+ * Tries, in order:
+ *   1. profiles/*-workspace directories next to this script (source-repo run) —
+ *      e.g. profiles/architect-workspace → id "architect".
+ *   2. Deployed-hub agent directories under cliOutputRoot — .claude/agents/*.md,
+ *      .cursor/agents/*.md, .github/agents/*.agent.md — whichever is present.
+ *
+ * Returns a sorted, de-duplicated array of lowercase agent IDs. Empty array if
+ * neither source is available (never throws).
+ *
+ * @param {string} cliOutputRoot  Absolute path to the workspace root being configured.
+ * @param {object} fsMod          Injectable fs module (real fs or an in-memory mock).
+ * @returns {string[]}
+ */
+export function discoverAgentIds(cliOutputRoot, fsMod) {
+	const ids = new Set();
+
+	// 1. Source-repo profiles/*-workspace dirs
+	if (fsMod.existsSync(SOURCE_PROFILES_ROOT)) {
+		try {
+			for (const name of fsMod.readdirSync(SOURCE_PROFILES_ROOT)) {
+				const match = /^(.+)-workspace$/i.exec(name);
+				if (match) ids.add(match[1].trim().toLowerCase());
+			}
+		} catch {
+			// Unreadable profiles/ dir — fall through to deployed-hub discovery
+		}
+	}
+
+	// 2. Deployed-hub agent directories
+	const deployedDirs = [
+		{ dir: path.join(cliOutputRoot, '.claude', 'agents'), suffix: '.md' },
+		{ dir: path.join(cliOutputRoot, '.cursor', 'agents'), suffix: '.md' },
+		{ dir: path.join(cliOutputRoot, '.github', 'agents'), suffix: '.agent.md' },
+	];
+	for (const { dir, suffix } of deployedDirs) {
+		if (!fsMod.existsSync(dir)) continue;
+		try {
+			for (const name of fsMod.readdirSync(dir)) {
+				if (name.endsWith(suffix)) {
+					ids.add(name.slice(0, -suffix.length).trim().toLowerCase());
+				}
+			}
+		} catch {
+			// Unreadable agents dir — skip this source
+		}
+	}
+
+	return [...ids].sort();
 }
 
 /**
@@ -190,6 +250,18 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 		line('Organisation ');
 		const orgName = await ask('Organisation or team name', prev.org ?? '');
 
+		line('Agent display names ');
+		const prevAgents = prev.agents ?? {};
+		const agentIds = discoverAgentIds(cliOutputRoot, fsMod);
+		const agents = {};
+		for (const id of agentIds) {
+			const prevDisplayName = prevAgents[id]?.displayName ?? '';
+			const displayName = await ask(`Display name for ${id} (optional)`, prevDisplayName);
+			if (displayName) {
+				agents[id] = { displayName };
+			}
+		}
+
 		line('Remote team ');
 		const hasRemoteTeam = await askYN('Do you work with a remote team?', prevRemoteTeam.enabled === true);
 
@@ -269,12 +341,8 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 			remoteTeam,
 			...(telegramMcp ? { telegram: telegramMcp } : {}),
 			...(Object.keys(relayBlock).length > 0 ? { relay: relayBlock } : {}),
+			...(Object.keys(agents).length > 0 ? { agents } : {}),
 		};
-
-		// Preserve existing agents block (preserves display names across re-runs)
-		if (existingConfig?.agents) {
-			config.agents = existingConfig.agents;
-		}
 
 		fsMod.mkdirSync(cliOutputRoot, { recursive: true });
 		fsMod.writeFileSync(configPath, JSON.stringify(config, null, 2) + '\n', 'utf-8');
