@@ -54,6 +54,61 @@ Run before every dispatch — both single-agent and batch:
 
 The preflight step does not require team lead involvement when all tools pass — it is a guard, not a gate.
 
+## Token Budget Preflight
+
+Before dispatching any subagent against a ticket that carries a `token-budget:` frontmatter value, check recorded spend against budget. Tickets without `token-budget:` set skip this check entirely — no behavior changes for them.
+
+### Pre-dispatch check protocol
+
+1. Sum every line's token count in the ticket's `## Token Spend` section to get current cumulative spend.
+2. Estimate the token cost of the dispatch about to run (use the prior dispatch of the same type on this ticket as the estimate when available; otherwise a conservative estimate is acceptable).
+3. If `current spend + estimated dispatch cost` would exceed `token-budget:` — **do not dispatch.** Park the ticket and escalate to the team lead instead.
+4. If the dispatch is within budget, proceed with dispatch as normal. After the dispatch completes, append the actual reported cost to `## Token Spend` per the convention in `ticket-lifecycle-mode`.
+
+This mirrors the existing 3rd-fail park behavior: the ticket halts, no further agent loop runs unsupervised, and the team lead makes the next call.
+
+### Park-and-escalate on budget exceeded
+
+```
+Architect: about to dispatch (e.g. Builder for ticket fix)
+  └─> pre-dispatch check: current spend + estimated cost > token-budget
+      └─> do not dispatch
+          └─> ticket: parked: true
+              └─> Architect notifies Team Lead with:
+                  - current cumulative spend (from ## Token Spend)
+                  - the ticket's token-budget
+                  - the dispatch that was about to happen (agent + purpose)
+```
+
+The team lead may raise the budget, approve the dispatch anyway, or redirect the ticket. Resume follows the same Parked Task Resumption flow used for fail-counter parking.
+
+### Worked Example
+
+Ticket frontmatter: `token-budget: 30000`. `## Token Spend` starts empty.
+
+**Dispatch 1 (Builder, implementation) — under budget:**
+
+- Current spend: `0`. Estimated cost: `~18000` (no prior dispatch on this ticket, conservative estimate used).
+- Check: `0 + 18000 = 18000` ≤ `30000` → dispatch proceeds.
+- Builder completes; usage data reports `18400` tokens actually spent.
+- Appended to the ticket's `## Token Spend`:
+
+  ```
+  - 2026-06-25T14:02:00Z | Builder | dispatch-1 | 18400 tokens | running total: 18400
+  ```
+
+**Dispatch 2 (Tester, QA verification) — would exceed budget:**
+
+- Current spend: `18400`. Estimated cost: `~13000` (based on a comparable prior Tester dispatch).
+- Check: `18400 + 13000 = 31400` > `30000` → dispatch does **not** proceed.
+- Ticket is parked (`parked: true`); no line is appended to `## Token Spend` since the dispatch never ran.
+- Architect notifies the team lead: "Ticket parked on token budget — current spend 18400 / budget 30000; the next dispatch (Tester QA verification) was estimated at ~13000 tokens, which would bring total spend to ~31400, exceeding budget. Awaiting direction: raise budget, approve anyway, or redirect."
+- Team lead raises `token-budget` to `35000` and approves. Architect updates the frontmatter, dispatches Tester, and the flow resumes. Tester completes; usage data reports `12900` tokens, appended as:
+
+  ```
+  - 2026-06-25T15:40:00Z | Tester | dispatch-2 | 12900 tokens | running total: 31300
+  ```
+
 ## Happy Path
 
 ### verifier: Tester

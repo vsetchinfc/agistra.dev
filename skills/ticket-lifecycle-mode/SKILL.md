@@ -37,8 +37,36 @@ The following fields define the authoritative state and configuration for every 
 | `fail-count`               | `0` \| `1` \| `2`                                                                                                                                             | active verifier on QA fail                 | Replaces `qa-fail-*` labels; incremented on each fail attempt                                       |
 | `parked`                   | `true` \| `false` (or absent)                                                                                                                                 | `Developer Lead` when fail-count reaches 3 | A parked task is not auto-dispatched; requires team lead direction to resume                        |
 | `github` or `github-issue` | issue URL or `org/repo#number`                                                                                                                                | `Developer Lead` at ticket creation        | **Optional** mirror link; its presence signals the mirror-update obligation applies                 |
+| `token-budget`             | integer token count                                                                                                                                            | `Developer Lead` at ticket creation        | **Optional** per-ticket spend ceiling; absent means no budget enforcement applies to the ticket. See `## Token Spend` log convention below and the pre-dispatch check in `task-automation-flow` |
 
 Agents update these fields on every lifecycle transition. The CLI keeps the filename infix in sync with `status:` when performing transitions.
+
+## Token Spend Log Convention
+
+When a ticket carries a `token-budget:` frontmatter value, every dispatch that completes against that ticket must append one line to the task file's `## Token Spend` section, recording the actual cost reported by the dispatch's usage data.
+
+**Section format** — an append-only log, oldest entry first, created the first time a dispatch completes after `token-budget` is set:
+
+```
+## Token Spend
+
+- 2026-06-25T14:02:00Z | Builder | dispatch-1 | 18400 tokens | running total: 18400
+- 2026-06-25T15:40:00Z | Tester | dispatch-2 | 9600 tokens | running total: 28000
+```
+
+**Line format** (exact):
+
+```
+- <ISO-8601 UTC timestamp> | <agent name> | <dispatch label> | <tokens for this dispatch> tokens | running total: <cumulative tokens>
+```
+
+Rules:
+
+- One line per completed dispatch — never edit or remove a prior line.
+- `<tokens for this dispatch>` is the value reported in the dispatch's `<usage><subagent_tokens>` completion data.
+- `running total:` is the sum of every line's token count so far, including the current line — this is the authoritative cumulative spend used by the pre-dispatch budget check in `task-automation-flow`.
+- A ticket without `token-budget:` set has no `## Token Spend` obligation — nothing changes for existing tickets.
+- A parked-for-budget dispatch (see `task-automation-flow`) is **not** logged here, since it never ran — only completed dispatches contribute spend.
 
 ## State Vocabulary (Filename Token ↔ Lifecycle State)
 
