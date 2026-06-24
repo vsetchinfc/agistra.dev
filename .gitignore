@@ -25,3 +25,4 @@ dev-server.log
 
 workspace-identity.mdc
 copilot-instructions.md
+.claude/settings.local.json
