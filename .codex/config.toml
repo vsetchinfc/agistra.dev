@@ -1,0 +1,6 @@
+[mcp_servers.agent-browser]
+command = "npx"
+args = [
+    "-y",
+    "@vercel-labs/agent-browser",
+]

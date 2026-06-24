@@ -102,15 +102,17 @@ git clone https://github.com/vsetchinfc/agistra.dev.git my-hub
 cd my-hub
 ```
 
-### 2. Claude, Cursor, Github Copilot
+### 2. Claude, Cursor, GitHub Copilot, Codex
 
-Out of the box, Agistra provides agent definitions for claude, cursor, and GitHub Copilot. You can remove the ones you don't need. See .claude, cursor, and .github folders for details.
+Out of the box, Agistra provides agent definitions for claude, cursor, GitHub Copilot, and Codex. You can remove the ones you don't need. See .claude, cursor, .github, and .codex folders for details.
 
 The memory files in `memory/` are shared between all models — if you switch from Claude to Cursor, the same memory carries over. Skills are also model-agnostic — if you switch models, the same skills load.
 
+**Skill layout:** canonical content lives in `skills/<name>/` (full trees). Platform paths `.github/skills/` and `.codex/skills/` hold stub `SKILL.md` files for discovery only — they point agents at the canonical copy. Dispatch injects skill content from `skills/` (the deployed hub default `--skills-root`).
+
 ### 2. Use VS Code, Cursor, or Claude Code
 
-You can use VS Code, Cursor or Claude Code to interact with the agents. Open my-hub and my-project workspaces in to same editor workspace. You will be able to use cli commands in the terminal to generate tasks and produce prompts to interact with agents.
+You can use VS Code, Cursor, Claude Code, or Codex to interact with the agents. Open my-hub and my-project workspaces in the same editor workspace. You will be able to use cli commands in the terminal to generate tasks and produce prompts to interact with agents.
 
 ### 3. Add your first project
 

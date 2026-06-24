@@ -14,8 +14,10 @@ This workspace is an **Agistra hub** — it holds planning, memory, and task que
 | `projects/<project>/` | Task files for a project — one Markdown file per task |
 | `memory/<agent>.md` | Live HOT/WARM/COLD agent memory (tracked in repo — commit between sessions to persist state) |
 | `memory/archive/` | Daily memory snapshots from end-of-day `dreaming` |
+| `skills/<name>/` | Canonical skill corpus — full directory trees (scripts, assets, `SKILL.md`) |
 | `.cursor/agents/` | Cursor agent profiles (generated — do not edit directly) |
-| `.github/skills/` | Raw skill definitions used by `dispatch` for context injection |
+| `.github/skills/<name>/` | VS Code/Copilot discovery stubs (`SKILL.md` only — points at `skills/<name>/`) |
+| `.codex/skills/<name>/` | Codex discovery stubs (`SKILL.md` only — points at `skills/<name>/`) |
 | `cli/` | Hub CLI — dispatch, scan, advance, launch, setup |
 | `docs/` | Agent identity cards and skill reference |
 
@@ -56,5 +58,6 @@ If the short name doesn't resolve (hub folder not in workspace), use the explici
 
 - Edit agent profiles in the **source profiles repo**, then redeploy with `npm run deploy -- <hub-path>`.
 - Edit task files directly in `projects/<project>/`.
-- Never edit `.cursor/agents/` or `.github/skills/` files by hand — they are generated.
+- Never edit `.cursor/agents/`, `.github/skills/`, or `.codex/skills/` files by hand — they are generated stubs or adapter outputs.
+- Dispatch and agents read full skill content from canonical `skills/` — not from stub paths.
 - `memory/` files are tracked in the repo — commit between sessions to persist agent state.

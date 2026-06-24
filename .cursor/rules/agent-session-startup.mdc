@@ -5,22 +5,22 @@ alwaysApply: true
 
 # Agent Session Startup
 
-When you are acting as `@architect`, `@builder`, `@tester`, or `@router`, your **very first action** must be two consecutive Read tool calls — no exceptions, no text output first.
+When you are acting as `@architect`, `@builder`, `@tester`, or `@router`, your **very first action** must be three consecutive Read tool calls before any text output or other action:
 
 ## File paths — hub workspace root only
 
 This workspace has multiple root folders. Agent profiles and memory files both live in the **hub root** (the folder containing `.cursor/agents/`) — NOT in project repo roots.
 
-| Agent | Profile path | Memory path |
-|-------|-------------|------------|
-| `@architect` | `<hub>/.cursor/agents/architect.md` | `<hub>/memory/architect.md` |
-| `@builder`   | `<hub>/.cursor/agents/builder.md`   | `<hub>/memory/builder.md`   |
-| `@tester`    | `<hub>/.cursor/agents/tester.md`    | `<hub>/memory/tester.md`    |
-| `@router`    | `<hub>/.cursor/agents/router.md`    | `<hub>/memory/router.md`    |
+| Agent | Profile path | Memory path | Personalisation |
+|-------|-------------|------------|----------------|
+| `@architect` | `<hub>/.cursor/agents/architect.md` | `<hub>/memory/architect.md` | `<hub>/workspace.config.json` if present |
+| `@builder`   | `<hub>/.cursor/agents/builder.md`   | `<hub>/memory/builder.md`   | `<hub>/workspace.config.json` if present |
+| `@tester`    | `<hub>/.cursor/agents/tester.md`    | `<hub>/memory/tester.md`    | `<hub>/workspace.config.json` if present |
+| `@router`    | `<hub>/.cursor/agents/router.md`    | `<hub>/memory/router.md`    | `<hub>/workspace.config.json` if present |
 
 Replace `<hub>` with the actual hub folder name (e.g. `agistra.dev`).
 
-Read **both** files before writing a single word of response or issuing any other tool call.
+Read the three files in order before writing a single word of response or issuing any other tool call. If `workspace.config.json` is absent, proceed with the first two reads and continue normally.
 
 ## Why both files are required
 
@@ -28,6 +28,7 @@ Read **both** files before writing a single word of response or issuing any othe
 |------|---------|
 | `.cursor/agents/<agent>.md` | Behavioral contract — identity, skills, decision rules, output formats, absolute prohibitions |
 | `memory/<agent>.md` | Live state — HOT current work, WARM recent decisions, COLD stable patterns |
+| `workspace.config.json` | Personalisation context — user name/role, organisation, per-agent display names |
 
 Neither substitutes for the other.
 
@@ -37,21 +38,27 @@ Neither substitutes for the other.
 > *[Read tool call: `<project>/memory/builder.md`]* → file not found
 
 ❌ **Wrong** — reads memory but skips the profile:
-> *[Read tool call: `<hub>/memory/builder.md`]*
+> *[Read tool call: `<hub>/memory/builder.md`]*  
 > *[starts implementing immediately]*
 
-✅ **Correct** — two Read calls from hub root before any other action:
-> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*
-> *[Read tool call: `<hub>/memory/builder.md`]*
+❌ **Wrong** — reads profile and memory but skips `workspace.config.json` when it exists:
+> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*  
+> *[Read tool call: `<hub>/memory/builder.md`]*  
+> *[proceeds without checking `workspace.config.json`]*
+
+✅ **Correct** — three Read calls from hub root before any other action when the config file is present:
+> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*  
+> *[Read tool call: `<hub>/memory/builder.md`]*  
+> *[Read tool call: `<hub>/workspace.config.json`]*  
 > *[task work begins]*
 
 ## Correct invocation prompts
 
 ```text
-@architect Read <hub>/.cursor/agents/architect.md then <hub>/memory/architect.md. Then: [instruction]
-@builder   Read <hub>/.cursor/agents/builder.md   then <hub>/memory/builder.md.   Then: implement projects/<project>/task_N_todo_<slug>.md
-@tester    Read <hub>/.cursor/agents/tester.md    then <hub>/memory/tester.md.    Then: QA projects/<project>/task_N_todo_<slug>.md
-@router    Read <hub>/.cursor/agents/router.md    then <hub>/memory/router.md.    Then: classify and route: [inbound message]
+@architect Read <hub>/.cursor/agents/architect.md then <hub>/memory/architect.md then <hub>/workspace.config.json if present. Then: [instruction]
+@builder   Read <hub>/.cursor/agents/builder.md   then <hub>/memory/builder.md   then <hub>/workspace.config.json if present. Then: implement projects/<project>/task_N_todo_<slug>.md
+@tester    Read <hub>/.cursor/agents/tester.md    then <hub>/memory/tester.md    then <hub>/workspace.config.json if present. Then: QA projects/<project>/task_N_todo_<slug>.md
+@router    Read <hub>/.cursor/agents/router.md    then <hub>/memory/router.md    then <hub>/workspace.config.json if present. Then: classify and route: [inbound message]
 ```
 
 ## Session end — memory discipline

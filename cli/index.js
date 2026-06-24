@@ -54,7 +54,7 @@ const command = args._command ?? 'dispatch';
 const project = typeof args.project === 'string' ? args.project : args._project;
 
 const projectsRoot = path.resolve(consultingRoot, args['projects-root'] ?? 'projects');
-const skillsRoot   = path.resolve(consultingRoot, args['skills-root']   ?? '.github/skills');
+const skillsRoot   = path.resolve(consultingRoot, args['skills-root']   ?? 'skills');
 const projectsDir  = project ? path.join(projectsRoot, project) : null;
 const projectRoot  = project ? path.join(workspaceRoot, project) : null;
 
