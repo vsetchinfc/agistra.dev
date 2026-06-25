@@ -15,6 +15,52 @@ const TREND = (t) => {
 };
 
 /**
+ * Render the latest scan result as a Markdown snapshot for projects/<projectName>/README.md.
+ * Reuses the same Perspective Scores bar-chart format as the terminal output.
+ *
+ * Returns a Markdown string (caller is responsible for writing it to disk).
+ */
+export function renderReadme({ projectName, perspectives, overall, allFindings, tasks, prev }) {
+	const lines = [`# ${projectName} — Project Scan`, ''];
+
+	lines.push('## Perspective Scores', '', '```', '─'.repeat(50));
+	for (const p of perspectives) {
+		const prevScore = prev?.perspectives?.[p.id]?.score ?? null;
+		const trend = prevScore !== null ? p.score - prevScore : null;
+		const flag = p.score === Math.min(...perspectives.map(x => x.score)) ? ' ← lowest' : '';
+		lines.push(`  ${p.id.toUpperCase().padEnd(4)} ${p.name.padEnd(12)} ${SCORE_BAR(p.score)}  ${p.score.toFixed(2)}${TREND(trend)}${flag}`);
+	}
+	lines.push('─'.repeat(50));
+	lines.push(`       ${'Overall'.padEnd(12)} ${SCORE_BAR(overall)}  ${overall.toFixed(2)}`);
+	lines.push('```', '');
+
+	if (allFindings.length === 0) {
+		lines.push('No issues found — project looks healthy.', '');
+		return lines.join('\n');
+	}
+
+	lines.push('## Issues Found', '', '| Priority | Issue |', '|----------|-------|');
+	for (const f of allFindings) {
+		lines.push(`| ${f.priority.toUpperCase()} | ${f.title} |`);
+	}
+	lines.push('');
+
+	lines.push('## Tasks', '', '| Task | Description |', '|------|-------------|');
+	if (tasks.length === 0) {
+		lines.push('| — | All issues already have task files — nothing new to create. |');
+	} else {
+		for (const { filename, content } of tasks) {
+			const taskId = filename.match(/^(task_\d+)_/)?.[1] ?? filename;
+			const title = content.match(/^#\s+(.+)$/m)?.[1] ?? filename;
+			lines.push(`| [${taskId}](${filename}) | ${title} |`);
+		}
+	}
+	lines.push('');
+
+	return lines.join('\n');
+}
+
+/**
  * Scan a project directory for quality issues and generate task files.
  *
  * Options:
@@ -55,7 +101,12 @@ export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) 
 
 	if (allFindings.length === 0) {
 		console.log('No issues found — project looks healthy.');
-		if (!dryRun && perspectives.length > 0) saveHealth(projectsDir, projectName, perspectives, overall);
+		if (!dryRun && perspectives.length > 0) {
+			saveHealth(projectsDir, projectName, perspectives, overall);
+			fs.mkdirSync(projectsDir, { recursive: true });
+			const readme = renderReadme({ projectName, perspectives, overall, allFindings, tasks: [], prev });
+			fs.writeFileSync(path.join(projectsDir, 'README.md'), readme, 'utf-8');
+		}
 		return;
 	}
 
@@ -79,6 +130,8 @@ export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) 
 
 	if (!dryRun) {
 		saveHealth(projectsDir, projectName, perspectives, overall);
+		const readme = renderReadme({ projectName, perspectives, overall, allFindings, tasks, prev });
+		fs.writeFileSync(path.join(projectsDir, 'README.md'), readme, 'utf-8');
 		if (tasks.length > 0) {
 			console.log(`\nRun "node cli/index.js dispatch --list" to see the updated queue.`);
 		}
