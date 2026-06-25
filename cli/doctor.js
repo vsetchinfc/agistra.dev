@@ -328,6 +328,16 @@ function checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }) {
 		return pass(13, 'router model tier', `router uses economy model ${deployedModel}`);
 }
 
+function checkProjectsDir({ hubRoot, fsMod }) {
+	const projectsPath = path.join(hubRoot, 'projects');
+	if (fsMod.existsSync(projectsPath)) {
+		return pass(14, 'projects directory', 'projects/ directory present');
+	}
+	// Auto-scaffold: create the directory in the same run
+	fsMod.mkdirSync(projectsPath, { recursive: true });
+	return pass(14, 'projects directory', 'projects/ directory scaffolded');
+}
+
 /**
  * Default health probe — GET /health and expect JSON with ok: true.
  *
@@ -379,6 +389,7 @@ export async function runChecks({
 		checkAutoDispatchClaude({ hubRoot, fsMod, execFn }),
 		checkAutoDispatchRouterProfile({ hubRoot, fsMod }),
 		checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }),
+		checkProjectsDir({ hubRoot, fsMod }),
 	];
 }
 
