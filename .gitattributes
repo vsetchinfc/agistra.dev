@@ -1,3 +1,8 @@
 # Personal files — always keep local branch version on merge
 memory/*.md                           merge=ours
 .cursor/rules/workspace-identity.mdc  merge=ours
+
+# Shell scripts and shared text must stay LF — Windows checkouts with
+# autocrlf=true would otherwise inject CR bytes that break adapter output.
+tools/*.sh    text eol=lf
+tools/*.txt   text eol=lf

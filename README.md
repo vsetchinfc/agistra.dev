@@ -237,6 +237,8 @@ npm run doctor
 
 Runs a battery of checks against the hub (config files, `.mcp.json`, agent profiles, relay wiring if enabled, etc.) and prints a pass/fail/warn report. Missing `memory/<agent>.md` files are scaffolded automatically in the same run — the required agent list is derived from whatever agent profiles are actually deployed under `.claude/agents/`, so doctor never invents memory files for agents that aren't installed in this hub. Existing memory files are never touched.
 
+**`.gitattributes` check (check 3):** doctor verifies the hub's `.gitattributes` declares `tools/*.sh eol=lf` and `tools/*.txt eol=lf`, in addition to the existing `merge=ours` personalization entries. These rules force the shell scripts under `tools/` to stay LF-terminated even on a Windows checkout with `core.autocrlf=true` — without them, git's checkout-time normalization injects `\r` bytes that break `set -euo pipefail` and other bash syntax. If your hub was deployed before this rule existed and already committed `tools/*.sh` with CRLF line endings, redeploying alone will not fix files already stored in git's object store with the wrong line endings — the `.gitattributes` rule only governs future checkouts. After redeploying (which updates `.gitattributes`), run `git add --renormalize .` once to rewrite the affected blobs back to LF, then commit the result.
+
 ---
 
 ## Task file format

@@ -81,6 +81,8 @@ function checkGitattributes({ hubRoot, fsMod }) {
 	if (!/.cursor\/rules\/workspace-identity\.mdc\s+merge=ours/.test(content)) {
 		missing.push('.cursor/rules/workspace-identity.mdc merge=ours');
 	}
+	if (!/tools\/\*\.sh\s+(?:text\s+)?eol=lf/.test(content)) missing.push('tools/*.sh eol=lf');
+	if (!/tools\/\*\.txt\s+(?:text\s+)?eol=lf/.test(content)) missing.push('tools/*.txt eol=lf');
 	if (missing.length === 0) {
 		return pass(3, '.gitattributes', 'merge=ours entries present');
 	}
