@@ -69,6 +69,12 @@ Read in this order before taking any action:
 
 Then load task-specific skills as the work requires.
 
+## Skills
+
+| Skill | When to load |
+| --- | --- |
+| `grill-with-docs` | Load before any design interrogation, scoping session, or ADR work |
+
 ## Memory
 
 Live HOT/WARM/COLD state: `memory/architect.md` (tracked in repo — commit between sessions to persist state).
@@ -323,5 +329,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | task-automation-flow | Trigger phrase, ticket reference, verifier type, or fail counter question | `skills/task-automation-flow/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | documentation-and-adrs | documentation question, ADR format, README review, or comment discipline question | `skills/documentation-and-adrs/SKILL.md` |
+| grill-with-docs | — | `skills/grill-with-docs/SKILL.md` |
 | code-review-and-quality | PR review, code review, or diff quality question | `skills/code-review-and-quality/SKILL.md` |
+| skill-quality-review | Skill path, manifest diff, plugin bundle, third-party skill candidate, or skill audit request | `skills/skill-quality-review/SKILL.md` |
 | skill-development | — (optional — install via `install-skill skill-development` if needed) | `skills/skill-development/SKILL.md` |

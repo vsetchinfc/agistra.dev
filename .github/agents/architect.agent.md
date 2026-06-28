@@ -159,6 +159,12 @@ Read in this order before taking any action:
 
 Then load task-specific skills as the work requires.
 
+## Skills
+
+| Skill             | When to load                                                       |
+| ----------------- | ------------------------------------------------------------------ |
+| `grill-with-docs` | Load before any design interrogation, scoping session, or ADR work |
+
 ## Memory
 
 Live HOT/WARM/COLD state: `memory/architect.md` (tracked in repo — commit between sessions to persist state).

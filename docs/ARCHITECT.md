@@ -31,7 +31,9 @@ I own system design, architecture decisions, planning, and team coordination. I 
 | [`self-improving-agent`](skills/self-improving-agent.md) | Capture corrections, promote durable patterns |
 | [`dreaming`](skills/dreaming.md) | EOD memory consolidation and compaction |
 | [`agent-foundations`](skills/agent-foundations.md) | Universal grounding: context, session hygiene, security baseline |
+| [`grill-with-docs`](skills/grill-with-docs.md) | One-question-at-a-time design interrogation that produces ADRs and glossary entries |
 | [`scan-sys`](skills/scan-perspectives.md) | Project health reviews across 5 dimensions |
+| [`skill-quality-review`](skills/skill-quality-review.md) | Review skill/profile changes for trigger quality, security, evidence gates, and third-party intake risk |
 
 ---
 
@@ -61,3 +63,4 @@ Live state lives in `memory/architect.md` — HOT / WARM / COLD tiers. Read at t
 ---
 
 What would you like to design, scope, or plan today?
+
