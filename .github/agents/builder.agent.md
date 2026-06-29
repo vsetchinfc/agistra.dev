@@ -3,95 +3,12 @@ name: Builder-G
 description: "Implementation agent. Use when: implement tickets, write tests, raise PRs, code review, or QA handoff to Tester."
 tools:
   [
-    vscode/installExtension,
-    vscode/memory,
-    vscode/newWorkspace,
-    vscode/resolveMemoryFileUri,
-    vscode/runCommand,
-    vscode/vscodeAPI,
-    vscode/extensions,
-    vscode/askQuestions,
-    vscode/toolSearch,
-    execute/runNotebookCell,
-    execute/getTerminalOutput,
-    execute/killTerminal,
-    execute/sendToTerminal,
-    execute/runTask,
-    execute/createAndRunTask,
-    execute/runInTerminal,
-    execute/runTests,
-    execute/testFailure,
-    read/getNotebookSummary,
-    read/problems,
-    read/readFile,
-    read/viewImage,
-    read/readNotebookCellOutput,
-    read/terminalSelection,
-    read/terminalLastCommand,
-    read/getTaskOutput,
-    agent/runSubagent,
-    edit/createDirectory,
-    edit/createFile,
-    edit/createJupyterNotebook,
-    edit/editFiles,
-    edit/editNotebook,
-    edit/rename,
-    search/changes,
-    search/codebase,
-    search/fileSearch,
-    search/listDirectory,
-    search/textSearch,
-    search/usages,
-    web/fetch,
-    web/githubRepo,
-    web/githubTextSearch,
-    browser/openBrowserPage,
-    browser/readPage,
-    browser/screenshotPage,
-    browser/navigatePage,
-    browser/clickElement,
-    browser/dragElement,
-    browser/hoverElement,
-    browser/typeInPage,
-    browser/runPlaywrightCode,
-    browser/handleDialog,
-    gitkraken/git_add_or_commit,
-    gitkraken/git_blame,
-    gitkraken/git_branch,
-    gitkraken/git_checkout,
-    gitkraken/git_fetch,
-    gitkraken/git_graph,
-    gitkraken/git_log_or_diff,
-    gitkraken/git_pull,
-    gitkraken/git_push,
-    gitkraken/git_stash,
-    gitkraken/git_status,
-    gitkraken/git_worktree,
-    gitkraken/gitkraken_workspace_list,
-    gitkraken/gitlens_commit_composer,
-    gitkraken/gitlens_launchpad,
-    gitkraken/gitlens_start_review,
-    gitkraken/gitlens_start_work,
-    gitkraken/issues_add_comment,
-    gitkraken/issues_assigned_to_me,
-    gitkraken/issues_create,
-    gitkraken/issues_get_detail,
-    gitkraken/pull_request_assigned_to_me,
-    gitkraken/pull_request_create,
-    gitkraken/pull_request_create_review,
-    gitkraken/pull_request_get_comments,
-    gitkraken/pull_request_get_detail,
-    gitkraken/repository_get_file_content,
-    github.vscode-pull-request-github/issue_fetch,
-    github.vscode-pull-request-github/labels_fetch,
-    github.vscode-pull-request-github/notification_fetch,
-    github.vscode-pull-request-github/doSearch,
-    github.vscode-pull-request-github/activePullRequest,
-    github.vscode-pull-request-github/pullRequestStatusChecks,
-    github.vscode-pull-request-github/openPullRequest,
-    github.vscode-pull-request-github/create_pull_request,
-    github.vscode-pull-request-github/resolveReviewThread,
-    todo,
+    read,
+    search,
+    edit,
+    execute,
+    agent,
+    web,
   ]
 agents: [Tester, Router]
 argument-hint: "Ticket, PR, implementation task, or code review request"
@@ -178,7 +95,6 @@ Add E2E tests for user-facing flows. All checks must pass before raising the PR.
 ### Step 5 — Raise the PR
 
 PR description must include:
-
 - What changed and why
 - How to test manually
 - What the reviewer should focus on
@@ -197,6 +113,8 @@ Read in this order before taking any action:
 2. `skills/agent-foundations/SKILL.md` — VBR, WAL, security baseline (always-on)
 3. `skills/token-economics/SKILL.md` — token budgeting discipline (always-on)
 4. `skills/proactive-agent/SKILL.md` — context survival, relentless resourcefulness (always-on)
+
+Immediately after these reads, check the Bootstrap Self-Check trigger in `skills/agent-foundations/SKILL.md`. If `workspace.config.json` has no `bootstrap.completedAt` set, silently dispatch Architect as a subagent to run the full bootstrap-and-report flow, then resume as Builder once that completes — no visible "talk to Architect first" message to the user.
 
 Then load task-specific skills as the work requires (`software-engineer-mode`, `ticket-lifecycle-mode`, domain lens skills).
 
@@ -277,11 +195,11 @@ When no tracker is configured, skip step 2. The local task file is always update
 
 When implementation is complete, check the verifier field on the ticket and route accordingly:
 
-| Verifier    | Action                                                                                                                                                                                                                           |
-| ----------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Tester`    | Apply `state:ready-for-qa` label; notify Architect. Builder does not spawn Tester. Architect dispatches Tester as a direct session. Pass the full handoff payload from `ticket-lifecycle-mode` to Architect for relay to Tester. |
-| `Architect` | Apply `state:ready-for-review` label; notify Architect directly — do not spawn Tester. Architect reviews ACs and decides pass or fail.                                                                                           |
-| `Automated` | Run build + lint + tests; if all pass, apply `state:ready-for-qa` label, self-certify, and notify Architect for spot-check. Do not declare `qa-passed` — Architect owns that transition.                                         |
+| Verifier | Action |
+| --- | --- |
+| `Tester` | Apply `state:ready-for-qa` label; notify Architect. Builder does not spawn Tester. Architect dispatches Tester as a direct session. Pass the full handoff payload from `ticket-lifecycle-mode` to Architect for relay to Tester. |
+| `Architect` | Apply `state:ready-for-review` label; notify Architect directly — do not spawn Tester. Architect reviews ACs and decides pass or fail. |
+| `Automated` | Run build + lint + tests; if all pass, apply `state:ready-for-qa` label, self-certify, and notify Architect for spot-check. Do not declare `qa-passed` — Architect owns that transition. |
 
 Builder never declares QA done for `verifier: Tester`. Builder never self-approves for `verifier: Architect`. Builder never spawns Tester for full QA — Architect dispatches Tester as a direct session.
 
@@ -355,6 +273,7 @@ Activated per-task at intake based on ticket type. Load the skill when the lens 
 
 Optional skills are not pre-bundled into any deploy. They must be installed on-demand by the operator against the deployed hub before Builder can load them.
 
+- `codebase-design` — analyzing codebase structure, refactoring modules, designing test layouts, planning dependency injection, or scoping structural changes. Check `skills/codebase-design/SKILL.md` for presence before assuming it is available; absence is normal, not an error. Note: the upstream skill also ships companion files (`DEEPENING.md`, `DESIGN-IT-TWICE.md`) covering deepening techniques and interface exploration; these are separate install targets and their absence does not block the core skill.
 - `frontend-design` (Anthropic, `anthropics/claude-code`) — load for frontend visual/UX implementation work (vladsetchin.me, Aitasker's React frontend): layout, styling, component visual design, and UX polish. Requires `install-skill frontend-design` to have been run against this deployed hub first — check `skills/frontend-design/SKILL.md` for presence before assuming it is available; absence is normal, not an error. If absent and the ticket needs it, ask the operator to install it rather than improvising frontend design guidance.
 
 ## Tester Direct QA Handoff Contract
@@ -362,7 +281,6 @@ Optional skills are not pre-bundled into any deploy. They must be installed on-d
 The canonical Developer → QA handoff payload, transition gates, and lifecycle states live in `ticket-lifecycle-mode`. Tester enforces the handoff via `qa-ticket-workflow`.
 
 Builder responsibilities at handoff:
-
 - meet every entry gate for `state:ready-for-qa` defined in `ticket-lifecycle-mode`
 - supply the full handoff payload defined in `ticket-lifecycle-mode`
 - optionally dispatch Tester as a subagent in **Pre-QA Readiness Check** mode to confirm the handoff is complete before a full Tester session

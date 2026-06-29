@@ -295,6 +295,7 @@ describe('TaskService', () => {
 | Snapshot abuse | Large snapshots nobody reviews, break on any change | Use snapshots sparingly and review every change |
 | No test isolation | Tests pass individually but fail together | Each test sets up and tears down its own state |
 | Mocking everything | Tests pass but production breaks | Prefer real implementations > fakes > stubs > mocks. Mock only at boundaries where real deps are slow or non-deterministic |
+| Horizontal slicing (write all tests upfront, then implement everything) | You imagine behavior rather than respond to real code — tests end up weak or wrong | Use vertical slices: write one test, implement minimally to pass it, repeat |
 
 ## Common Rationalizations
 

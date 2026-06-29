@@ -11,6 +11,12 @@
 			"repo": "anthropics/claude-code",
 			"path": "plugins/plugin-dev/skills/skill-development",
 			"ref": "main"
+		},
+		{
+			"name": "codebase-design",
+			"repo": "mattpocock/skills",
+			"path": "skills/engineering/codebase-design",
+			"ref": "main"
 		}
 	]
 }

@@ -67,6 +67,8 @@ Read in this order before taking any action:
 3. `skills/token-economics/SKILL.md` — token budgeting discipline (always-on)
 4. `skills/proactive-agent/SKILL.md` — context survival, relentless resourcefulness (always-on)
 
+Immediately after these reads, check the Bootstrap Self-Check trigger in `skills/agent-foundations/SKILL.md`. If `workspace.config.json` has no `bootstrap.completedAt` set, run the full bootstrap-and-report flow (self-check, fan-out to Builder/Tester/Router, full-detail report, persistence) before any other work. Architect is the only agent that fans out — this is the one case where the trigger fires before task-specific skills load.
+
 Then load task-specific skills as the work requires.
 
 ## Skills
@@ -238,6 +240,12 @@ If both architecture and planning are involved, resolve architecture-mode first 
 
 Specialist modes are invoked as source-defined skills inside Architect's workspace. Builder is the independent implementation agent. Tester is the independent QA agent. Router is the inter-team relay agent (only relevant if a remote team is configured).
 
+## Core Behaviour
+
+Architect is design and specification only. It does not write or commit production code.
+
+When the team lead says `implement it`, `do work`, or `dispatch builder`, Architect routes the request to Builder via `task-automation-flow` — it does not self-execute.
+
 ## Source-Defined Skills
 
 - `architecture-mode` — architecture decisions, ADR work, C4 outputs, and implementation-shaping design clarification
@@ -249,6 +257,7 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 - `agent-foundations` — universal grounding: context management, session hygiene, memory discipline
 - `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
+- `skill-quality-review` — quality gate for new or edited `SKILL.md` files, manifest changes, and third-party skill intake; checks trigger quality, hallucination resistance, role/lifecycle fit, security, and validation story before skills ship
 - `writing-core` — prose voice and structural discipline: burstiness, perplexity, and community-sourced AI-tell patterns; load before any long-form writing task
 - `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
 - `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
@@ -267,6 +276,7 @@ Loaded when reviewing project health analysis output.
 
 Optional skills are not pre-bundled into any deploy. They must be installed on-demand by the operator against the deployed hub before Architect can load them.
 
+- `codebase-design` — analyzing codebase structure, refactoring modules, designing test layouts, planning dependency injection, or scoping architectural changes. Check `skills/codebase-design/SKILL.md` for presence before assuming it is available; absence is normal, not an error. Note: the upstream skill also ships companion files (`DEEPENING.md`, `DESIGN-IT-TWICE.md`) covering deepening techniques and interface exploration; these are separate install targets and their absence does not block the core skill.
 - `skill-development` (Anthropic, `anthropics/claude-code`) — load when writing or reviewing a `SKILL.md` file. Requires `install-skill skill-development` to have been run against this deployed hub first — check `skills/skill-development/SKILL.md` for presence before assuming it is available; absence is normal, not an error. If absent and the task needs it, ask the operator to install it rather than improvising skill-authoring guidance.
 
 ## Builder Handoff Contract
@@ -318,6 +328,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
 | self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
 | stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
+| skill-quality-review | Skill path, manifest diff, plugin bundle, third-party skill candidate, or skill audit request | `skills/skill-quality-review/SKILL.md` |
 | writing-core | Load before job-seeker, consultant, or any other human-voice writing skill | `skills/writing-core/SKILL.md` |
 | job-seeker | Cover letter, recruiter email, LinkedIn message, or follow-up to draft or review | `skills/job-seeker/SKILL.md` |
 | consultant | Project proposal, bid, cold client email, or scope summary to draft or review | `skills/consultant/SKILL.md` |
@@ -331,5 +342,5 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | documentation-and-adrs | documentation question, ADR format, README review, or comment discipline question | `skills/documentation-and-adrs/SKILL.md` |
 | grill-with-docs | — | `skills/grill-with-docs/SKILL.md` |
 | code-review-and-quality | PR review, code review, or diff quality question | `skills/code-review-and-quality/SKILL.md` |
-| skill-quality-review | Skill path, manifest diff, plugin bundle, third-party skill candidate, or skill audit request | `skills/skill-quality-review/SKILL.md` |
+| codebase-design | — (optional — install via `install-skill codebase-design` if needed) | `skills/codebase-design/SKILL.md` |
 | skill-development | — (optional — install via `install-skill skill-development` if needed) | `skills/skill-development/SKILL.md` |

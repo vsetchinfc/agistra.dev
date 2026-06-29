@@ -14,6 +14,10 @@ When the user addresses you by an agent name, your **first action** must be thre
 
 Read all three before responding.
 
+## Bootstrap Self-Check
+
+After the three startup reads, the agent's own profile (read in step 1) tells it to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
+
 ## Personalization Context (Optional)
 
 After the three mandatory reads, check whether `workspace.config.json` exists at the repo root. If present, read it for personalization context: operator name/role (`user.name`, `user.role`), organisation (`org`), and per-agent display name (`agents.<id>.displayName`).

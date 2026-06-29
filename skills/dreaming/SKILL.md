@@ -123,7 +123,12 @@ The "Compacted" section must always report:
 
 **Dispatch behaviour:**
 
-- If Architect receives the trigger directly: run shared steps (including decay rules + LAST_EVENT retirement), then invoke Builder, Tester, and Router as subagents simultaneously — `"End of day consolidation. Run the dreaming skill for [role] workspace."` — then confirm to the team lead: `"Good night. All agents consolidated."`
+- If Architect receives the trigger directly:
+  1. **Status report phase** — invoke Builder, Tester, and Router as subagents simultaneously with the status-contribution prompt: `"EOD status check. Read your memory file and return your status contribution: active tickets, dispatched-but-unreturned work, and any blockers. Bullets only."` Collect all three responses.
+  2. **Compile and deliver EOD report** — using the status contributions plus Architect's own HOT section, compile a single project-grouped report (per the multi-project output format in `agent-foundations`: group by project, mention the relevant agent owner inside each section). Deliver to the team lead before any consolidation output.
+  3. **Consolidation phase** — run shared steps (including decay rules + LAST_EVENT retirement), then invoke Builder, Tester, and Router as subagents simultaneously with the dreaming consolidation prompt: `"End of day consolidation. Run the dreaming skill for [role] workspace."` Wait for all three to acknowledge.
+  4. Confirm to the team lead: `"Good night. All agents consolidated."`
+
 - If the trigger arrives via subagent dispatch: run shared steps (including decay rules + LAST_EVENT retirement) only, then acknowledge: `"Architect consolidated. Good night."`
 
 ### Builder
@@ -149,8 +154,8 @@ The "Compacted" section must always report:
 **Dispatch behaviour:**
 
 - Builder runs end-of-day consolidation when dispatched by Architect as a subagent. Builder does NOT cascade the trigger.
-- Run shared steps (including decay rules + LAST_EVENT retirement).
-- Acknowledge: `"Builder consolidated. Good night."`
+- If dispatched with the **status-contribution prompt**: read `memory/builder.md` HOT section. Return bullets only — active tickets (branch/ticket reference), dispatched-but-unreturned items, blockers. Do not run consolidation steps; Architect will dispatch again for that separately.
+- If dispatched with the **consolidation prompt**: run shared steps (including decay rules + LAST_EVENT retirement). Acknowledge: `"Builder consolidated. Good night."`
 
 ### Tester
 
@@ -177,8 +182,8 @@ The "Compacted" section must always report:
 **Dispatch behaviour:**
 
 - Tester runs end-of-day consolidation when dispatched by Architect as a subagent. Tester does NOT cascade the trigger.
-- Run shared steps (including decay rules + LAST_EVENT retirement).
-- Acknowledge: `"Tester consolidated. Good night."`
+- If dispatched with the **status-contribution prompt**: read `memory/tester.md` HOT section. Return bullets only — QA queue (tickets in state:ready-for-qa or in-progress), blockers, any outstanding verdicts. Do not run consolidation steps; Architect will dispatch again for that separately.
+- If dispatched with the **consolidation prompt**: run shared steps (including decay rules + LAST_EVENT retirement). Acknowledge: `"Tester consolidated. Good night."`
 
 ### Router
 
@@ -205,7 +210,7 @@ The "Compacted" section must always report:
 **Dispatch behaviour:**
 
 - Router runs end-of-day consolidation when dispatched by Architect as a subagent. Router does NOT cascade the trigger.
-- Run shared steps (including decay rules + LAST_EVENT retirement).
-- Acknowledge: `"Router consolidated. Good night."`
+- If dispatched with the **status-contribution prompt**: read `memory/router.md` HOT section. Return bullets only — any unresolved routing classifications, pending escalations, or relay activity since last session. Do not run consolidation steps; Architect will dispatch again for that separately.
+- If dispatched with the **consolidation prompt**: run shared steps (including decay rules + LAST_EVENT retirement). Acknowledge: `"Router consolidated. Good night."`
 
 This is internal-only. Do not post to GitHub issues, PRs, or any external channel.

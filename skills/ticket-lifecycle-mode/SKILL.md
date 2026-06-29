@@ -180,7 +180,7 @@ All of these should be true:
 - implementation is complete for the scoped acceptance criteria
 - accountable engineering review is complete
 - branch is pushed and PR exists when the repository uses PR workflow
-- required build, lint, test, and repo-specific validation have passed
+- required build, lint, test, and repo-specific validation have passed — confirm by process exit code (exit 0), not by stdout pass counts; a test runner can report a high pass count and still exit non-zero on failure
 - required migrations, edge functions, seed data, or environment setup are ready for QA
 - the target QA environment is live, reachable, and configured for the intended handoff path
 - the Developer -> QA handoff payload is complete

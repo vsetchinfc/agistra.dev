@@ -88,6 +88,8 @@ npm test -- --verbose
 npm test -- --testPathPattern="specific-file" --runInBand
 ```
 
+**Completion gate:** The step is complete only when you can name and run a single command that reliably triggers the failure. If you cannot, do not proceed to Step 2 — return to the strategies above.
+
 ### Step 2: Localize
 
 Narrow down where the failure happens:
@@ -124,6 +126,12 @@ Create the minimal failing case:
 A minimal reproduction makes the root cause obvious and prevents fixing symptoms instead of causes.
 
 ### Step 4: Fix the Root Cause
+
+**Before writing any fix, state your hypothesis explicitly.** Unverified assumptions are guesses — and a guess applied to the wrong layer guarantees a second incident.
+
+1. Generate 2–4 ranked, falsifiable hypotheses
+2. Format each: "If [X] causes this, then changing [Y] will eliminate it"
+3. Confirm the top hypothesis is correct before coding — if the prediction does not hold, move to the next
 
 Fix the underlying issue, not the symptom:
 

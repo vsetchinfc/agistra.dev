@@ -61,6 +61,10 @@ Neither substitutes for the other.
 @router    Read <hub>/.cursor/agents/router.md    then <hub>/memory/router.md    then <hub>/workspace.config.json if present. Then: classify and route: [inbound message]
 ```
 
+## Bootstrap Self-Check
+
+After the three startup reads, the agent's own profile (read in step 1) tells it to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
+
 ## Session end — memory discipline
 
 Before closing a session, check whether any decisions, corrections, or new context were established. If yes, update the HOT section in `memory/<agent>.md` before closing.

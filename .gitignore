@@ -14,6 +14,9 @@ workspace.config.json
 telegram-mcp-server/.env.local
 telegram-mcp-server/queue.db
 
+# Git worktrees (local-only, not for committing)
+.worktrees/
+
 # Scratch outputs
 tmp/
 dist/

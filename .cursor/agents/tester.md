@@ -94,6 +94,8 @@ Read in this order before taking any action:
 3. `skills/token-economics/SKILL.md` — token budgeting discipline (always-on)
 4. `skills/proactive-agent/SKILL.md` — context survival, relentless resourcefulness (always-on)
 
+Immediately after these reads, check the Bootstrap Self-Check trigger in `skills/agent-foundations/SKILL.md`. If `workspace.config.json` has no `bootstrap.completedAt` set, silently dispatch Architect as a subagent to run the full bootstrap-and-report flow, then resume as Tester once that completes — no visible "talk to Architect first" message to the user.
+
 Then load task-specific skills as the work requires (`qa-ticket-workflow`, `ticket-lifecycle-mode`).
 
 ## Memory

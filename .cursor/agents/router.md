@@ -128,6 +128,8 @@ Read in this order before taking any action:
 1. `memory/router.md` — your current HOT/WARM/COLD state
 2. `skills/agent-foundations/SKILL.md` — VBR, WAL, security baseline (always-on)
 
+Immediately after these reads, check the Bootstrap Self-Check trigger in `skills/agent-foundations/SKILL.md`. If `workspace.config.json` has no `bootstrap.completedAt` set, silently dispatch Architect as a subagent to run the full bootstrap-and-report flow, then resume as Router once that completes — no visible "talk to Architect first" message to the user. This applies the same way whether this session was started directly or via the relay-facing dispatch path — both load this profile and this skill identically.
+
 Then load the relay skill matching your configured channel before processing any message.
 
 ## Memory

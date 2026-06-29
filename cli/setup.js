@@ -14,6 +14,7 @@ import { stdin as input, stdout as output } from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
 import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
 
@@ -91,6 +92,37 @@ export function discoverAgentIds(cliOutputRoot, fsMod) {
 	}
 
 	return [...ids].sort();
+}
+
+/**
+ * Check whether the `gh` CLI is installed and authenticated.
+ *
+ * Used by the GitHub-workflow opt-in question during setup. Never blocks
+ * setup from completing — callers decide how to surface the result (warn,
+ * not exit).
+ *
+ * @param {function(string, string[], object): void} [execFn]
+ *   Injectable exec function for testing. Defaults to execFileSync.
+ * @returns {{ installed: boolean, authenticated: boolean }}
+ */
+export function checkGhCli(execFn = execFileSync) {
+	let installed = false;
+	let authenticated = false;
+	try {
+		execFn('gh', ['--version'], { stdio: 'pipe' });
+		installed = true;
+	} catch {
+		// gh not on PATH — installed stays false
+	}
+	if (installed) {
+		try {
+			execFn('gh', ['auth', 'status'], { stdio: 'pipe' });
+			authenticated = true;
+		} catch {
+			// gh installed but not authenticated — authenticated stays false
+		}
+	}
+	return { installed, authenticated };
 }
 
 /**
@@ -213,9 +245,11 @@ export const TOKEN_SENTINEL = '[token set — press Enter to keep]';
  *   Injectable fs module (real fs or an in-memory mock).
  * @param {string} deps.cliOutputRoot
  *   Absolute path to the workspace root being configured.
+ * @param {function(): {installed: boolean, authenticated: boolean}} [deps.checkGh]
+ *   Injectable `gh` CLI probe (see checkGhCli). Defaults to the real probe.
  * @returns {function(): Promise<void>}
  */
-export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
+export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = checkGhCli }) {
 	return async function run() {
 		// ── Read existing config (pre-populate defaults) ──────────────────────────
 		let existingConfig = null;
@@ -236,6 +270,7 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 		const prevBotToken = prevTelegram.bot_token ?? '';
 		const prevRelay = prev.relay ?? {};
 		const prevTrackingIssue = prevRelay.github?.trackingIssue ?? '';
+		const prevGithubWorkflows = prev.githubWorkflows ?? {};
 
 		// ── Prompts ────────────────────────────────────────────────────────────────
 
@@ -292,6 +327,26 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 			}
 		}
 
+		line('GitHub workflows ');
+		const wantsGithubWorkflows = await askYN(
+			'Do you intend to use GitHub-based workflows (PR creation via Builder/Tester)?',
+			prevGithubWorkflows.enabled === true,
+		);
+		let githubWorkflows = { enabled: false };
+		if (wantsGithubWorkflows) {
+			const { installed, authenticated } = checkGh();
+			githubWorkflows = { enabled: true };
+			if (!installed) {
+				process.stdout.write(
+					'  WARNING: `gh` CLI not found on PATH. Builder/Tester will not be able to create PRs until it is installed.\n',
+				);
+			} else if (!authenticated) {
+				process.stdout.write(
+					'  WARNING: `gh` CLI is installed but not authenticated. Run `gh auth login` before Builder/Tester create PRs.\n',
+				);
+			}
+		}
+
 		// Detect which platforms are present
 		const platforms = detectPlatforms(cliOutputRoot);
 
@@ -339,9 +394,13 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot }) {
 			user: { name: userName, role: userRole },
 			org: orgName,
 			remoteTeam,
+			githubWorkflows,
 			...(telegramMcp ? { telegram: telegramMcp } : {}),
 			...(Object.keys(relayBlock).length > 0 ? { relay: relayBlock } : {}),
 			...(Object.keys(agents).length > 0 ? { agents } : {}),
+			// Preserve the bootstrap flag across re-runs of setup — re-running setup
+			// must never silently reset "has the team run its self-check" state.
+			...(prev.bootstrap ? { bootstrap: prev.bootstrap } : {}),
 		};
 
 		fsMod.mkdirSync(cliOutputRoot, { recursive: true });
