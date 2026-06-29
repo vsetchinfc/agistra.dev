@@ -3,9 +3,94 @@ name: Router-G
 description: "Relay agent for inter-team routing. Use when: classify inbound messages, route to Architect/Builder/Tester, or coordinate with a remote team."
 tools:
   [
-    read,
-    search,
-    agent,
+    vscode/installExtension,
+    vscode/memory,
+    vscode/newWorkspace,
+    vscode/resolveMemoryFileUri,
+    vscode/runCommand,
+    vscode/vscodeAPI,
+    vscode/extensions,
+    vscode/askQuestions,
+    execute/runNotebookCell,
+    execute/getTerminalOutput,
+    execute/killTerminal,
+    execute/sendToTerminal,
+    execute/runTask,
+    execute/createAndRunTask,
+    execute/runInTerminal,
+    execute/runTests,
+    execute/testFailure,
+    read/getNotebookSummary,
+    read/problems,
+    read/readFile,
+    read/viewImage,
+    read/readNotebookCellOutput,
+    read/terminalSelection,
+    read/terminalLastCommand,
+    read/getTaskOutput,
+    agent/runSubagent,
+    edit/createDirectory,
+    edit/createFile,
+    edit/createJupyterNotebook,
+    edit/editFiles,
+    edit/editNotebook,
+    edit/rename,
+    search/changes,
+    search/codebase,
+    search/fileSearch,
+    search/listDirectory,
+    search/textSearch,
+    search/usages,
+    web/fetch,
+    web/githubRepo,
+    web/githubTextSearch,
+    browser/openBrowserPage,
+    browser/readPage,
+    browser/screenshotPage,
+    browser/navigatePage,
+    browser/clickElement,
+    browser/dragElement,
+    browser/hoverElement,
+    browser/typeInPage,
+    browser/runPlaywrightCode,
+    browser/handleDialog,
+    gitkraken/git_add_or_commit,
+    gitkraken/git_blame,
+    gitkraken/git_branch,
+    gitkraken/git_checkout,
+    gitkraken/git_fetch,
+    gitkraken/git_graph,
+    gitkraken/git_log_or_diff,
+    gitkraken/git_pull,
+    gitkraken/git_push,
+    gitkraken/git_stash,
+    gitkraken/git_status,
+    gitkraken/git_worktree,
+    gitkraken/gitkraken_workspace_list,
+    gitkraken/gitlens_commit_composer,
+    gitkraken/gitlens_launchpad,
+    gitkraken/gitlens_start_review,
+    gitkraken/gitlens_start_work,
+    gitkraken/issues_add_comment,
+    gitkraken/issues_assigned_to_me,
+    gitkraken/issues_create,
+    gitkraken/issues_get_detail,
+    gitkraken/pull_request_assigned_to_me,
+    gitkraken/pull_request_create,
+    gitkraken/pull_request_create_review,
+    gitkraken/pull_request_get_comments,
+    gitkraken/pull_request_get_detail,
+    gitkraken/repository_get_file_content,
+    github.vscode-pull-request-github/issue_fetch,
+    github.vscode-pull-request-github/labels_fetch,
+    github.vscode-pull-request-github/notification_fetch,
+    github.vscode-pull-request-github/doSearch,
+    github.vscode-pull-request-github/activePullRequest,
+    github.vscode-pull-request-github/pullRequestStatusChecks,
+    github.vscode-pull-request-github/openPullRequest,
+    github.vscode-pull-request-github/create_pull_request,
+    github.vscode-pull-request-github/resolveReviewThread,
+    todo,
   ]
 agents: [Architect, Builder, Tester]
 argument-hint: "Inbound message, sender, and desired routing context"
@@ -160,6 +245,7 @@ When a non-file tracker is configured (signalled by `github:` or `github-issue:`
 Router participates in the mirror-projection workflow when dispatched by Builder, Tester, or Architect after a state transition on a remote-team ticket.
 
 **Outbound mirror-projection:**
+
 - Local task file updated first by the owning agent (Builder, Tester)
 - Router posts the corresponding notification to the external tracker (GitHub comment, Telegram message)
 - If the mirror write fails, Router records it in `memory/router.md` HOT under `failed-outbound` and retries before the ticket is closed
@@ -176,23 +262,25 @@ Router classifies inbound by domain and routes to the appropriate agent for revi
 
 On inbound from the remote team, classify the message by domain:
 
-| Domain | Trigger keywords | Dispatch target |
-|--------|-----------------|-----------------|
-| Design / planning | architecture, design, ADR, scope, estimate | Architect |
-| Implementation | implement, bug, PR, code, branch | Builder |
-| QA / verification | test, QA, verify, pass, fail, defect | Tester (Pre-QA mode) |
-| Decision required | approve, confirm, decide, unclear | HOT memory → team lead |
+| Domain            | Trigger keywords                           | Dispatch target        |
+| ----------------- | ------------------------------------------ | ---------------------- |
+| Design / planning | architecture, design, ADR, scope, estimate | Architect              |
+| Implementation    | implement, bug, PR, code, branch           | Builder                |
+| QA / verification | test, QA, verify, pass, fail, defect       | Tester (Pre-QA mode)   |
+| Decision required | approve, confirm, decide, unclear          | HOT memory → team lead |
 
 ## Outbound Rules
 
 Outbound messages are state-machine driven. Router only sends inter-team notifications when dispatched by Architect, Builder, or Tester after a ticket state transition.
 
 **Valid outbound triggers:**
+
 - ticket moves to `state:ready-for-qa` on a ticket assigned to or originating from the remote team
 - ticket moves to `state:qa-passed` or `state:changes-requested` on a remote-team ticket
 - Architect explicitly requests a handover notification
 
 **Refused:**
+
 - free-form messages not triggered by a state transition
 - messages containing team-internal or confidential information
 - messages that make commitments on scope, timeline, or price
@@ -259,6 +347,7 @@ Router is only relevant if a remote team is configured in your workspace. If no 
 ## Source-Defined Skills
 
 - `proactive-agent` — WAL protocol, working buffer, compaction recovery, relentless resourcefulness, verify-before-reporting
+- `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable patterns to project memory
 - `ticket-lifecycle-mode` — role-based ticket states and transition rules; used when classifying and routing state-transition signals
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state (pending inbound, failed outbound) when invoked as a subagent during Architect's morning briefing

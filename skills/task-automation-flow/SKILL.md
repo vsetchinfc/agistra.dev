@@ -387,6 +387,7 @@ During batch runs, apply the Batch Checkpoint Rule from `proactive-agent`: write
 
 ## Hard Rules
 
+- Architect never edits files in any source repository directly, regardless of how small or obvious the change appears. Every file change — one line or one hundred — requires a scoped ticket and a Builder dispatch. There are no exceptions for docs, config, or "trivial" fixes.
 - The team lead's "do work" / "dispatch builder" is the only valid trigger. Architect does not self-start.
 - Architect specifies the verifier on every ticket at creation time. A ticket without a verifier is underscoped and must not be dispatched.
 - For `verifier: Tester` — Builder never declares QA done. Only Tester transitions to `state:qa-passed`.

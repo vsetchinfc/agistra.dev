@@ -48,6 +48,9 @@ Each lens enforces a specific readiness gate before `state:ready-for-qa`.
 | [`proactive-agent`](skills/proactive-agent.md) | WAL protocol, working buffer, relentless resourcefulness, verify-before-reporting |
 | [`agent-foundations`](skills/agent-foundations.md) | Universal grounding: context management, session hygiene, memory discipline |
 | [`self-improving-agent`](skills/self-improving-agent.md) | Captures corrections and promotes durable patterns to project memory |
+| [`test-driven-development`](skills/test-driven-development.md) | TDD discipline: red-green-refactor, stop-the-line on test regression |
+| [`debugging-and-error-recovery`](skills/debugging-and-error-recovery.md) | Systematic fault isolation and structured recovery steps |
+| [`browser-automation`](skills/browser-automation.md) | E2E browser flows for UI verification before handoff |
 | [`dreaming`](skills/dreaming.md) | End-of-session memory consolidation |
 | [`morning-standup`](skills/morning-standup.md) | Contributes HOT state to Architect's briefing when invoked as subagent |
 

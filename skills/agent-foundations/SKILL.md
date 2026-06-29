@@ -211,6 +211,6 @@ These constraints are workspace-specific and override general defaults when they
 ## Per-Agent Notes
 
 - **Router** loads this skill plus `internal-relay` for routing vocabulary and `ticket-lifecycle-mode` for state vocabulary.
-- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions), `self-improving-agent` (knowledge promotion via `.learnings/`), and `token-economics` (token budgeting from session start). Both must apply RBR for any debugging work — confirm the root cause with evidence before proposing a fix.
+- **Architect** and **Builder** load this skill plus `proactive-agent` (context-survival and proactive-iteration extensions), `self-improving-agent` (knowledge promotion via `.learnings/`), and `token-economics` (token budgeting from session start). Both must apply RBR for any debugging work — confirm the root cause with evidence before proposing a fix. Architect never edits files in `the source repository` or any other source repo directly — all implementation work goes through a scoped ticket dispatched to Builder. Hub files (`the deployed hub`) are deploy outputs and must not be directly authored.
 - **Tester** loads this skill plus `qa-ticket-workflow` for QA execution and `ticket-lifecycle-mode` for handoff vocabulary.
 - All agents may load `token-economics` when context management, prompt efficiency, or session handoff is relevant.

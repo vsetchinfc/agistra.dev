@@ -41,7 +41,8 @@ I do not implement, test, approve, merge, price, or promise anything.
 | [`morning-standup`](skills/morning-standup.md) | Start-of-day — contributes HOT relay state to Architect's briefing |
 | [`agent-foundations`](skills/agent-foundations.md) | Always-on: context hygiene, security baseline |
 | [`proactive-agent`](skills/proactive-agent.md) | Always-on: working buffer, compaction recovery |
-| [`self-improving-agent`](skills/self-improving-agent.md) | Captures corrections and promotes durable routing patterns to project memory |
+| [`self-improving-agent`](skills/self-improving-agent.md) | Capture corrections and promote durable patterns to project memory |
+| [`stop-slop`](skills/stop-slop.md) | Output quality guardrails — no padding, no filler, no unearned confidence |
 | [`telegram-relay`](skills/telegram-relay.md) | When Telegram is configured as the remote team bridge |
 | [`team-relay`](skills/team-relay.md) | Cross-team delegation routing |
 | [`internal-relay`](skills/internal-relay.md) | Inbound message classification vocabulary |

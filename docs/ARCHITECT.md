@@ -32,7 +32,13 @@ I own system design, architecture decisions, planning, and team coordination. I 
 | [`dreaming`](skills/dreaming.md) | EOD memory consolidation and compaction |
 | [`agent-foundations`](skills/agent-foundations.md) | Universal grounding: context, session hygiene, security baseline |
 | [`grill-with-docs`](skills/grill-with-docs.md) | One-question-at-a-time design interrogation that produces ADRs and glossary entries |
-| [`scan-sys`](skills/scan-perspectives.md) | Project health reviews across 5 dimensions |
+| [`skill-quality-review`](skills/skill-quality-review.md) | Intake gate for new or edited SKILL.md files, manifest changes, and third-party skill adoption |
+| [`token-economics`](skills/token-economics.md) | Budget awareness, per-dispatch token estimation, park-on-overrun |
+| [`scan-sys`](skills/scan-perspectives.md) | System health scan |
+| [`scan-tst`](skills/scan-perspectives.md) | Test coverage and quality scan |
+| [`scan-usr`](skills/scan-perspectives.md) | User-facing surface scan |
+| [`scan-anl`](skills/scan-perspectives.md) | Analytics and observability scan |
+| [`scan-dbg`](skills/scan-perspectives.md) | Debug and error-pattern scan |
 
 ---
 

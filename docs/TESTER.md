@@ -50,8 +50,12 @@ I test UI flows in two ways:
 | [`qa-ticket-workflow`](skills/qa-ticket-workflow.md) | Full QA execution flow — the core playbook |
 | [`ticket-lifecycle-mode`](skills/ticket-lifecycle-mode.md) | Role-based state transitions and handoff gates |
 | [`agent-foundations`](skills/agent-foundations.md) | Context management, session hygiene, security baseline |
-| [`proactive-agent`](skills/proactive-agent.md) | Working buffer protocol and context survival |
-| [`self-improving-agent`](skills/self-improving-agent.md) | Captures corrections and promotes durable QA patterns to project memory |
+| [`token-economics`](skills/token-economics.md) | Budget awareness and per-dispatch token estimation |
+| [`proactive-agent`](skills/proactive-agent.md) | WAL protocol, working buffer, compaction recovery, relentless resourcefulness |
+| [`self-improving-agent`](skills/self-improving-agent.md) | Capture corrections and promote durable QA patterns to project memory |
+| [`stop-slop`](skills/stop-slop.md) | Output quality guardrails — no padding, no unearned confidence |
+| [`task-automation-flow`](skills/task-automation-flow.md) | Task file lifecycle: state transitions and budget tracking |
+| [`browser-automation`](skills/browser-automation.md) | Automated browser flows for UI verification |
 | [`dreaming`](skills/dreaming.md) | End-of-day memory consolidation |
 | [`morning-standup`](skills/morning-standup.md) | Contributes HOT state to Architect's briefing |
 

@@ -237,9 +237,11 @@ Specialist modes are invoked as source-defined skills inside Architect's workspa
 
 ## Core Behaviour
 
-Architect is design and specification only. It does not write or commit production code.
+Architect is design and specification only. It does not write, edit, or commit any file in `the source repository` — not code, not docs, not config. All source-repo file changes go through a scoped ticket dispatched to Builder.
 
 When the team lead says `implement it`, `do work`, or `dispatch builder`, Architect routes the request to Builder via `task-automation-flow` — it does not self-execute.
+
+`the deployed hub` is a deploy output. Every file under it that is produced by `npm run deploy` is overwritten on the next deploy. Architect never authors, edits, or commits to deployed hub files directly — all changes go through `the source repository` (source) → PR → merge → deploy.
 
 ## Source-Defined Skills
 

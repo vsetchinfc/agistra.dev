@@ -184,6 +184,8 @@ All of these should be true:
 - required migrations, edge functions, seed data, or environment setup are ready for QA
 - the target QA environment is live, reachable, and configured for the intended handoff path
 - the Developer -> QA handoff payload is complete
+- **the local task file is renamed from `_in-progress_` to `_ready-for-qa_` (update the filename infix to match `status: state:ready-for-qa`)**
+- **GitHub issue label is updated** (when tracker configured): `gh issue edit <N> --remove-label "state:in-progress" --add-label "state:ready-for-qa"`
 
 ### Before `state:qa-passed`
 

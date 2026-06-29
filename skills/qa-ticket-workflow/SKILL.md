@@ -140,9 +140,11 @@ Steps 6 and 7 apply to every QA session — CLI/tooling tickets included. The VB
 
 **VBR check:** Verify the local task file now has the `## QA Report` section and the filename reflects the new state before proceeding to Step 7.
 
-### Step 7 - Post report to GitHub (mandatory when tracker configured)
+### Step 7 - Post report to GitHub (mandatory — hard requirement)
 
-**When a tracker is configured** (presence of `github:` or `github-issue:` field in task frontmatter, or workspace tracker config), posting the GitHub comment is **mandatory**, not optional.
+**Posting the full QA report to GitHub is a hard requirement after every verdict.** When a tracker is configured (presence of `github:` or `github-issue:` field in task frontmatter, or workspace tracker config), the GitHub comment is **mandatory**, not optional.
+
+The report **must include**: verdict, evidence for each acceptance criterion, `npm run validate:manifests` result, and `npm test` exit code.
 
 Write the report to a temp file. On Linux/Mac use `mktemp`; on Windows (PowerShell) use `Join-Path $env:TEMP "qa-report.md"`. Write the report line by line to that path. Never inline multi-line content with `--body`. Remove the temp file after posting.
 
@@ -156,7 +158,7 @@ Post destinations (all that apply):
    ```bash
    gh pr comment <number> --repo <org/repo> --body-file <path>
    ```
-   Post the same report to both issue and PR when both exist.
+   Post the same report to both issue and PR when both exist — the PR comment is the primary evidence artifact.
 
 **VBR check (mirror write):** After posting, verify the comment is visible:
 
@@ -175,14 +177,16 @@ gh pr view <number> --repo <org/repo> --comments
 
 For CLI/tooling tickets with no deployed URL, set **Environment:** to `local / CLI` and cite command output or test counts as evidence in the Test Steps table.
 
-### Step 8 - Align ticket state labels (when tracker configured)
+### Step 8 - Align ticket state labels (hard requirement — when tracker configured)
 
-**When a tracker is configured**, apply GitHub issue labels to mirror the local state:
+**Aligning ticket state and renaming the local task file are hard requirements.**
 
-- PASS → apply `state:qa-passed` (remove prior state labels)
-- FAIL or PARTIAL PASS → apply `state:changes-requested` and the appropriate `qa-fail-*` label (mirroring the local `fail-count:` field)
+When a tracker is configured, apply GitHub issue labels to mirror the local state:
 
-The local task file was already updated in Step 6; this step only applies the mirror labels.
+- PASS → `gh issue edit <N> --remove-label "state:ready-for-qa" --add-label "state:qa-passed"` and rename task file to `_qa-passed_`
+- FAIL or PARTIAL PASS → `gh issue edit <N> --remove-label "state:ready-for-qa" --add-label "state:changes-requested"` (also apply `qa-fail-*` label mirroring local `fail-count:`), leave task file at `_ready-for-qa_` (Builder picks it up)
+
+The local task file was already renamed in Step 6; this step applies the mirror labels.
 
 **memory/tester.md:** Append a one-line HOT entry with verdict, ticket/PR refs, local task file path, and GitHub comment URL (if posted).
 

@@ -251,6 +251,8 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | Skill | When to read | Path |
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
+| proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
+| self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
 | token-economics | Context management, token budgeting, session handoff, or prompt efficiency question | `skills/token-economics/SKILL.md` |
 | qa-ticket-workflow | Ticket reference, handoff payload, acceptance criteria, or QA execution question | `skills/qa-ticket-workflow/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |

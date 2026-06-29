@@ -252,6 +252,7 @@ Router is only relevant if a remote team is configured in your workspace. If no 
 ## Source-Defined Skills
 
 - `proactive-agent` — WAL protocol, working buffer, compaction recovery, relentless resourcefulness, verify-before-reporting
+- `self-improving-agent` — capture corrections, errors, and knowledge gaps; promote durable patterns to project memory
 - `ticket-lifecycle-mode` — role-based ticket states and transition rules; used when classifying and routing state-transition signals
 - `dreaming` — background memory consolidation; nightly promotion of strong short-term signals to `MEMORY.md`
 - `morning-standup` — contributes HOT state (pending inbound, failed outbound) when invoked as a subagent during Architect's morning briefing
@@ -307,6 +308,7 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 |-------|-------------|------|
 | agent-foundations | VBR, WAL, security baseline, context survival, or agent safety question | `skills/agent-foundations/SKILL.md` |
 | proactive-agent | Context survival, compaction recovery, working buffer, or proactive suggestion request | `skills/proactive-agent/SKILL.md` |
+| self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
 | ticket-lifecycle-mode | Ticket reference, current state, role, handoff, or lifecycle question | `skills/ticket-lifecycle-mode/SKILL.md` |
 | stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
 | internal-relay | Inbound signal text or workflow state to classify | `skills/internal-relay/SKILL.md` |
