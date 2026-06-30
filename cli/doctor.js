@@ -340,6 +340,65 @@ function checkProjectsDir({ hubRoot, fsMod }) {
 	return pass(14, 'projects directory', 'projects/ directory scaffolded');
 }
 
+const HUB_TYPE_DEV_REQUIRED = ['architect', 'builder', 'tester', 'router'];
+const HUB_TYPE_OPS_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'];
+
+/**
+ * Check 15: hubType-aware agent profile verification.
+ *
+ * Reads `hubType` from workspace.config.json and verifies that the correct
+ * set of agent profiles is deployed in .claude/agents/:
+ *   "dev"  — architect, builder, tester, router (cao must NOT be present)
+ *   "ops"  — architect, builder, tester, router, cao (all five required)
+ *
+ * If hubType is absent or unrecognised, warns and falls back to dev checks.
+ */
+function checkHubType({ hubRoot, fsMod }) {
+	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
+	if (skipReason) return skip(15, 'hub type', skipReason);
+
+	const hubType = config?.hubType;
+	const agentIds = discoverDeployedAgentIds({ hubRoot, fsMod });
+	const agentSet = new Set(agentIds);
+
+	if (!hubType || (hubType !== 'dev' && hubType !== 'ops')) {
+		// Warn and fall back to dev checks
+		const missingDev = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
+		if (missingDev.length > 0) {
+			return warn(15, 'hub type',
+				`hubType not set — defaulting to dev checks; missing profiles: ${missingDev.join(', ')}`,
+				'set hubType in workspace.config.json ("dev" or "ops"), then redeploy');
+		}
+		return warn(15, 'hub type',
+			'hubType not set in workspace.config.json — defaulting to dev verification',
+			'set hubType: "dev" or "ops" in workspace.config.json');
+	}
+
+	if (hubType === 'dev') {
+		const missingAgents = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
+		if (missingAgents.length > 0) {
+			return fail(15, 'hub type',
+				`hubType=dev but missing profiles: ${missingAgents.join(', ')}`,
+				'run: npm run deploy:dev (redeploy dev hub)');
+		}
+		if (agentSet.has('cao')) {
+			return warn(15, 'hub type',
+				'hubType=dev but cao profile found — unexpected in a dev hub',
+				'remove cao or change hubType to "ops" in workspace.config.json');
+		}
+		return pass(15, 'hub type', 'hubType=dev — architect, builder, tester, router all present');
+	}
+
+	// hubType === 'ops'
+	const missingAgents = HUB_TYPE_OPS_REQUIRED.filter(a => !agentSet.has(a));
+	if (missingAgents.length > 0) {
+		return fail(15, 'hub type',
+			`hubType=ops but missing profiles: ${missingAgents.join(', ')}`,
+			'run: npm run deploy:ops (redeploy ops hub)');
+	}
+	return pass(15, 'hub type', 'hubType=ops — architect, builder, tester, router, cao all present');
+}
+
 /**
  * Default health probe — GET /health and expect JSON with ok: true.
  *
@@ -392,6 +451,7 @@ export async function runChecks({
 		checkAutoDispatchRouterProfile({ hubRoot, fsMod }),
 		checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }),
 		checkProjectsDir({ hubRoot, fsMod }),
+		checkHubType({ hubRoot, fsMod }),
 	];
 }
 

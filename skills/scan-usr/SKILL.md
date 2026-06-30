@@ -16,8 +16,8 @@ Evaluates how well the project communicates its purpose and value to users, cont
 - A thin README (<500 chars) generates a high-priority task
 
 **Description** — Is the package self-describing?
-- package.json must have a non-empty description field
-- Missing = 0.0 on this axis
+- If no package.json exists, marked N/A (not applicable to non-npm projects)
+- If package.json exists: non-empty description field = 1.0, missing or empty = 0.0
 
 **Changelog** — Is the release history communicated?
 - CHANGELOG.md or CHANGELOG present = 1.0
@@ -41,7 +41,7 @@ Score interpretation:
 |---|---|
 | No README.md | critical |
 | README < 500 chars | high |
-| No package.json description | medium |
+| No package.json description (when package.json exists) | medium |
 
 ## Agent Analysis Guide
 
@@ -49,7 +49,7 @@ When performing a manual USR analysis:
 
 1. Read the README as if you are a new user — can you answer: what is this, how do I install it, how do I use it?
 2. Check for usage examples with real commands or code snippets (not just API reference)
-3. Verify the package.json description accurately describes what the package does in one line
+3. If package.json exists: verify the description field accurately describes what the package does in one line; if no package.json, mark this dimension N/A
 4. Check if there is a CHANGELOG and whether it lists breaking changes for major versions
 5. Look for a CONTRIBUTING.md — if contributors cannot find setup instructions they cannot help
 6. Assess any public API surface: are types and parameters documented?

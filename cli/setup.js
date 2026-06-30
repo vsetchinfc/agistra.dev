@@ -393,6 +393,11 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = ch
 		const config = {
 			user: { name: userName, role: userRole },
 			org: orgName,
+			// hubType controls which agent profiles are expected by `npm run doctor`.
+			//   "dev"  — expects: architect, builder, tester, router (no cao)
+			//   "ops"  — expects: architect, builder, tester, router, cao
+			// Defaults to "dev" on first setup. Edit manually for an ops hub.
+			hubType: prev.hubType ?? 'dev',
 			remoteTeam,
 			githubWorkflows,
 			...(telegramMcp ? { telegram: telegramMcp } : {}),

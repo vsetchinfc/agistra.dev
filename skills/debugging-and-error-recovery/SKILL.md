@@ -131,7 +131,8 @@ A minimal reproduction makes the root cause obvious and prevents fixing symptoms
 
 1. Generate 2–4 ranked, falsifiable hypotheses
 2. Format each: "If [X] causes this, then changing [Y] will eliminate it"
-3. Confirm the top hypothesis is correct before coding — if the prediction does not hold, move to the next
+3. Run the discriminating check — a targeted command, log inspection, or minimal test that confirms or refutes the top hypothesis
+4. **Do not begin coding until the discriminating check confirms the top hypothesis.** If the check refutes it, move to the next hypothesis and repeat from step 3.
 
 Fix the underlying issue, not the symptom:
 

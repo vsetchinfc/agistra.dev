@@ -29,6 +29,8 @@ Tester must satisfy at least one of these before reporting `state:qa-passed`:
 
 ## Usage
 
+**Preflight:** Before using any `mcp__agent-browser__*` tool, confirm the server is present in `.mcp.json` and reachable. If not, fall back immediately to the When Browser Is Unavailable section below and report evidence quality in your verdict.
+
 The `agent-browser` MCP server exposes tools directly in the session once configured in `.mcp.json`. No `npx` invocation required — tools are available as `mcp__agent-browser__browser_navigate`, `mcp__agent-browser__browser_snapshot`, `mcp__agent-browser__browser_screenshot`, etc.
 
 Common operations:
@@ -50,4 +52,6 @@ If the MCP server is not running or not configured, fall back to:
 - Reading rendered HTML files from the build output
 - Manual screenshot instruction to the team lead
 
-Note the fallback in the QA report so the team lead can assess evidence quality.
+**VBR fallback rule:** If the acceptance criteria explicitly require browser evidence (UI state, visual confirmation, form submission feedback, etc.), and only curl or static file fallbacks were used, report the result as **BLOCKED** — evidence is insufficient to satisfy VBR without observable UI state capture. Note the fallback method in the QA report and escalate to the team lead for manual verification.
+
+Note the fallback method in the QA report so the team lead can assess evidence quality.

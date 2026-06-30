@@ -11,8 +11,7 @@ Evaluates whether the project has a functioning, proportionate test suite. Assig
 ## Dimensions
 
 **Coverage ratio** — Are enough source files tested?
-- Score = min(testFiles / sourceFiles / 0.5, 1.0)
-- 50%+ file coverage = full score on this axis
+- Score = min((testFileCount / sourceFileCount) * 2, 1.0) — 50%+ coverage = full score
 - 0 test files = 0.0 immediately (no further analysis needed)
 
 **Test script** — Can the suite be run?
@@ -26,6 +25,8 @@ tst_score = (coverage_ratio + test_script) / 2
 ```
 
 Edge case: if no test files exist at all, score is 0.0 and only one critical task is generated.
+
+**When test suite execution fails:** If the test suite cannot be executed (missing dependencies, syntax errors, unavailable runtime), record this as a data gap rather than failure; note it in output and do not penalize the coverage score until the execution blocker is resolved.
 
 Score interpretation:
 - 0.9–1.0  Test suite is healthy and runnable

@@ -41,7 +41,7 @@ Before dispatching any subagent — single or batch — confirm the required too
 | ------- | ----------------------------------------------------------------- |
 | Builder | Read, Edit, Write, Bash, Glob, Grep                               |
 | Tester  | Read, Bash, Glob, Grep                                            |
-| Router  | Read, Bash, Glob, Grep, mcp**relay**\* (when relay is configured) |
+| Router  | Read, Bash, Glob, Grep, mcp__relay__* (when relay is configured) |
 
 ### Preflight protocol
 

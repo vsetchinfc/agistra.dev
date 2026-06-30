@@ -1,6 +1,7 @@
 ---
 name: grill-with-docs
-description: "One-question-at-a-time design interrogation that produces ADRs and glossary entries as decisions settle."
+description: "One-question-at-a-time design interrogation. Use when: 'grill me', 'interrogate this', 'one question at a time', or design review start. Produces ADRs and glossary as decisions settle. Do not use for settled designs — load architecture-mode instead."
+argument-hint: "Design question, plan, topic, or decision under interrogation"
 ---
 
 # grill-with-docs
@@ -20,7 +21,9 @@ A relentless, docs-aware interview that sharpens a plan or design one question a
 2. **Evidence first.** When an answer is ambiguous or abstract, ask for a concrete example before accepting it.
 3. **Name load-bearing assumptions.** When an answer closes a design option, state the assumption explicitly before moving to the next question.
 4. **Write as you go.** After each settled decision, draft the corresponding ADR entry or glossary term inline — do not batch documentation for after the session.
-5. **Close with docs.** When the session concludes, produce: one ADR per settled decision, a glossary of key terms introduced, and any scope exclusions made explicit.
+5. **Close with docs (VBR required).** When the session concludes:
+   - Produce one ADR per settled decision, a glossary of key terms introduced, and any scope exclusions made explicit.
+   - **Verify Before Reporting:** confirm each ADR file exists under `docs/decisions/` with the decision and rationale documented before declaring the session closed.
 
 ## Session flow
 

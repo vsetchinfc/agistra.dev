@@ -10,6 +10,14 @@ argument-hint: "Cover letter, recruiter email, LinkedIn message, or follow-up to
 
 ---
 
+## REQUIRED GATE: Load writing-core First
+
+**STOP.** Do not produce output until writing-core is confirmed loaded.
+
+If you are not running with `skills/writing-core/SKILL.md` already loaded, you cannot use this skill. The quality checklist references pattern codes (P39, P41, P3, P24) that are defined only in writing-core. Load it now before proceeding.
+
+---
+
 ## Profile
 
 I am actively looking for work. I write cover letters, recruiter emails, LinkedIn connection messages, interview follow-ups, and thank-you notes. My audience is recruiters, hiring managers, and professional contacts. I want my writing to sound like a real person — specific, confident, and direct — not a template.

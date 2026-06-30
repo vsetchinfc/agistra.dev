@@ -124,7 +124,7 @@ Every skill change needs a validation story.
 
 Minimum validation:
 
-- frontmatter parses
+- frontmatter parses — run `grep -c '^---' skills/<name>/SKILL.md` and confirm the result is exactly `2` (opening and closing fence markers)
 - `npm run validate:manifests` passes when manifests change
 - relevant deploy or composition test passes when generated output changes
 - docs or README references resolve

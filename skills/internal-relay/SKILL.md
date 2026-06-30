@@ -15,7 +15,7 @@ Workflow-state classification vocabulary for mapping inbound signals from the re
 | `review_requested` | "ready for review", "PR open", "please review" | Builder |
 | `ci_failed` | "CI failed", "test failed", "build failed" | Builder |
 | `qa_requested` | "ready for QA", "needs QA", "acceptance test", "retest" | Tester (Pre-QA Readiness Check mode only — see `qa-ticket-workflow`) |
-| `blocked` | "blocked", "waiting on", "cannot proceed" | Builder if engineering blocker; Router HOT for team lead if decision blocker |
+| `blocked` | "blocked", "waiting on", "cannot proceed" | Builder if engineering blocker; Router HOT for team lead if decision blocker. Engineering blockers: build failing, test blocked, dependency missing, environment down, type error, merge conflict. Decision blockers: needs approval, awaiting scope, pricing question, timeline decision, client commitment, awaiting direction. |
 | `decision_required` | "needs approval", "scope", "price", "timeline", "client promise" | Router HOT for team lead; surfaces at standup or dreaming |
 | `info_only` | "FYI", "status", no requested action | None — Router composes short ack |
 | `unclear` | Missing issue/PR, state, owner, or requested action | Sender — ask one concise clarifying question |

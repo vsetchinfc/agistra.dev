@@ -165,7 +165,7 @@ When a learning applies across multiple files or features, or prevents a recurri
 | Promotion target | What goes there |
 | ---------------- | --------------- |
 | `memory/<agent>.md` COLD section | Project facts, conventions, verified practices |
-| `AGENTS.md` in the workspace | Workflow improvements, automation rules |
+| `AGENTS.md` in the workspace | Workflow improvements, automation rules — applies to Codex and GitHub Copilot environments; for Claude Code the equivalent is `CLAUDE.md` |
 | `~/.claude/projects/.../memory/` auto-memory | Cross-project patterns and preferences |
 
 ### Promotion threshold

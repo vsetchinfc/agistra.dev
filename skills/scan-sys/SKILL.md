@@ -19,9 +19,8 @@ Evaluates the structural and architectural health of a codebase. Assigns a score
 - Each overloaded directory reduces the score proportionally
 
 **Infrastructure** — Is the project properly configured?
-- TypeScript project without tsconfig.json scores 0 on this axis
-- No CI/CD pipeline (missing .github/workflows/) scores 0 on this axis
-- Both present = 1.0
+- TypeScript: If no .ts files are present, marked N/A; otherwise tsconfig.json present = 1.0, missing = 0.0
+- CI/CD health is assessed by scan-anl; see that skill for pipeline evaluation
 
 ## Scoring
 
@@ -43,7 +42,6 @@ Score interpretation:
 | Source files > 300 lines (≤3 files) | medium |
 | Directories > 20 source files | medium |
 | tsconfig.json missing (TS project) | high |
-| CI/CD pipeline missing | medium |
 
 ## Agent Analysis Guide
 
@@ -51,9 +49,8 @@ When performing a manual SYS analysis:
 
 1. Count source files per directory — flag any over 20
 2. Measure file lengths — flag anything over 300 lines and note the dominant concern
-3. Check for tsconfig.json if .ts files are present; verify `strict: true` is set
-4. Check .github/workflows/ for at least one CI workflow that runs tests
-5. Look for circular imports or cross-layer dependencies (service importing from controller, etc.)
-6. Identify God objects — single classes or modules that do too many things
+3. Check for tsconfig.json **only if .ts files are present**; verify `strict: true` is set; mark TypeScript N/A if no .ts files found
+4. Look for circular imports or cross-layer dependencies (service importing from controller, etc.)
+5. Identify God objects — single classes or modules that do too many things
 
 Output: a ranked list of structural issues, each with the file or directory, the dimension it violates, and a recommended remediation.

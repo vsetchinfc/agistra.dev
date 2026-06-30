@@ -192,8 +192,6 @@ The local task file was already renamed in Step 6; this step applies the mirror 
 
 ### Step 9 - Notify Builder on defects
 
-**If operating inside a `task-automation-flow` run:** follow the fail counter rules in `profiles/tester-workspace/ROUTING.md` (Automation Run Rules → Fail Counter Logic) instead of the default dispatch below. On 1st fail, dispatch Builder (same as below). On 2nd fail, route to Architect — do not dispatch Builder.
-
 If verdict is FAIL or PARTIAL PASS:
 
 **Preferred path — dispatch Builder as subagent:**
@@ -216,6 +214,8 @@ Append to `memory/builder.md` HOT section:
 - status: needs fix — awaiting retest
 
 Do not modify any other section of Builder's memory file. Builder will read the local task file's `## QA Report` section for full context; the HOT append ensures the defect is tracked for the next Builder session.
+
+**Fail counter automation rules:** When operating inside a `task-automation-flow` run, see `skills/ticket-lifecycle-mode/SKILL.md` for the complete fail counter rules. On 1st fail, dispatch Builder (same as preferred path above). On 2nd fail, route to Architect — do not dispatch Builder again.
 
 If verdict is PASS with no defects, skip this step — Builder will see the local task file update and (if posted) the GitHub comment.
 

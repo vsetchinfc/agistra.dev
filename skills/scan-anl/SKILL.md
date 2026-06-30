@@ -14,6 +14,8 @@ Evaluates the delivery and process health of a project by analysing CI/CD automa
 - 1.0: pipeline present AND includes a test-run step AND is passing
 - 0.5: pipeline present but no test step, or pipeline is failing
 - 0.0: no pipeline at all
+- To check CI status: `gh run list --limit 1 --json conclusion --jq '.[0].conclusion'`
+- If `gh` is unavailable, mark as 'unknown' and score 0.5
 
 **Commit quality** — Does the commit history signal healthy development?
 - Examines the last 20 commits
@@ -61,8 +63,8 @@ Score interpretation:
 
 When performing a manual ANL analysis:
 
-1. Check .github/workflows/ — verify at least one workflow runs tests on push/PR; check whether the pipeline is currently passing
-2. Run `git log -20 --oneline` — classify each commit as feat, fix, chore, refactor, docs
+1. Check .github/workflows/ — verify at least one workflow runs tests on push/PR; check whether the pipeline is currently passing. Use `gh run list --limit 1 --json conclusion --jq '.[0].conclusion'` for automated status check. If gh is unavailable, mark as 'unknown' and score 0.5.
+2. Run `git log -20 --oneline` — classify each commit: first check for conventional-commit prefixes (fix:, bugfix:, hotfix: for fixes; feat: for features; chore:, refactor:, docs: for other categories); if no prefix is present, apply keyword fallback (look for fix, feature, add, remove, update, refactor in message); as last resort, use subjective inference from the message content.
 3. Calculate fix rate — if >50%, identify which modules are generating the most fixes
 4. Run `git status` — note any uncommitted changes and their age (stash date)
 5. Assess commit message quality — count messages that are vague ("fix", "WIP", "update", "changes", "stuff"); score as 1.0/<10%, 0.5/10–40%, 0.0/>40%

@@ -328,5 +328,5 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | test-driven-development | TDD workflow, test-first implementation, bug-fix with failing test, or test discipline question | `skills/test-driven-development/SKILL.md` |
 | debugging-and-error-recovery | debugging loop, build failure, test failure, runtime error, or error recovery question | `skills/debugging-and-error-recovery/SKILL.md` |
 | browser-automation | URL to verify, UI state to capture, form to fill, or integration endpoint to exercise | `skills/browser-automation/SKILL.md` |
-| frontend-design | — (optional — install via `install-skill frontend-design` if needed) | `skills/frontend-design/SKILL.md` |
+| frontend-design | Component name, page name, user flow, or design brief (optional — install via `install-skill frontend-design` if needed) | `skills/frontend-design/SKILL.md` |
 | codebase-design | — (optional — install via `install-skill codebase-design` if needed) | `skills/codebase-design/SKILL.md` |

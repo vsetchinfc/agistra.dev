@@ -36,7 +36,7 @@ Read your agent identity and follow the section below that matches.
 
 **Step 2 — Dispatch subagents**
 
-Run Builder, Tester, and Router as subagents simultaneously with the morning-standup prompt. Collect their reports.
+Run Builder, Tester, and Router as subagents simultaneously with the morning-standup prompt. Collect their reports. When dispatching Router, set `model: 'haiku'` — Router is economy-tier per its manifest.
 
 **Step 3 — Compile and deliver briefing**
 

@@ -87,7 +87,7 @@ During any automation run involving multiple sequential agent dispatches, write 
 
 ### Checkpoint format
 
-Write to `memory/architect.md` HOT section:
+Write to `memory/<agent>.md` HOT section (the loading agent's own memory file):
 
 ```
 ## Automation Checkpoint — [timestamp]

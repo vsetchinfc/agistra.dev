@@ -229,6 +229,7 @@ These surfaces help agents follow project conventions and avoid known traps:
 
 ```
 - [ ] ADR file exists in docs/decisions/ with all required sections populated
+      run: git ls-files docs/decisions/ADR-*.md   # lists committed ADRs; empty output means none exist
 - [ ] ADRs exist for all significant architectural decisions
 - [ ] README covers quick start, commands, and architecture overview
 - [ ] Public API functions have parameter, return type, and exception documentation

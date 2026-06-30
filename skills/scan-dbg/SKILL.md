@@ -72,6 +72,17 @@ When performing a manual DBG analysis:
 6. Look for `as any`, `// @ts-ignore`, `// @ts-nocheck`, or `// eslint-disable` — each one is a type-safety escape hatch hiding a potential bug
 7. Identify whether each module boundary has at least one observable failure output: structured logging, error event emission, or a health-check endpoint
 
+```bash
+# Structured logging — look for a logger library in use
+grep -r "winston\|pino\|bunyan\|logger\." src/ --include="*.ts" --include="*.js" -l
+
+# Error event emission — look for error events being emitted
+grep -r "emit.*['\"]error['\"]" src/ --include="*.ts" --include="*.js" -l
+
+# Health-check endpoints — look for health or ping routes
+grep -r "['\"]\/health\|['\"]\/healthz\|['\"]\/ping\|healthCheck\|health_check" src/ --include="*.ts" --include="*.js" -l
+```
+
 Output: ranked list of debug findings — FIXME/BUG first, then TODO density by module, then silent swallows, then logging and type-safety escapes, then observability gaps.
 
 When debugging failures are found, apply the Root Before Repair (RBR) protocol from `skills/agent-foundations/SKILL.md` — confirm root cause with evidence before proposing a fix.

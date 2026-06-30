@@ -104,6 +104,7 @@ Router, notify remote agent:
 - ticket exists and is in the claimed state
 - the state transition is on the trigger table above
 - the message body matches a template; no copies of internal context
+- **data minimisation:** include only the ticket reference, state label, and required action — no context beyond what is in the trigger template
 - no secrets, no credentials, no scope/price/timeline language (information-classification check)
 
 If any check fails, return an error to the dispatching agent. The dispatching agent appends a retry note to its own HOT memory.
@@ -132,8 +133,6 @@ Router actions:
      → daemon sends: "Max, Ticket #58 in state:ready-for-qa, please pick up first-pass QA. <link>"
   4. Reply to Builder: sent (message_id …) or error with retry note
 ```
-
-See `docs/relay-outbound-runbook.md` for full manual E2E steps.
 
 ## Information Classification
 

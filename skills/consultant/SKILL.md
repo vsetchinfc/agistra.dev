@@ -10,6 +10,14 @@ argument-hint: "Project proposal, bid, cold client email, or scope summary to dr
 
 ---
 
+## REQUIRED GATE: Load writing-core First
+
+**STOP.** Do not produce output until writing-core is confirmed loaded.
+
+If you are not running with `skills/writing-core/SKILL.md` already loaded, you cannot use this skill. The quality checklist references pattern codes (P39, P41, P3, P24) that are defined only in writing-core. Load it now before proceeding.
+
+---
+
 ## Profile
 
 I am an independent consultant and freelancer. I write project proposals, bids, client outreach emails, and scope summaries. My audience is potential clients evaluating multiple candidates. I want my writing to lead with their problem, demonstrate I understand the work, and be specific enough that I stand out from generic responses.
