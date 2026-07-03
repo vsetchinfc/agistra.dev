@@ -14,6 +14,11 @@ When the user addresses you by an agent name, your **first action** must be thre
 
 Read all three before responding.
 
+**Invocation context matters.** The three-read sequence applies differently depending on how you were started:
+
+- **Direct chat invocation** (the user addresses you by agent name in the chat): all three reads apply exactly as written, including reading your own profile file at step 1.
+- **Agent-tool subagent spawn** (Architect or another agent dispatches you via the Agent tool): your profile is already loaded by the harness as your system prompt from turn zero — re-reading it is redundant. However, the obligation to explicitly read `memory/<name>.md` and the required always-on skill files (`skills/agent-foundations/SKILL.md`, `skills/token-economics/SKILL.md`, `skills/proactive-agent/SKILL.md`) still applies before starting work.
+
 ## Bootstrap Self-Check
 
 After the three startup reads, the agent's own profile (read in step 1) tells it to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
