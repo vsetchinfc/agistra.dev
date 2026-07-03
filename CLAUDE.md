@@ -33,6 +33,21 @@ This file is local-only and gitignored — it is never committed to the repo. It
 | `router` | `.claude/agents/router.md` | `memory/router.md` |
 | `tester` | `.claude/agents/tester.md` | `memory/tester.md` |
 
+## Version Check
+
+On the first message of each session, run the update checker silently:
+
+```
+node cli/lib/version-check.js
+```
+
+- `{"status": "update-available", "local": "...", "remote": "..."}` → inform the user once, briefly: "Hub release {remote} is available; you're on {local}. Run `npm run version:check` for details."
+- `{"status": "up-to-date"}` → say nothing
+- `{"status": "offline"}` or `{"status": "no-remote-version"}` → say nothing (silent non-failure)
+- Any error or missing file → say nothing
+
+The user can also say "check for updates" at any time to force a check.
+
 ## Path Discipline
 
 Agent profiles live in `.claude/agents/` of **this project directory**. Do not load profiles from other workspace roots or additional working directories unless the user explicitly instructs it.

@@ -322,6 +322,21 @@ Tester produces PASS, FAIL, PARTIAL PASS, or BLOCKED — never skips the handoff
 
 ---
 
+## Release Versioning
+
+The hub release version is tracked in the root `VERSION` file (semver).
+
+**Check for updates:**
+```
+npm run version:check
+```
+
+Returns JSON `{"status": "up-to-date" | "update-available" | "offline", "local": "...", "remote": "..."}`.
+
+**Bump the version:** Edit `VERSION` manually or via release-please. The deploy step automatically copies `VERSION` to the hub output root.
+
+---
+
 ## Open source
 
 Agistra is open source and free to use.
