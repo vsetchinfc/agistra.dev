@@ -30,3 +30,5 @@ workspace-identity.mdc
 copilot-instructions.md
 .claude/settings.local.json
 .env
+# Third-party skills
+codebase-design/
