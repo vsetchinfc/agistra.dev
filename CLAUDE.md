@@ -43,7 +43,7 @@ This file is local-only and gitignored — it is never committed to the repo. It
 On the first message of each session, run the update checker silently:
 
 ```
-node cli/lib/version-check.js
+node pipelines/deploy/lib/version-check.js
 ```
 
 - `{"status": "update-available", "local": "...", "remote": "..."}` → inform the user once, briefly: "Hub release {remote} is available; you're on {local}. Run `npm run version:check` for details."

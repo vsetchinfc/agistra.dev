@@ -3,18 +3,18 @@
   "license": "Apache-2.0",
   "type": "module",
   "scripts": {
-    "setup": "node cli/setup.js --output .",
-    "doctor": "node cli/doctor.js",
-    "list": "node cli/index.js dispatch --list",
-    "dispatch": "node cli/index.js dispatch",
-    "advance": "node cli/index.js dispatch --advance",
-    "launch": "node cli/index.js dispatch --launch",
-    "scan": "node cli/index.js scan",
-    "install-skill": "node cli/index.js install-skill",
-    "relay": "node cli/relay/telegram-relay/daemon.js --hub .",
-    "relay:status": "node cli/relay/telegram-relay/status.js --hub .",
+    "setup": "node pipelines/deploy/setup.js --output .",
+    "doctor": "node pipelines/deploy/doctor.js",
+    "list": "node pipelines/deploy/index.js dispatch --list",
+    "dispatch": "node pipelines/deploy/index.js dispatch",
+    "advance": "node pipelines/deploy/index.js dispatch --advance",
+    "launch": "node pipelines/deploy/index.js dispatch --launch",
+    "scan": "node pipelines/deploy/index.js scan",
+    "install-skill": "node pipelines/deploy/index.js install-skill",
+    "relay": "node pipelines/deploy/relay/telegram-relay/daemon.js --hub .",
+    "relay:status": "node pipelines/deploy/relay/telegram-relay/status.js --hub .",
     "export": "python tools/export-letter.py",
     "export:all": "python tools/export-letter.py --all",
-    "version:check": "node cli/lib/version-check.js"
+    "version:check": "node pipelines/deploy/lib/version-check.js"
   }
 }

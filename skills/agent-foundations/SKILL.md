@@ -208,6 +208,15 @@ These constraints are workspace-specific and override general defaults when they
 - After any change to `.mcp.json` or environment variables: flag to the user that a Claude Code restart is required — do not assume the change is live in the running session.
 - When making any restart-dependent config change, produce a numbered post-restart verification checklist so the next session can confirm the change took effect immediately on startup.
 
+## Knowledge Retrieval (paid `dev:sub` hubs only)
+
+This section only applies when `workspace.config.json` has `hubType: "dev:sub"` and the hub has a knowledge-retrieval index configured. It does not apply to `dev` or `ops` hubs. The specific vault/index tool names and runtime state paths are intentionally not enumerated here — that detail lives entirely in the dev:sub-only plugin files the deployed hub ships when this feature is active, never in this universally-shipped skill.
+
+- **Batch writes, don't refresh per-edit.** Group related vault mutation tool calls into one meaningful batch before refreshing. Every mutation call already marks retrieval state dirty automatically via the `PostToolUse` hook — you do not need to do that yourself, but you do need to avoid triggering a full refresh after every single tiny edit.
+- **Refresh after the batch, not before reporting.** Once a batch of related writes is complete, run `npm run knowledge:refresh` before telling the user the new content is retrievable.
+- **Verify before claiming retrievable.** Check the refresh command's exit code (0 = success) before reporting the new knowledge as searchable. A non-zero exit or a stale-status warning means the previous index is still what will be returned — say so rather than reporting success.
+- Session start (`SessionStart` hook → `npm run knowledge:start`) and session end (`Stop` hook, refresh-if-dirty) run automatically — no agent action required for those.
+
 ## Per-Agent Notes
 
 - **Router** loads this skill plus `internal-relay` for routing vocabulary and `ticket-lifecycle-mode` for state vocabulary.

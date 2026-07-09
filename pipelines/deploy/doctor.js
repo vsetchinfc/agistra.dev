@@ -2,13 +2,13 @@
 /**
  * doctor.js — Hub health check command.
  *
- * Runs 13 checks and prints a coloured report showing green/warn/fail for each
+ * Runs 17 checks and prints a coloured report showing green/warn/fail for each
  * configuration item. Designed to be run after `npm run setup` to confirm the
  * hub is correctly configured before starting a work session.
  *
  * Usage:
- *   node cli/doctor.js --output <hub-root>   # check the given hub
- *   node cli/doctor.js                       # defaults to cwd
+ *   node pipelines/deploy/doctor.js --output <hub-root>   # check the given hub
+ *   node pipelines/deploy/doctor.js                       # defaults to cwd
  *   npm run doctor                           # deployed hub shortcut
  */
 import fs from 'node:fs';
@@ -20,21 +20,26 @@ import { DEFAULT_DAEMON_PORT } from './relay/core/config.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
 import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
 
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 // ── Check result constructors ──────────────────────────────────────────────────
 
-function pass(id, label, message) {
+// Exported (in addition to being used locally) so tier-specific doctor plugin
+// modules under lib/*.doctor-plugin.js can build check results in the same
+// shape without duplicating this logic.
+export function pass(id, label, message) {
 	return { id, label, status: 'pass', message, hint: null };
 }
 
-function fail(id, label, message, hint) {
+export function fail(id, label, message, hint) {
 	return { id, label, status: 'fail', message, hint };
 }
 
-function warn(id, label, message, hint) {
+export function warn(id, label, message, hint) {
 	return { id, label, status: 'warn', message, hint };
 }
 
-function skip(id, label, message) {
+export function skip(id, label, message) {
 	return { id, label, status: 'skip', message, hint: null };
 }
 
@@ -143,7 +148,7 @@ function checkMcpJson({ hubRoot, fsMod }) {
 		'run: npm run deploy (redeploy hub to add agent-browser)');
 }
 
-function readHubConfig(hubRoot, fsMod) {
+export function readHubConfig(hubRoot, fsMod) {
 	const configPath = path.join(hubRoot, 'workspace.config.json');
 	if (!fsMod.existsSync(configPath)) {
 		return { config: null, skipReason: 'workspace.config.json absent — skipping relay check' };
@@ -348,8 +353,9 @@ const HUB_TYPE_OPS_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'
  *
  * Reads `hubType` from workspace.config.json and verifies that the correct
  * set of agent profiles is deployed in .claude/agents/:
- *   "dev"  — architect, builder, tester, router (cao must NOT be present)
- *   "ops"  — architect, builder, tester, router, cao (all five required)
+ *   "dev"     — architect, builder, tester, router (cao must NOT be present)
+ *   "dev:sub" — same profile requirements as "dev" (cao must NOT be present)
+ *   "ops"     — architect, builder, tester, router, cao (all five required)
  *
  * If hubType is absent or unrecognised, warns and falls back to dev checks.
  */
@@ -361,17 +367,32 @@ function checkHubType({ hubRoot, fsMod }) {
 	const agentIds = discoverDeployedAgentIds({ hubRoot, fsMod });
 	const agentSet = new Set(agentIds);
 
-	if (!hubType || (hubType !== 'dev' && hubType !== 'ops')) {
+	if (!hubType || !['dev', 'ops', 'dev:sub'].includes(hubType)) {
 		// Warn and fall back to dev checks
 		const missingDev = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
 		if (missingDev.length > 0) {
 			return warn(15, 'hub type',
 				`hubType not set — defaulting to dev checks; missing profiles: ${missingDev.join(', ')}`,
-				'set hubType in workspace.config.json ("dev" or "ops"), then redeploy');
+				'set hubType in workspace.config.json ("dev", "ops", or "dev:sub"), then redeploy');
 		}
 		return warn(15, 'hub type',
 			'hubType not set in workspace.config.json — defaulting to dev verification',
-			'set hubType: "dev" or "ops" in workspace.config.json');
+			'set hubType: "dev", "ops", or "dev:sub" in workspace.config.json');
+	}
+
+	if (hubType === 'dev:sub') {
+		const missingAgents = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
+		if (missingAgents.length > 0) {
+			return fail(15, 'hub type',
+				`hubType=dev:sub but missing profiles: ${missingAgents.join(', ')}`,
+				'run: npm run deploy:dev:sub (redeploy subscriber hub)');
+		}
+		if (agentSet.has('cao')) {
+			return warn(15, 'hub type',
+				'hubType=dev:sub but cao profile found — unexpected in a subscriber hub',
+				'remove cao or change hubType to "ops" in workspace.config.json');
+		}
+		return pass(15, 'hub type', 'hubType=dev:sub — architect, builder, tester, router all present');
 	}
 
 	if (hubType === 'dev') {
@@ -397,6 +418,51 @@ function checkHubType({ hubRoot, fsMod }) {
 			'run: npm run deploy:ops (redeploy ops hub)');
 	}
 	return pass(15, 'hub type', 'hubType=ops — architect, builder, tester, router, cao all present');
+}
+
+/**
+ * Checks 16+: optional tier-specific readiness (dev:sub, ops, publish hubs only).
+ *
+ * Manifest-driven, not hardcoded: some hub tiers ship one or more additional
+ * doctor checks as self-contained plugin modules under lib/ (filename
+ * convention: "*.doctor-plugin.js"). deployExtras() only copies those plugin
+ * files into non-free hub tiers (see pipelines/deploy/lib/extras.js); a free
+ * "dev" hub never receives any of them. This function discovers every plugin
+ * file present on disk (sorted, so results are stable) and runs each one,
+ * flattening their results into the returned array — a dev hub, with no
+ * plugin files present, simply returns a single clean skip result instead of
+ * one skip per (absent) plugin. Each plugin module owns its own check
+ * `id`/`label`, hardcoded in that module, so numbering stays stable and
+ * non-colliding as more plugins are added. This keeps doctor.js itself
+ * generic and free of any tier-specific
+ * feature names, so a dev-hub deploy carries zero disclosure of paid-tier
+ * feature details.
+ */
+async function checkOptionalTierReadiness({
+	hubRoot, fsMod, execFn, platform = process.platform, env = process.env,
+	fetchFn = globalThis.fetch, pluginOptions = {},
+}) {
+	let pluginFiles = [];
+	try {
+		pluginFiles = fs.readdirSync(path.join(__dirname, 'lib'))
+			.filter(f => f.endsWith('.doctor-plugin.js'))
+			.sort();
+	} catch {
+		pluginFiles = [];
+	}
+	if (pluginFiles.length === 0) {
+		return [skip(16, 'optional tier readiness', 'no optional tier-specific checks present in this hub')];
+	}
+	const results = [];
+	for (const file of pluginFiles) {
+		const mod = await import(`./lib/${file}`);
+		results.push(await mod.check({
+			hubRoot, fsMod, execFn, platform, env, fetchFn,
+			readHubConfig, pass, fail, warn, skip,
+			...pluginOptions,
+		}));
+	}
+	return results;
 }
 
 /**
@@ -427,6 +493,12 @@ export async function probeRelayHealth(port, fetchFn = globalThis.fetch) {
  * @param {function(number): Promise<'ok'|'bad'|'unreachable'>} [options.probeHealth]
  * @param {function} [options.execFn]     Injectable execFileSync for PATH checks.
  * @param {string}   [options.profilesRoot] Absolute path to profiles repo root.
+ * @param {string}   [options.platform]    Injectable process.platform for testability.
+ * @param {object}   [options.env]         Injectable process.env for testability.
+ * @param {typeof fetch} [options.fetchFn] Injectable fetch for optional-tier plugin checks.
+ * @param {object}   [options.pluginOptions] Extra injectable overrides passed through to
+ *   every discovered *.doctor-plugin.js module's check() call (e.g. probe functions for
+ *   testability) — kept generic here so doctor.js never names a specific plugin's options.
  * @returns {Promise<Array<{id, label, status, message, hint}>>}
  */
 export async function runChecks({
@@ -434,7 +506,11 @@ export async function runChecks({
 	fsMod = fs,
 	probeHealth = probeRelayHealth,
 	execFn = execFileSync,
-	profilesRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'),
+	profilesRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..'),
+	platform = process.platform,
+	env = process.env,
+	fetchFn = globalThis.fetch,
+	pluginOptions = {},
 }) {
 	return [
 		checkWorkspaceConfig({ hubRoot, fsMod }),
@@ -452,6 +528,7 @@ export async function runChecks({
 		checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }),
 		checkProjectsDir({ hubRoot, fsMod }),
 		checkHubType({ hubRoot, fsMod }),
+		...(await checkOptionalTierReadiness({ hubRoot, fsMod, execFn, platform, env, fetchFn, pluginOptions })),
 	];
 }
 

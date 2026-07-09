@@ -133,7 +133,7 @@ export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) 
 		const readme = renderReadme({ projectName, perspectives, overall, allFindings, tasks, prev });
 		fs.writeFileSync(path.join(projectsDir, 'README.md'), readme, 'utf-8');
 		if (tasks.length > 0) {
-			console.log(`\nRun "node cli/index.js dispatch --list" to see the updated queue.`);
+			console.log(`\nRun "node pipelines/deploy/index.js dispatch --list" to see the updated queue.`);
 		}
 	}
 }

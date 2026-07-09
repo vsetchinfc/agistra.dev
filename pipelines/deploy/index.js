@@ -13,8 +13,8 @@ import { findSkillCatalogEntry, installSkillFromCatalog } from './lib/skill-sour
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// setchin-consulting-ai/ root is the parent of cli/
-const consultingRoot = path.resolve(__dirname, '..');
+// setchin-consulting-ai/ root is two levels up from pipelines/deploy/
+const consultingRoot = path.resolve(__dirname, '..', '..');
 // workspace root is the parent of setchin-consulting-ai/
 // sibling project repos live at: workspaceRoot/<project-name>/
 const workspaceRoot = path.resolve(consultingRoot, '..');
@@ -78,7 +78,7 @@ if (command === 'dispatch') {
 // writes into, reads from as a destination, or otherwise touches
 // setchin-agent-profiles' own skills/ directory or git history. It is never
 // invoked by `deploy`, `deploy:dist`, or any CI step — see
-// docs/optional-third-party-skills-PRD.md for the full rationale (licensing:
+// docs/product/optional-third-party-skills-PRD.md for the full rationale (licensing:
 // third-party skill content is not ours to redistribute).
 
 } else if (command === 'install-skill') {
@@ -87,7 +87,7 @@ if (command === 'dispatch') {
 	const destRoot = path.join(process.cwd(), 'skills');
 
 	if (!name) {
-		process.stderr.write('Usage: node cli/index.js install-skill <name>\n');
+		process.stderr.write('Usage: node pipelines/deploy/index.js install-skill <name>\n');
 		process.exit(1);
 	}
 
@@ -109,16 +109,16 @@ if (command === 'dispatch') {
 } else {
 	process.stdout.write([
 		'Usage:',
-		'  node cli/index.js dispatch [<project>]                           # show current increment prompt',
-		'  node cli/index.js dispatch <project> --list                     # show all project queues',
-		'  node cli/index.js dispatch <project> --advance                  # mark lowest todo done, show next',
-		'  node cli/index.js dispatch <project> --advance --task <N>     # mark task N done, show next',
-		'  node cli/index.js dispatch <project> --advance <N>            # same (npm: advance -- <project> <N>)',
-		'  node cli/index.js dispatch <project> --launch                   # launch Claude in the project dir',
-		'  node cli/index.js dispatch <project> --task <num-or-slug>         # dispatch a specific task',
-		'  node cli/index.js scan     <project>             # scan project and generate increments',
-		'  node cli/index.js scan     <project> --dry-run   # preview without writing files',
-		'  node cli/index.js install-skill <name>           # fetch a third-party skill into this hub\'s skills/',
+		'  node pipelines/deploy/index.js dispatch [<project>]                           # show current increment prompt',
+		'  node pipelines/deploy/index.js dispatch <project> --list                     # show all project queues',
+		'  node pipelines/deploy/index.js dispatch <project> --advance                  # mark lowest todo done, show next',
+		'  node pipelines/deploy/index.js dispatch <project> --advance --task <N>     # mark task N done, show next',
+		'  node pipelines/deploy/index.js dispatch <project> --advance <N>            # same (npm: advance -- <project> <N>)',
+		'  node pipelines/deploy/index.js dispatch <project> --launch                   # launch Claude in the project dir',
+		'  node pipelines/deploy/index.js dispatch <project> --task <num-or-slug>         # dispatch a specific task',
+		'  node pipelines/deploy/index.js scan     <project>             # scan project and generate increments',
+		'  node pipelines/deploy/index.js scan     <project> --dry-run   # preview without writing files',
+		'  node pipelines/deploy/index.js install-skill <name>           # fetch a third-party skill into this hub\'s skills/',
 		'',
 		'Or via npm scripts:',
 		'  npm run list',

@@ -20,10 +20,36 @@ import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Source-repo profiles/ dir, relative to this script's own location (not cliOutputRoot).
+
+/**
+ * Manifest-driven, not hardcoded: some hub tiers ship an additional setup
+ * step as a self-contained plugin module under lib/ (filename convention:
+ * "*.setup-plugin.js"). deployExtras() only copies that plugin file into
+ * non-free hub tiers (see pipelines/deploy/lib/extras.js); a free "dev" hub
+ * never receives it, and its own setup wizard always writes hubType: 'dev',
+ * so it can never reach the branch below that would call this loader. This
+ * keeps setup.js itself generic and free of any tier-specific feature names.
+ *
+ * @returns {function|null}  The plugin's run(opts) function, or null if no
+ *   plugin file is present in this hub.
+ */
+async function defaultSetupTierPlugin(opts) {
+	let pluginFiles = [];
+	try {
+		pluginFiles = fs.readdirSync(path.join(__dirname, 'lib'))
+			.filter(f => f.endsWith('.setup-plugin.js'))
+			.sort();
+	} catch {
+		pluginFiles = [];
+	}
+	if (pluginFiles.length === 0) return;
+	const mod = await import(`./lib/${pluginFiles[0]}`);
+	return mod.run(opts);
+}
+// Source-repo agents/profiles/ dir, relative to this script's own location (not cliOutputRoot).
 // Present when running `npm run setup` from inside the setchin-agent-profiles repo itself.
-// Absent in a deployed hub (profiles/ is a source-repo-only concept there).
-const SOURCE_PROFILES_ROOT = path.resolve(__dirname, '..', 'profiles');
+// Absent in a deployed hub (agents/profiles/ is a source-repo-only concept there).
+const SOURCE_PROFILES_ROOT = path.resolve(__dirname, '..', '..', 'agents', 'profiles');
 
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
@@ -45,8 +71,8 @@ export function detectPlatforms(root) {
  * Discover known agent IDs at runtime, without hardcoding the list.
  *
  * Tries, in order:
- *   1. profiles/*-workspace directories next to this script (source-repo run) —
- *      e.g. profiles/architect-workspace → id "architect".
+ *   1. agents/profiles/*-workspace directories next to this script (source-repo run) —
+ *      e.g. agents/profiles/architect-workspace → id "architect".
  *   2. Deployed-hub agent directories under cliOutputRoot — .claude/agents/*.md,
  *      .cursor/agents/*.md, .github/agents/*.agent.md — whichever is present.
  *
@@ -249,7 +275,16 @@ export const TOKEN_SENTINEL = '[token set — press Enter to keep]';
  *   Injectable `gh` CLI probe (see checkGhCli). Defaults to the real probe.
  * @returns {function(): Promise<void>}
  */
-export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = checkGhCli }) {
+export function createRun({
+	ask,
+	askYN,
+	line,
+	fsMod,
+	cliOutputRoot,
+	checkGh = checkGhCli,
+	setupTierPlugin = defaultSetupTierPlugin,
+	tierPluginPort,
+}) {
 	return async function run() {
 		// ── Read existing config (pre-populate defaults) ──────────────────────────
 		let existingConfig = null;
@@ -379,7 +414,7 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = ch
 				relayBlock.primaryRuntime = 'github';
 			}
 			process.stdout.write(
-				'  Install workflow: copy cli/relay/adapters/github-action.yml to .github/workflows/relay-notify.yml\n',
+				'  Install workflow: copy pipelines/deploy/relay/adapters/github-action.yml to .github/workflows/relay-notify.yml\n',
 			);
 		}
 
@@ -438,6 +473,23 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = ch
 			}
 		}
 
+		if (config.hubType === 'dev:sub') {
+			line('Knowledge retrieval ');
+			// The tier plugin (dev:sub-only, discovered generically above) owns
+			// both the knowledge retrieval setup and its own runtime lifecycle
+			// hook wiring (SessionStart/PostToolUse/Stop) — passing
+			// platforms/readJsonSafe/writeJsonSafe lets it merge into
+			// .claude/settings.json itself without setup.js importing anything
+			// tier-specific directly.
+			await setupTierPlugin({
+				hubRoot: cliOutputRoot,
+				portOverride: tierPluginPort,
+				platforms,
+				readJsonSafe: (p) => readJsonSafe(p, fsMod),
+				writeJsonSafe: (p, v) => writeJsonSafe(p, v, fsMod),
+			});
+		}
+
 		line('Done ');
 		process.stdout.write(`  Config written → ${configPath}\n`);
 
@@ -468,11 +520,16 @@ export function createRun({ ask, askYN, line, fsMod, cliOutputRoot, checkGh = ch
 
 // ── CLI entry point (only runs when executed directly, not when imported) ──────
 
-function parseCliArgs(argv) {
+export function parseCliArgs(argv) {
 	const result = {};
 	for (let i = 0; i < argv.length; i++) {
 		const arg = argv[i];
 		if (arg.startsWith('--')) {
+			const equalsIndex = arg.indexOf('=');
+			if (equalsIndex !== -1) {
+				result[arg.slice(2, equalsIndex)] = arg.slice(equalsIndex + 1);
+				continue;
+			}
 			const key = arg.slice(2);
 			const next = argv[i + 1];
 			result[key] = (next && !next.startsWith('--')) ? next : true;
@@ -507,7 +564,8 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		process.stdout.write(`\n── ${label}${dashes}\n\n`);
 	}
 
-	const run = createRun({ ask, askYN, line, fsMod: fs, cliOutputRoot });
+	const tierPluginPort = cliArgs['tier-plugin-port'];
+	const run = createRun({ ask, askYN, line, fsMod: fs, cliOutputRoot, tierPluginPort });
 
 	run().then(() => {
 		rl.close();

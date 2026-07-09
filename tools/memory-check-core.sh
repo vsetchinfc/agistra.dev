@@ -16,6 +16,27 @@
 
 set -euo pipefail
 
+# Resolve to the hub root before any check, regardless of the session shell's
+# cwd. A session that has cd'd into a foreign repo (e.g. another project
+# working dir) must not have its dirty/no-memory state misreported as the
+# hub's.
+#
+#   1. CLAUDE_PROJECT_DIR, when set (Claude Code always sets it) — trust it.
+#   2. Otherwise fall back to this script's own repo root, discovered via
+#      `git rev-parse --show-toplevel` from the script's directory. This
+#      keeps the fallback adapter-agnostic (Copilot/Codex/Cursor have no
+#      CLAUDE_PROJECT_DIR) with no hard Claude dependency in the core.
+script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [ -n "${CLAUDE_PROJECT_DIR:-}" ]; then
+  hub_root="$CLAUDE_PROJECT_DIR"
+else
+  hub_root="$(cd "$script_dir" && git rev-parse --show-toplevel 2>/dev/null || true)"
+  hub_root="${hub_root:-$script_dir}"
+fi
+
+cd "$hub_root" 2>/dev/null || true
+
 # Nothing to check if this isn't a git repo
 if ! git rev-parse --git-dir > /dev/null 2>&1; then
   echo "clean"

@@ -110,7 +110,7 @@ export function mergeRelayMcpEntry(existing, entry) {
  * @returns {object}
  */
 export function buildRelayMcpEntry(workspaceRoot) {
-	const serverPath = path.join(workspaceRoot, 'cli', 'relay', 'mcp', 'server.js');
+	const serverPath = path.join(workspaceRoot, 'pipelines', 'deploy', 'relay', 'mcp', 'server.js');
 	return {
 		command: process.execPath,
 		args: [serverPath, '--hub', path.resolve(workspaceRoot)],

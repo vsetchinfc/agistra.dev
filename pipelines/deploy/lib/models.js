@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const ROUTER_MANIFEST_REL = path.join('profiles', 'router-workspace', 'agent.manifest.json');
+const ROUTER_MANIFEST_REL = path.join('agents', 'profiles', 'router-workspace', 'agent.manifest.json');
 
 /**
  * Read the Router model from the router-workspace manifest.

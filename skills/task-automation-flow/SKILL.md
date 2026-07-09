@@ -31,6 +31,14 @@ Every ticket has acceptance criteria. Architect specifies the verifier when crea
 
 The verifier is recorded on the GitHub issue at ticket creation and drives the post-completion branch in the flow.
 
+## Mandatory dispatch inclusion: ticket-state ownership
+
+Before dispatching Builder or Tester, include the following paragraph verbatim in the dispatch prompt. This is not optional — it is what closes the gap that let `task_131`/#242 sit at `status: state:todo` with zero GitHub labels through an entire dispatch/QA lifecycle, discovered only after the team lead caught it retroactively.
+
+> You own transitioning this ticket's state at each lifecycle step: update the local task file's `status:` frontmatter and filename infix, and apply/update the corresponding GitHub `state:*` label on the linked issue, per `ticket-lifecycle-mode`. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
+
+Run `npm run check:tickets` periodically (see `pipelines/deploy/lib/ticket-drift.js`) to catch any drift that slips through regardless.
+
 ## Permission Preflight
 
 Before dispatching any subagent — single or batch — confirm the required tools are permitted in the current session. A subagent that lacks a required tool fails silently; the pipeline produces no output and the failure is invisible until the user inspects.

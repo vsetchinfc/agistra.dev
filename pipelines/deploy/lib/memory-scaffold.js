@@ -1,8 +1,8 @@
 /**
  * memory-scaffold.js — shared memory/<agent>.md starter content + create-if-absent write.
  *
- * Used by both deploy-time scaffolding (cli/lib/extras.js's deployExtras) and
- * doctor's auto-fix (cli/doctor.js's checkMemoryFiles) so starter content never
+ * Used by both deploy-time scaffolding (pipelines/deploy/lib/extras.js's deployExtras) and
+ * doctor's auto-fix (pipelines/deploy/doctor.js's checkMemoryFiles) so starter content never
  * drifts between the two call sites.
  */
 import fs from 'node:fs';

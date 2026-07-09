@@ -54,7 +54,7 @@ export function shouldEnsureRelay({ hubRoot, fsMod = fs }) {
  * @returns {string|null}
  */
 export function resolveDaemonScript(hubRoot, fsMod = fs) {
-	const script = path.join(hubRoot, 'cli', 'relay', 'telegram-relay', 'daemon.js');
+	const script = path.join(hubRoot, 'pipelines', 'deploy', 'relay', 'telegram-relay', 'daemon.js');
 	return fsMod.existsSync(script) ? script : null;
 }
 
@@ -100,7 +100,7 @@ export async function ensureRelayDaemon({
 
 	const daemonScript = resolveDaemonScript(hubRoot, fsMod);
 	if (!daemonScript) {
-		log('relay autostart: skipped — cli/relay not found (run npm run deploy on hub)');
+		log('relay autostart: skipped — pipelines/deploy/relay not found (run npm run deploy on hub)');
 		return { action: 'skip', reason: 'daemon script missing' };
 	}
 
