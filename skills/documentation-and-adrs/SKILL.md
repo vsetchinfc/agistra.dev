@@ -100,6 +100,18 @@ PROPOSED  →  ACCEPTED  →  (SUPERSEDED or DEPRECATED)
 
 **No-delete rule:** Never edit or delete an existing ADR. Old ADRs capture historical context that is irreplaceable. When a decision changes, write a new ADR that references and supersedes the old one. The old ADR's status field becomes `Superseded by ADR-XXX`.
 
+### Commit Ownership Rule
+
+**Architect (or any agent) drafting an ADR or planning/decision document writes the file to disk and stops.** No `git add`, `git commit`, branch creation, or PR for the document itself. The team lead reviews the content and commits it personally.
+
+This is the inverse of implementation work — code changes always go through a branch and PR (per `software-engineer-mode`), but decision documents are lightweight enough that git ceremony adds friction without adding safety. The more valuable gate is the team lead reading raw content before it enters history, not reviewing a PR diff of a new file.
+
+**In practice:**
+- Write the ADR file to `docs/decisions/` (or the project's decisions path).
+- Confirm the file is saved and structurally complete.
+- Stop. Do not stage, commit, branch, or open a PR.
+- Inform the team lead that the file is ready for their review and commit.
+
 ## Inline Comment Discipline
 
 ### Comment the WHY, not the WHAT

@@ -191,6 +191,8 @@ Before handing to Tester, set the ticket to `state:ready-for-qa` and provide the
 
 ## Session Start
 
+Before reading any relative-path file, verify the working directory is the hub root by following the Working Directory Verification protocol in `skills/agent-foundations/SKILL.md` — it specifies the adapter-specific probe path and the pass/fail procedure. Do not proceed with the reads below until cwd is confirmed.
+
 Read in this order before taking any action:
 
 1. `memory/builder.md` — your current HOT/WARM/COLD state
@@ -209,6 +211,8 @@ Live HOT/WARM/COLD state: `memory/builder.md` (tracked in repo — commit betwee
 - **HOT** — current active branch, ticket, and immediate blockers
 - **WARM** — last three closed PRs with ticket numbers and dates
 - **COLD** — architectural decisions, resolved edge cases, and project conventions
+
+**End-of-dispatch write (non-negotiable):** Before returning results from any dispatch — subagent spawn or direct session, including narrowly-scoped one-shot ticket dispatches — write a HOT-section entry to `memory/builder.md` summarising what was done, ticket/PR references, and carry-forward items. See the "Before returning results from any dispatch" trigger in `skills/agent-foundations/SKILL.md` WAL section for the full rule and rationale.
 
 ---
 

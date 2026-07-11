@@ -123,6 +123,8 @@ Router never becomes the decision-maker. If a message requires judgment beyond c
 
 ## Session Start
 
+Before reading any relative-path file, verify the working directory is the hub root by following the Working Directory Verification protocol in `skills/agent-foundations/SKILL.md` — it specifies the adapter-specific probe path and the pass/fail procedure. Do not proceed with the reads below until cwd is confirmed.
+
 Read in this order before taking any action:
 
 1. `memory/router.md` — your current HOT/WARM/COLD state
@@ -135,6 +137,8 @@ Then load the relay skill matching your configured channel before processing any
 ## Memory
 
 Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between sessions to persist state).
+
+**End-of-dispatch write (non-negotiable):** Before returning results from any dispatch — including all inbound classification outcomes not already covered by an explicit write instruction (e.g. routes to Architect, Builder, or Tester) — write a HOT-section entry to `memory/router.md` summarising what was classified, the destination, ticket/PR references, and any carry-forward items. This general rule complements the two existing "Routes to Team Lead → append to HOT" instructions above; it does not replace them. See the "Before returning results from any dispatch" trigger in `skills/agent-foundations/SKILL.md` WAL section for the full rule and rationale.
 
 ---
 

@@ -29,13 +29,29 @@ Every ticket has acceptance criteria. Architect specifies the verifier when crea
 | `Architect` | Design or structural review sufficient              | Builder notifies Architect who reviews — smaller loop                                                                                                                                                                                                       |
 | `Automated` | Build + lint + tests are the full acceptance signal | Builder self-certifies; Architect spot-checks before notifying team lead                                                                                                                                                                                    |
 
-The verifier is recorded on the GitHub issue at ticket creation and drives the post-completion branch in the flow.
+The verifier is recorded in the task file (and mirrored to the tracker record at ticket creation when a tracker is configured) and drives the post-completion branch in the flow.
+
+## Ticket Creation: Tracker Mirror (Mandatory When a Tracker is Configured)
+
+When Architect creates a local task file destined for Builder dispatch, check whether the target repo/project has a tracker configured. If so, create the matching tracker record in the same action as creating the local task file — before dispatch, not as a follow-up.
+
+**"Tracker configured" (plugin-based check):**
+1. Resolve the active tracker plugin per the Plugin Resolution Order in `ticket-lifecycle-mode` (check `workspace.config.json` for an explicit `tracker.plugin` declaration; fall back to auto-detection by running detect-configured for each plugin present in `agents/skills/ticket-lifecycle-mode/trackers/`).
+2. Run the resolved plugin's detect-configured procedure. If it returns true, a tracker is configured.
+
+The concrete detection steps (e.g. checking for a `github.com` remote and `gh auth status`) are defined by each plugin file, not by this skill — see `agents/skills/ticket-lifecycle-mode/trackers/<plugin-name>.md`.
+
+When a tracker is configured, run the plugin's create-record procedure to open a matching record in the tracker. Record the returned reference in the task file frontmatter using the field name the plugin specifies, before dispatching Builder.
+
+When no tracker is configured or auth is unavailable, create the local task file only and proceed with dispatch; record the reason in the task file if auth was the limiting factor so it can be reconciled later.
+
+**Going-forward rule only:** This step is required for newly created tickets. Pre-existing local-only tickets in the backlog are not required to be back-filled retroactively.
 
 ## Mandatory dispatch inclusion: ticket-state ownership
 
 Before dispatching Builder or Tester, include the following paragraph verbatim in the dispatch prompt. This is not optional — it is what closes the gap that let `task_131`/#242 sit at `status: state:todo` with zero GitHub labels through an entire dispatch/QA lifecycle, discovered only after the team lead caught it retroactively.
 
-> You own transitioning this ticket's state at each lifecycle step: update the local task file's `status:` frontmatter and filename infix, and apply/update the corresponding GitHub `state:*` label on the linked issue, per `ticket-lifecycle-mode`. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
+> You own transitioning this ticket's state at each lifecycle step: update the local task file's `status:` frontmatter and filename infix, and run the active tracker plugin's update-record procedure for the linked tracker record (if a tracker is configured), per `ticket-lifecycle-mode`. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
 
 Run `npm run check:tickets` periodically (see `pipelines/deploy/lib/ticket-drift.js`) to catch any drift that slips through regardless.
 
@@ -177,7 +193,7 @@ Tester fails → ticket transitions to `state:changes-requested`. Label applied:
 
 ```
 Tester: FAIL (1st)
-  └─> Tester applies qa-fail-1 label to GitHub issue
+  └─> Tester runs plugin update-record to signal fail-1 on tracker (when configured)
       └─> Tester spawns Builder (sub-agent)
           └─> Builder fixes
               └─> ticket: state:ready-for-qa
@@ -190,7 +206,7 @@ Architect reviews and corrects. Builder does not loop autonomously again. Label 
 
 ```
 Tester: FAIL (2nd)
-  └─> Tester removes qa-fail-1 (if present) then applies qa-fail-2 label to GitHub issue
+  └─> Tester runs plugin update-record to signal fail-2 on tracker (when configured)
       └─> Architect reviews + corrects
           ├─ Architect can resolve:
           │   └─> Architect provides instructions → Builder fixes → Tester re-runs
@@ -261,20 +277,20 @@ Team Lead answers
 
 ## Fail Attempt Counter
 
-The fail counter is tracked in the task file's `fail-count:` frontmatter field (authoritative) and mirrored to GitHub labels when a tracker is configured.
+The fail counter is tracked in the task file's `fail-count:` frontmatter field (authoritative) and mirrored to the tracker record when a tracker is configured (using the active plugin's update-record procedure — see `ticket-lifecycle-mode` Tracker Plugin Contract).
 
-| Fail # | Frontmatter `fail-count:`      | Who acts                                                       | GitHub label (when configured) |
-| ------ | ------------------------------ | -------------------------------------------------------------- | ------------------------------ |
-| 1st    | `1`                            | Tester spawns Builder directly                                 | `qa-fail-1`                    |
-| 2nd    | `2`                            | Architect reviews + corrects (or escalates if decision needed) | `qa-fail-2`                    |
-| 3rd    | — (task marked `parked: true`) | Park + escalate to Team Lead unconditionally                   | —                              |
+| Fail # | Frontmatter `fail-count:`      | Who acts                                                       | Tracker update (when configured)       |
+| ------ | ------------------------------ | -------------------------------------------------------------- | -------------------------------------- |
+| 1st    | `1`                            | Tester spawns Builder directly                                 | plugin update-record: signal fail-1    |
+| 2nd    | `2`                            | Architect reviews + corrects (or escalates if decision needed) | plugin update-record: signal fail-2    |
+| 3rd    | — (task marked `parked: true`) | Park + escalate to Team Lead unconditionally                   | —                                      |
 
 Rules:
 
 - The counter is independent per ticket — a fail on Ticket 1 does not affect Ticket 2's counter.
 - The counter is stored in the local task file frontmatter `fail-count:` field.
-- The counter resets if the team lead provides new direction and the flow restarts from a parked state. On reset, set `fail-count: 0` and `parked: false` in the task file frontmatter; if a tracker is configured, remove all `qa-fail-*` labels from the GitHub issue before the flow resumes.
-- When a tracker is configured, the fail-counter labels `qa-fail-1` and `qa-fail-2` are applied to the GitHub issue as a mirror of the local `fail-count:` field at the moment of the corresponding fail.
+- The counter resets if the team lead provides new direction and the flow restarts from a parked state. On reset, set `fail-count: 0` and `parked: false` in the task file frontmatter; if a tracker is configured, run the plugin's update-record procedure to clear any fail signals before the flow resumes.
+- When a tracker is configured, the fail-counter update is applied via the active plugin's update-record procedure at the moment of each corresponding fail.
 
 ## Lifecycle State Mapping
 
@@ -359,11 +375,9 @@ All three rules below are mandatory during an automation run.
    - Update `fail-count:` frontmatter field when applicable
    - Set `parked: true` when fail-count reaches 3
    - Rename the file to reflect the new state token (e.g., `task_N_ready-for-qa_slug.md` → `task_N_changes-requested_slug.md`)
-2. **If a tracker is configured** (presence of `github:` or `github-issue:` field, or workspace tracker config):
+2. **If a tracker is configured** (presence of a tracker reference field in the task file frontmatter, or workspace tracker config):
    - **Immediately follow with the mirror update** (this is mandatory, not optional):
-     - Apply the corresponding lifecycle state label to the GitHub issue (remove the previous state label)
-     - Apply or remove fail-counter labels (`qa-fail-1`, `qa-fail-2`) to mirror the `fail-count:` field
-     - Post any required comments (e.g., QA reports, handoff notifications)
+     - Run the active tracker plugin's update-record procedure (see `ticket-lifecycle-mode` Tracker Plugin Contract and `trackers/<plugin-name>.md`) to sync the state change, fail-counter update, and any required comments (e.g. QA reports, handoff notifications)
    - **If the mirror write fails:**
      - Append the failure to the task file's `## Log` section (timestamp, attempted action, error)
      - Record the failed outbound in Router's `memory/router.md` HOT section under `failed-outbound` (if Router is active)

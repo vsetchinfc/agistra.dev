@@ -126,6 +126,21 @@ If architecture-mode has already produced `Evidence and Current State`, `Impleme
 - If the repository uses lifecycle labels or workflow states, move the ticket to `state:in-progress` when active implementation starts.
 - Refresh dependencies only when the task or validation requires it.
 
+**Never mutate the operator's default checkout.** If the team lead's primary local clone of a
+repository is checked out to the default/main branch, or to any branch carrying the team
+lead's own uncommitted work, treat that working tree as read-only. All branch/commit/rebase/
+stash work happens in a dedicated worktree (`git worktree add`) or a separate clone — never
+`git stash`, `git checkout`, `git reset`, or any other tree-mutating command against the
+operator's own checkout, even to "temporarily" get it out of the way. This applies regardless
+of whether the dispatch explicitly names a worktree path: the default is isolation, not the
+operator's tree, and a dispatch that forgets to say so is not permission to touch it.
+
+If a dispatch's worktree setup fails or the target path is unexpectedly dirty, STOP and report
+the exact failure — do not work around it by stashing, resetting, or otherwise touching the
+operator's tree to make room. A blocked task is recoverable; an operator's uncommitted work
+touched without consent is a trust failure regardless of whether the change turns out to be
+reversible.
+
 ### Step 3 - Implement
 
 #### TDD gate (Logic / Service / Bug tickets only)

@@ -36,7 +36,7 @@ The following fields define the authoritative state and configuration for every 
 | `verifier`                 | `Tester` \| `Architect` \| `Automated`                                                                                                                        | `Developer Lead` at ticket creation        | Drives the post-completion branch in `task-automation-flow`; ticket without verifier is underscoped |
 | `fail-count`               | `0` \| `1` \| `2`                                                                                                                                             | active verifier on QA fail                 | Replaces `qa-fail-*` labels; incremented on each fail attempt                                       |
 | `parked`                   | `true` \| `false` (or absent)                                                                                                                                 | `Developer Lead` when fail-count reaches 3 | A parked task is not auto-dispatched; requires team lead direction to resume                        |
-| `github` or `github-issue` | issue URL or `org/repo#number`                                                                                                                                | `Developer Lead` at ticket creation        | **Optional** mirror link; its presence signals the mirror-update obligation applies                 |
+| tracker reference field    | format defined by the active tracker plugin (e.g. `github-issue: <url>` for the GitHub plugin) | `Developer Lead` at ticket creation | **Mandatory when a tracker is configured** (see Tracker Creation Obligation and Tracker Plugin Contract below); its presence signals the mirror-update obligation applies. Only projects with no tracker configured at all are exempt. This field is not retroactively required for existing tickets created before this rule — it applies to newly created tickets going forward. The exact field name and value format are specified by the active tracker plugin (see `trackers/<plugin-name>.md`). |
 | `token-budget`             | integer token count                                                                                                                                            | `Developer Lead` at ticket creation        | **Optional** per-ticket spend ceiling; absent means no budget enforcement applies to the ticket. See `## Token Spend` log convention below and the pre-dispatch check in `task-automation-flow` |
 
 Agents update these fields on every lifecycle transition. The CLI keeps the filename infix in sync with `status:` when performing transitions.
@@ -107,22 +107,34 @@ After `state:qa-passed`, the `Team Lead` decides whether the work is closed or m
 
 ## QA Fail Counter
 
-The fail counter is tracked in the task file's `fail-count:` frontmatter field (authoritative) and mirrored to GitHub labels when a tracker is configured.
+The fail counter is tracked in the task file's `fail-count:` frontmatter field (authoritative) and mirrored to the tracker record when a tracker is configured (using the active plugin's update-record procedure — see Tracker Plugin Contract and `trackers/<plugin-name>.md`).
 
-| Fail # | Frontmatter `fail-count:` | GitHub label (when configured)           | Applied by       |
-| ------ | ------------------------- | ---------------------------------------- | ---------------- |
-| 1st    | `1`                       | `qa-fail-1`                              | active verifier  |
-| 2nd    | `2`                       | `qa-fail-2`                              | active verifier  |
-| 3rd    | — (task is parked)        | — (no label; task marked `parked: true`) | `Developer Lead` |
+| Fail # | Frontmatter `fail-count:` | Tracker record update (when configured)                    | Applied by       |
+| ------ | ------------------------- | ---------------------------------------------------------- | ---------------- |
+| 1st    | `1`                       | signal fail-1 via plugin update-record                     | active verifier  |
+| 2nd    | `2`                       | remove fail-1 signal, apply fail-2 via plugin update-record | active verifier  |
+| 3rd    | — (task is parked)        | — (no tracker update; local `parked: true` is authoritative) | `Developer Lead` |
 
-When progressing from fail 1 to fail 2, update the frontmatter `fail-count: 2` and (if a tracker is configured) remove the `qa-fail-1` label before applying `qa-fail-2`. Fail counter and lifecycle state are independent — both are recorded in the task file.
+When progressing from fail 1 to fail 2, update the frontmatter `fail-count: 2` and (if a tracker is configured) apply the plugin's fail-counter update procedure. Fail counter and lifecycle state are independent — both are recorded in the task file.
+
+## Tracker Creation Obligation (Mandatory When a Tracker is Configured)
+
+When creating a new ticket for a project that has a tracker configured, a matching tracker record **must** be created at the same time as the local task file — not as a follow-up, and not only when the team lead explicitly requests it. The tracker record and local task file are created in the same action.
+
+**"Tracker configured" definition:** Resolve the active tracker plugin (see Tracker Plugin Contract below), then run that plugin's detect-configured procedure. A tracker is configured when detect-configured returns true. Each plugin owns its own detection logic — the core contract never names a specific host or CLI tool.
+
+**How to create the tracker record:** Run the active plugin's create-record procedure (defined in `trackers/<plugin-name>.md`). Record the returned reference in the task file frontmatter using the field name specified by the plugin.
+
+**Going-forward rule only:** This obligation applies to newly created tickets. Existing local-only tickets in the backlog created before this rule was established are not required to be back-filled. Back-filling is a separate decision if ever warranted.
+
+**No tracker configured:** create the local task file only; no tracker record is required.
 
 ## Mirror Update Obligation (Mandatory When a Tracker is Configured)
 
-When a non-file tracker is configured for a project — signalled by a `github:` or `github-issue:` field in the task file frontmatter or a workspace-level tracker config — **every lifecycle transition must update both the local task file and the corresponding tracker record as part of the same transition.**
+When a tracker is configured for a project — signalled by a tracker reference field in the task file frontmatter (e.g. `github-issue:` for the GitHub plugin) or a workspace-level tracker config — **every lifecycle transition must update both the local task file and the corresponding tracker record as part of the same transition.**
 
 - The **local write is authoritative and happens first**: update `status:` frontmatter, `fail-count:`, and filename infix.
-- The **mirror write is a required follow-on step**: apply the corresponding GitHub label (removing the previous state label), apply or remove fail-counter labels, and post any required comments (e.g., QA reports).
+- The **mirror write is a required follow-on step**: run the active plugin's update-record procedure (defined in `trackers/<plugin-name>.md`) to sync the state change, fail-counter update, and any required comments (e.g. QA reports) to the tracker record.
 - A transition is **not complete** until the mirror write succeeds **or** the failure is explicitly recorded for retry.
 - "I updated the local file" is not a complete transition when a tracker is configured.
 
@@ -155,7 +167,7 @@ When a non-file tracker is configured for a project — signalled by a `github:`
 
 `state:qa-passed` is normally reached via `QA`. The sole exception is when the ticket's verifier field is set to `Architect`: in that case the `Developer Lead` (acting as verifier) transitions directly from `state:ready-for-review` to `state:qa-passed` after reviewing engineering quality and verifying all ACs — no separate QA phase is required. In all other verifier paths, a `Developer Lead` completing an engineering review must advance to `state:ready-for-qa`, never directly to `state:qa-passed`.
 
-**On every state transition:** update the local task file first (frontmatter `status:`, filename infix, `fail-count:` if applicable). If a tracker is configured, immediately follow with the mirror update (GitHub labels, comments as required). See Mirror Update Obligation above.
+**On every state transition:** update the local task file first (frontmatter `status:`, filename infix, `fail-count:` if applicable). If a tracker is configured, immediately follow with the mirror update using the active plugin's update-record procedure. See Mirror Update Obligation above.
 
 ## Typical Direct Lane Flow
 
@@ -185,7 +197,7 @@ All of these should be true:
 - the target QA environment is live, reachable, and configured for the intended handoff path
 - the Developer -> QA handoff payload is complete
 - **the local task file is renamed from `_in-progress_` to `_ready-for-qa_` (update the filename infix to match `status: state:ready-for-qa`)**
-- **GitHub issue label is updated** (when tracker configured): `gh issue edit <N> --remove-label "state:in-progress" --add-label "state:ready-for-qa"`
+- **tracker record is updated** (when tracker configured): run the active plugin's update-record procedure to reflect the new state (see `trackers/<plugin-name>.md`)
 
 ### Before `state:qa-passed`
 
@@ -216,7 +228,7 @@ When a `Developer Lead` reviews work in `state:ready-for-review`, the review rec
 - concrete file references and implementer next steps
 - lifecycle action taken, including any state change
 
-Post the review record to the GitHub issue or PR comment thread. A local audit trail alone is not sufficient — the GitHub thread must reflect the verdict and any state change.
+Post the review record to the tracker record (e.g. the GitHub issue or PR comment thread when the GitHub plugin is active) using the active plugin's update-record procedure. A local audit trail alone is not sufficient — the tracker record must reflect the verdict and any state change.
 
 If the review is blocked by missing context, credentials, or environment, record the blocker and do not advance the lifecycle state.
 
@@ -251,6 +263,66 @@ When a workflow update arrives, `Relay` should:
 - ask for clarification if the update is missing owner, state, or requested action
 
 `Relay` may describe the current lifecycle state, but it does not replace `Developer Lead`, `QA`, or `Team Lead` decisions.
+
+## Tracker Plugin Contract
+
+The tracker concept is implemented via a small set of plugin files, each at
+`agents/skills/ticket-lifecycle-mode/trackers/<plugin-name>.md`. This mirrors the
+spirit of the `*.doctor-plugin.js` / `*.hooks-plugin.js` convention used in
+`pipelines/deploy/lib/` — the core module (here, this SKILL.md) stays generic and
+never names any specific tracker host or CLI tool; implementation details live in
+the plugin file. Adding a second tracker (Jira, Linear, etc.) means adding a new
+`trackers/<name>.md` file without touching this core contract.
+
+### Plugin file convention
+
+Every tracker plugin file must define three operations:
+
+| Operation          | Purpose                                                                                       |
+| ------------------ | --------------------------------------------------------------------------------------------- |
+| detect-configured  | Return true/false: is this tracker configured and reachable for the current project/session?  |
+| create-record      | Create a matching record in the tracker when a new ticket is created; return the reference.   |
+| update-record      | Sync a lifecycle transition (state change, fail-counter update, QA comment) to the tracker.  |
+
+Each plugin also specifies:
+- the **frontmatter field name** it uses to store the tracker reference (e.g. `github-issue:`)
+- the **workspace.config.json declaration** (see below) that explicitly selects this plugin
+
+### Plugin resolution order
+
+1. Check `workspace.config.json` for a `tracker.plugin` field (e.g. `"plugin": "github"`). If
+   present, load only that plugin — no auto-detection.
+2. If absent, run detect-configured for each plugin file present in
+   `agents/skills/ticket-lifecycle-mode/trackers/` and use the first one that returns true.
+3. If no plugin returns true, treat the project as having no tracker configured.
+
+Explicit declaration via `workspace.config.json` is recommended when a project uses
+multiple remotes or could match more than one plugin's detection heuristic.
+
+### workspace.config.json schema extension
+
+Add a top-level `tracker` object to `workspace.config.json` to declare the active plugin:
+
+```json
+{
+  "tracker": {
+    "plugin": "github"
+  }
+}
+```
+
+This field is optional. Its absence triggers auto-detection per step 2 above. The value
+must match the `<plugin-name>` of a file present in `trackers/`.
+
+### Available plugins
+
+| Plugin name | File                                   | Tracker host  |
+| ----------- | -------------------------------------- | ------------- |
+| `github`    | `trackers/github.md`                   | GitHub Issues |
+
+To add a second tracker, create `trackers/<name>.md` implementing the three operations
+above. No changes to this SKILL.md or to `task-automation-flow` are required — the
+plugin contract is the complete extension point.
 
 ## Role Binding Guidance
 

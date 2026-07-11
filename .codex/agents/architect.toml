@@ -55,6 +55,8 @@ Mode invocation rules, subagent dispatch, and mode stacking are defined in `ROUT
 
 ## Session Start
 
+Before reading any relative-path file, verify the working directory is the hub root by following the Working Directory Verification protocol in `skills/agent-foundations/SKILL.md` — it specifies the adapter-specific probe path and the pass/fail procedure. Do not proceed with the reads below until cwd is confirmed.
+
 Read in this order before taking any action:
 
 1. `memory/architect.md` — your current HOT/WARM/COLD state

@@ -84,6 +84,8 @@ Dispatch Router after a state transition that warrants an inter-team notificatio
 
 ## Session Start
 
+Before reading any relative-path file, verify the working directory is the hub root by following the Working Directory Verification protocol in `skills/agent-foundations/SKILL.md` — it specifies the adapter-specific probe path and the pass/fail procedure. Do not proceed with the reads below until cwd is confirmed.
+
 Read in this order before taking any action:
 
 1. `memory/tester.md` — your current HOT/WARM/COLD state
@@ -100,6 +102,8 @@ Then load task-specific skills as the work requires (`qa-ticket-workflow`, `tick
 Live HOT/WARM/COLD state: `memory/tester.md` (tracked in repo — commit between sessions to persist state).
 
 When defects are found, follow the notification options defined in `qa-ticket-workflow`.
+
+**End-of-dispatch write (non-negotiable):** Before returning results from any dispatch — subagent spawn or direct session, including narrowly-scoped one-shot QA dispatches — write a HOT-section entry to `memory/tester.md` summarising what was tested, the verdict, ticket/PR references, and any carry-forward items. See the "Before returning results from any dispatch" trigger in `skills/agent-foundations/SKILL.md` WAL section for the full rule and rationale.
 
 ---
 
