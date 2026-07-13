@@ -1,0 +1,119 @@
+# repo-files Storage Plugin
+
+This file is the `repo-files` implementation of the storage plugin contract defined in
+`agent-foundations/SKILL.md` (Storage Plugin Contract section). It formalizes the
+current free-tier behavior — all storage is plain Markdown files in the repository.
+No behavior change from this ticket; this is an extraction of existing mechanics into
+an explicit, pluggable form.
+
+The vault-backed plugin used by other tiers covers the paid-tier implementation.
+
+## Plugin Identity
+
+- **Plugin name:** `repo-files`
+- **Tier:** `dev` (free tier) and any repo-file-backed hub
+- **Tooling required:** standard file I/O (Read/Edit/Write tools, or equivalent)
+
+---
+
+## Memory store
+
+### read-memory(agent)
+
+Read `memory/<agent>.md` from the hub root.
+
+Example: `memory/builder.md`, `memory/architect.md`.
+
+### write-memory-entry(agent, tier, content)
+
+Edit the HOT, WARM, or COLD section of `memory/<agent>.md`. The tier argument
+identifies which section heading to target. Prepend new HOT entries (most recent
+first); append WARM/COLD entries at the bottom of the relevant section.
+
+### archive-memory(agent, date)
+
+Write the archived snapshot to `memory/archive/<agent>-YYYY-MM-DD.md`. The date
+argument is formatted `YYYY-MM-DD`. The dreaming skill calls this at the end of each
+consolidation cycle before compacting the live file.
+
+### compact-memory(agent, newContent)
+
+Rewrite `memory/<agent>.md` with the compacted content. The dreaming skill supplies
+the full new file content after distilling HOT→WARM→COLD decay. This is a full
+overwrite, not an append.
+
+---
+
+## Task store
+
+Task files live at `projects/<project>/task_<id>_<state>_<slug>.md`.
+
+The filename infix `<state>` is the derived index of `status:` frontmatter; the
+`status:` field is authoritative (ADR-005). The CLI reconciles the infix with
+frontmatter on every transition (`check:tickets` / `fix:tickets`).
+
+### create-task(project, id, frontmatter, body)
+
+Write a new file at `projects/<project>/task_<id>_<state>_<slug>.md`, where
+`<state>` is the value of the `status:` field in frontmatter and `<slug>` is a
+short kebab-case description derived from the ticket title. Include the full YAML
+frontmatter block followed by the task body.
+
+Required frontmatter fields: `status`, `verifier`. Optional: `fail-count`, `parked`,
+`github-issue` (or the active tracker plugin's reference field), `agent`, `model`,
+`skills`, `token-budget`.
+
+### read-task(id)
+
+Glob `projects/**/*task_<id>_*.md` and read the matching file. State is read from
+the `status:` frontmatter field (authoritative); the filename infix is a derived
+convenience index only.
+
+### list-tasks(project, stateFilter)
+
+Glob `projects/<project>/task_*.md`. If `stateFilter` is provided, filter by the
+`status:` frontmatter field value. Return the matching file paths and their `status:`
+values.
+
+### update-task-fields(id, fields)
+
+Edit the YAML frontmatter of the task file identified by `id`. The `fields` argument
+is a map of frontmatter key→value pairs to update. Do not rename the file from this
+operation — use `transition-state` when a rename is required.
+
+### transition-state(id, newState)
+
+1. Edit the `status:` frontmatter field to `newState`.
+2. Rename the file to replace the `<state>` infix with the new state token.
+   The state-to-filename-token mapping:
+   - `state:ready-for-implementation` → `ready-for-implementation`
+   - `state:in-progress` → `in-progress`
+   - `state:ready-for-review` → `ready-for-review`
+   - `state:ready-for-qa` → `ready-for-qa`
+   - `state:changes-requested` → `changes-requested`
+   - `state:qa-passed` → `qa-passed`
+   - `closed` → `done`
+3. The CLI (`check:tickets` / `fix:tickets`) reconciles filename infix with
+   `status:` frontmatter for any file the agent edits but does not rename.
+
+### append-task-section(id, section, content)
+
+Append `content` under the named section heading in the task file (e.g. `## Log`,
+`## QA Report`, `## Token Spend`). If the section heading does not exist, create it
+at the end of the file before appending.
+
+---
+
+## Document store
+
+Documents live under `docs/<collection>/`. Common collections: `decisions` (ADRs),
+`architecture`, `reports`, `proposals`.
+
+### create-document(collection, name, content)
+
+Write a new file at `docs/<collection>/<name>`. The `name` argument includes the
+file extension (e.g. `ADR-022-foo.md`). Create the directory if it does not exist.
+
+### read-document(collection, name)
+
+Read `docs/<collection>/<name>` from the hub root.

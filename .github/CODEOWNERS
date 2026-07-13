@@ -1,0 +1,26 @@
+# CODEOWNERS — agistra.dev
+#
+# Maintainer review is required on security-critical paths before merge is possible.
+# These files contain natural-language agent-behavior instructions that code-level
+# tools (CodeQL, dependency-review) cannot audit for semantic weakening.
+#
+# Paths designated security-critical by ADR-020, decision 5:
+
+# Agent foundations skill — VBR, WAL, security baseline, stop-vs-proceed logic
+/skills/agent-foundations/SKILL.md @vsetchinfc
+
+# All skill files — trigger logic and security-baseline rules
+/skills/*/SKILL.md @vsetchinfc
+
+# Agent behavior control (startup, session rules, prohibitions)
+/CLAUDE.md @vsetchinfc
+
+# Ticket lifecycle gate logic — governs when agents stop vs. proceed
+/skills/ticket-lifecycle-mode/SKILL.md @vsetchinfc
+
+# Deploy pipeline — path-traversal / injection risk surface
+/pipelines/deploy/ @vsetchinfc
+
+# Contribution and security-policy files themselves
+/.github/CODEOWNERS @vsetchinfc
+/CONTRIBUTING.md @vsetchinfc

@@ -269,6 +269,72 @@ This section only applies when `workspace.config.json` has `hubType: "dev:sub"` 
 - **Verify before claiming retrievable.** Check the refresh command's exit code (0 = success) before reporting the new knowledge as searchable. A non-zero exit or a stale-status warning means the previous index is still what will be returned — say so rather than reporting success.
 - Session start (`SessionStart` hook → `npm run knowledge:start`) and session end (`Stop` hook, refresh-if-dirty) run automatically — no agent action required for those.
 
+## Storage Plugin Contract
+
+Storage is implemented via plugin files at
+`agents/skills/agent-foundations/storage/<name>.md`. This mirrors the
+`trackers/<name>.md` convention in `ticket-lifecycle-mode` — the core skill stays
+generic and never names a specific backend; implementation details live in the plugin
+file. Exactly one storage plugin ships per hub, stamped at deploy time. Skills that
+touch storage reference "the active storage plugin" — they never hardcode a path or
+tool name.
+
+### Plugin file location
+
+`agents/skills/agent-foundations/storage/<plugin-name>.md`
+
+The specific plugin name, backing technology, and tier mapping are intentionally not
+enumerated here — that detail lives entirely in the tier-specific plugin files the
+deployed hub ships. The plugin file present in the deployed hub is the active one.
+
+### Plugin resolution
+
+Exactly one plugin ships per hub via the deploy pipeline's tier-gated copy block. No
+runtime backend switching in v1 — the plugin is fixed at deploy time. Skills refer to
+"the active storage plugin"; the plugin file present in the deployed hub is the active
+one.
+
+### Operations by store
+
+Every storage plugin implements the following three stores and their operations.
+
+#### Memory store
+
+Used by: WAL (HOT writes), Session Start, dreaming, morning-standup.
+
+| Operation | Description |
+|---|---|
+| `read-memory(agent)` | Read the agent's live memory file. |
+| `write-memory-entry(agent, tier, content)` | Edit a HOT/WARM/COLD section entry. |
+| `archive-memory(agent, date)` | Write the archived snapshot (dreaming end-of-cycle). |
+| `compact-memory(agent, newContent)` | Rewrite the live memory file with compacted content. |
+
+#### Task store
+
+Used by: ticket-lifecycle-mode, task-automation-flow, drift tooling.
+
+| Operation | Description |
+|---|---|
+| `create-task(project, id, frontmatter, body)` | Write a new task file with frontmatter and body. |
+| `read-task(id)` | Read a single task file by id. |
+| `list-tasks(project, stateFilter)` | List task files for a project, optionally filtered by state. |
+| `update-task-fields(id, fields)` | Edit frontmatter fields (status, fail-count, verifier, etc.). |
+| `transition-state(id, newState)` | Update `status:` frontmatter and, where the plugin requires it, rename the filename infix. |
+| `append-task-section(id, section, content)` | Append content to a named section (e.g. `## Log`, `## QA Report`). |
+
+#### Document store
+
+Used by: documentation-and-adrs, planner/architecture outputs.
+
+| Operation | Description |
+|---|---|
+| `create-document(collection, name, content)` | Write a document under the named collection (ADRs, reports, proposals). |
+| `read-document(collection, name)` | Read a document by collection and name. |
+
+Out of contract deliberately: retrieval/search (qmd's job, ADR-019), tracker mirroring
+(tracker plugin's job, `trackers/<name>.md`), and vault write-path guarding
+(`packages/vault/vault-guard.cjs`).
+
 ## Per-Agent Notes
 
 - **Router** loads this skill plus `internal-relay` for routing vocabulary and `ticket-lifecycle-mode` for state vocabulary.

@@ -49,7 +49,7 @@ When no tracker is configured or auth is unavailable, create the local task file
 
 ## Mandatory dispatch inclusion: ticket-state ownership
 
-Before dispatching Builder or Tester, include the following paragraph verbatim in the dispatch prompt. This is not optional — it is what closes the gap that let `task_131`/#242 sit at `status: state:todo` with zero GitHub labels through an entire dispatch/QA lifecycle, discovered only after the team lead caught it retroactively.
+Before dispatching Builder or Tester, include the following paragraph verbatim in the dispatch prompt. This is not optional — it closes the gap where tickets can sit in an inconsistent state (local status and tracker labels out of sync) through an entire dispatch/QA lifecycle without any agent catching it.
 
 > You own transitioning this ticket's state at each lifecycle step: update the local task file's `status:` frontmatter and filename infix, and run the active tracker plugin's update-record procedure for the linked tracker record (if a tracker is configured), per `ticket-lifecycle-mode`. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
 
