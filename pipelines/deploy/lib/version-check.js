@@ -46,15 +46,17 @@ function fetchRemoteVersion(url) {
 	});
 }
 
-async function main() {
-	const args = process.argv.slice(2);
-	const hubIdx = args.indexOf('--hub');
-	const hubRoot = hubIdx !== -1 ? path.resolve(args[hubIdx + 1]) : path.resolve(__dirname, '..', '..', '..');
-
+/**
+ * Compute the version-check result for a given hub root. Extracted so other
+ * callers (e.g. session-cli.js's `session init`, task_182) can reuse this
+ * logic directly instead of shelling out to this script or duplicating it.
+ *
+ * Returns the same `{ status, local, remote }` shape this script prints.
+ */
+export async function computeVersionCheck(hubRoot = path.resolve(__dirname, '..', '..', '..')) {
 	const local = readLocalVersion(hubRoot);
 	if (!local) {
-		console.log(JSON.stringify({ status: 'no-local-version', local: null, remote: null }));
-		process.exit(0);
+		return { status: 'no-local-version', local: null, remote: null };
 	}
 
 	let remote;
@@ -66,13 +68,11 @@ async function main() {
 
 	if (remote === null) {
 		// Distinguish offline from no-remote-version by whether we got a response
-		console.log(JSON.stringify({ status: 'offline', local, remote: null }));
-		process.exit(0);
+		return { status: 'offline', local, remote: null };
 	}
 
 	if (!remote) {
-		console.log(JSON.stringify({ status: 'no-remote-version', local, remote: null }));
-		process.exit(0);
+		return { status: 'no-remote-version', local, remote: null };
 	}
 
 	const cmp = compareVersions(local, remote);
@@ -81,7 +81,20 @@ async function main() {
 	else if (cmp < 0) status = 'update-available';
 	else status = 'local-ahead';
 
-	console.log(JSON.stringify({ status, local, remote }));
+	return { status, local, remote };
 }
 
-main();
+async function main() {
+	const args = process.argv.slice(2);
+	const hubIdx = args.indexOf('--hub');
+	const hubRoot = hubIdx !== -1 ? path.resolve(args[hubIdx + 1]) : path.resolve(__dirname, '..', '..', '..');
+
+	const result = await computeVersionCheck(hubRoot);
+	console.log(JSON.stringify(result));
+	process.exit(0);
+}
+
+// Only run as a CLI when invoked directly, not when imported (e.g. by session-cli.js).
+if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
+	main();
+}

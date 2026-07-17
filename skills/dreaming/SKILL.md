@@ -19,8 +19,7 @@ Read your agent identity and follow the per-agent delta below after running the 
 - Preserve scope. Do not flatten all memories into one file. Session, repo, and user memory remain in their native stores.
 - Treat `memory/<agent>.md` as the live current-state file for the next session, not as the full historical archive.
 - Write a dated archive snapshot to `memory/archive/<agent>-YYYY-MM-DD.md` before compacting the live file.
-- If the live repo memory file does not exist, create it with HOT / WARM / COLD headings before compacting it.
-- If the archive directory does not exist, create `memory/archive/` before writing the dated snapshot.
+- Before compacting, run `npm run memory -- ensure <agent>` to scaffold `memory/<agent>.md` (with HOT / WARM / COLD headings) and `memory/archive/` if either does not already exist yet. This is a no-op — it never overwrites or truncates an existing file — so it is safe to run unconditionally at the start of every dreaming cycle.
 - Session memory may be deleted after it has been captured in the daily checkpoint or promoted elsewhere.
 - Repo and user memory compaction is opt-in only. Rewrite or delete entries there only when they are explicitly marked `dreaming-managed` or were created as transient capture for the same dreaming cycle.
 - Never clear the full user, session, or repo memory stores wholesale.

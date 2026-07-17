@@ -55,6 +55,10 @@ Before dispatching Builder or Tester, include the following paragraph verbatim i
 
 Run `npm run check:tickets` periodically (see `pipelines/deploy/lib/ticket-drift.js`) to catch any drift that slips through regardless.
 
+## Mandatory dispatch inclusion: end-to-end run step for integration-shaped work
+
+For any ticket that wires together two or more components (e.g. a CLI calling a library, a client calling a service, a pipeline step feeding another step), the Builder dispatch prompt must require a concrete end-to-end run — actually invoking the integrated path and observing real output — not just "tests should pass." Unit test green is not sufficient proof that integration work is actually wired up; state the specific command or flow Builder must run and what output confirms success.
+
 ## Permission Preflight
 
 Before dispatching any subagent — single or batch — confirm the required tools are permitted in the current session. A subagent that lacks a required tool fails silently; the pipeline produces no output and the failure is invisible until the user inspects.
@@ -315,6 +319,10 @@ This flow operates within `ticket-lifecycle-mode`.
 | Team Lead merges + closes                                      | Team Lead merges and closes — out-of-band action, not a managed label. |
 
 Note: For `verifier: Architect`, the intermediate state is `state:ready-for-review` (not `state:ready-for-qa`). On pass, Architect transitions directly from `state:ready-for-review` to `state:qa-passed` — no separate QA phase is required. See the Transition Permissions table in `ticket-lifecycle-mode`.
+
+### Post-Merge Hygiene
+
+Immediately after any confirmed merge (single-ticket or batch), before moving on to the next ticket or action, the agent whose local checkout tracks the merged branch runs `git fetch origin && git pull` on the default branch. This keeps the local checkout current so the next dispatch, review, or branch cut starts from the merged state rather than a stale one.
 
 ## Batch Mode (Sequential Pair)
 

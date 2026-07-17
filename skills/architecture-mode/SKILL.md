@@ -362,6 +362,25 @@ acceptance criteria that rely on implicit shared understanding, and scope-bounda
 This is not a mandatory gate: apply it when the decision is ambiguous, high-risk, or the tier
 assessment landed on Full; skip it for fast-track, low-blast-radius decisions with clear precedent.
 
+## Optional UI Methodology Pass
+
+Before producing the Story/Epic Ticket Output, optionally load `ui-audit-lens` when the decision
+centres on UI standards, UI pattern discovery, or a concrete UI surface that needs a structured
+audit before implementation. Use it to capture a research snapshot of the target product or
+organisation's existing conventions, audit the named surface against an explicit standard, and run
+a pre-handoff UI state coverage gate. This is stack-agnostic and intended to be reused by
+business-specific child skills rather than replaced by them.
+
+## Optional Security Audit Pass
+
+Before producing the Story/Epic Ticket Output, optionally load `security-audit-lens` when the
+decision is a general codebase assessment, precedes migration/rewrite planning, or the work touches
+authentication, secrets, or external input handling. Use it to run the structured, stack-agnostic
+checklist (hardcoded credentials, injection-prone constructs, auth/debug backdoors, insecure config
+defaults) and produce evidence-backed findings in the shared severity vocabulary. This complements,
+and does not replace, the built-in `/security-review` command, and it is not a mandatory gate on
+every ticket.
+
 ## Story / Epic Ticket Output
 
 After producing the architecture recommendation and receiving team lead confirmation, create a GitHub story or epic ticket:

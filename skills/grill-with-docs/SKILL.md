@@ -23,6 +23,7 @@ A relentless, docs-aware interview that sharpens a plan or design one question a
 4. **Write as you go.** After each settled decision, immediately update the WAL — write the decision to the HOT section of `memory/<agent>.md` — then draft the corresponding ADR entry or glossary term inline. Do not batch documentation for after the session. Do not advance to the next question before the WAL/memory entry is written.
 5. **Close with docs (VBR required).** When the session concludes:
    - Produce one ADR per settled decision, a glossary of key terms introduced, and any scope exclusions made explicit.
+   - Optionally load `ui-audit-lens` when the interrogation is about UI standards, a design system, or a concrete UI surface — worthwhile when the settled decision needs a research snapshot, structured audit findings, or a pre-handoff UI state coverage gate before the docs are written.
    - Optionally load `assumptions-audit` for a structured pass over the settled decision before writing the ADRs — worthwhile when the interrogation surfaced enough edge cases or scope ambiguity to warrant a second, structured look. Not required for every session.
    - **Verify Before Reporting:** confirm each ADR file exists under `docs/decisions/` with the decision and rationale documented before declaring the session closed.
 
