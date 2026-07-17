@@ -354,6 +354,14 @@ Use this structure for the architecture recommendation:
 
 See `skills/architecture-mode/EXAMPLES.md` for illustrated examples. Reuse the decision shape, not the repo-specific answer.
 
+## Optional Pre-Handoff Pass: Assumptions Audit
+
+Before producing the Story/Epic Ticket Output, optionally load `assumptions-audit` for a
+structured pass over the Decision Output — surfacing unstated environment/data/user assumptions,
+acceptance criteria that rely on implicit shared understanding, and scope-boundary failure modes.
+This is not a mandatory gate: apply it when the decision is ambiguous, high-risk, or the tier
+assessment landed on Full; skip it for fast-track, low-blast-radius decisions with clear precedent.
+
 ## Story / Epic Ticket Output
 
 After producing the architecture recommendation and receiving team lead confirmation, create a GitHub story or epic ticket:

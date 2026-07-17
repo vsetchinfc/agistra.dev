@@ -51,7 +51,7 @@ When no tracker is configured or auth is unavailable, create the local task file
 
 Before dispatching Builder or Tester, include the following paragraph verbatim in the dispatch prompt. This is not optional — it closes the gap where tickets can sit in an inconsistent state (local status and tracker labels out of sync) through an entire dispatch/QA lifecycle without any agent catching it.
 
-> You own transitioning this ticket's state at each lifecycle step: update the local task file's `status:` frontmatter and filename infix, and run the active tracker plugin's update-record procedure for the linked tracker record (if a tracker is configured), per `ticket-lifecycle-mode`. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
+> You own transitioning this ticket's state at each lifecycle step: run `npm run task -- transition <id> <new-state>` (see `ticket-lifecycle-mode` State Transition CLI section) instead of manually editing the frontmatter, renaming the file, and calling the tracker plugin as separate steps — the CLI does all three atomically, including the tracker label sync and post-verify when a tracker is configured. Do not leave this for the dispatching agent to reconstruct afterward — transition state yourself as you move through each stage of the flow.
 
 Run `npm run check:tickets` periodically (see `pipelines/deploy/lib/ticket-drift.js`) to catch any drift that slips through regardless.
 
@@ -189,16 +189,19 @@ For `verifier: Automated`, treat an Architect spot-check FAIL as a verifier fail
 
 ### 1st Fail
 
-Tester fails → ticket transitions to `state:changes-requested`. Label applied: `qa-fail-1`.
+Tester fails → ticket transitions to `state:changes-requested`. Label applied: `qa-fail-1`. Per `qa-ticket-workflow`, Tester appends a `## Gap Closure` section to the task file (one entry per failed AC) as part of the FAIL verdict write.
 
 ```
 Tester: FAIL (1st)
   └─> Tester runs plugin update-record to signal fail-1 on tracker (when configured)
-      └─> Tester spawns Builder (sub-agent)
-          └─> Builder fixes
-              └─> ticket: state:ready-for-qa
-                  └─> Tester re-runs
+      └─> Tester appends ## Gap Closure section to the task file (per qa-ticket-workflow)
+          └─> Tester spawns Builder (sub-agent)
+              └─> Builder fixes
+                  └─> ticket: state:ready-for-qa
+                      └─> Tester re-runs
 ```
+
+**Re-dispatch prompt requirement:** the Builder re-dispatch prompt includes the task file's `## Gap Closure` section verbatim as the work list — do not re-summarize or paraphrase the gaps in the dispatch prompt; point Builder at the section (or paste it in full) so each `### Gap N` entry is the unit of work. Builder marks each gap closed directly in the section (e.g. `**Status:** closed — <one-line fix summary>` appended under the relevant `### Gap N`) as part of the fix commit, rather than deleting the entries or rewriting the ticket body.
 
 ### 2nd Fail
 
@@ -207,15 +210,21 @@ Architect reviews and corrects. Builder does not loop autonomously again. Label 
 ```
 Tester: FAIL (2nd)
   └─> Tester runs plugin update-record to signal fail-2 on tracker (when configured)
-      └─> Architect reviews + corrects
-          ├─ Architect can resolve:
-          │   └─> Architect provides instructions → Builder fixes → Tester re-runs
-          │
-          └─ Architect needs a user decision:
-              └─> task parked → Architect escalates to Team Lead
-                  └─> Team Lead answers
-                      └─> Architect updates instructions → dispatches Builder → flow resumes
+      └─> Tester appends/updates ## Gap Closure section to the task file (per qa-ticket-workflow)
+          └─> Architect reviews the ## Gap Closure section (not the whole ticket thread)
+              ├─ Architect can resolve:
+              │   └─> Architect corrects/re-scopes entries directly in the Gap Closure section
+              │       (e.g. narrowing an AC's expected behavior, correcting a wrong
+              │       suspected-location hint, merging or splitting entries) → Builder fixes
+              │       against the corrected section → Tester re-runs
+              │
+              └─ Architect needs a user decision:
+                  └─> task parked → Architect escalates to Team Lead
+                      └─> Team Lead answers
+                          └─> Architect updates the Gap Closure section → dispatches Builder → flow resumes
 ```
+
+**2nd-fail scope:** Architect's 2nd-fail review operates on the `## Gap Closure` section — correcting or re-scoping individual gap entries — rather than rewriting the ticket body or acceptance criteria. This keeps the review focused on the specific gaps Tester already isolated instead of re-deriving fix scope from the full ticket/QA thread each time.
 
 ### 3rd Fail
 
@@ -315,13 +324,15 @@ Sequential means Ticket 2 does not start until Ticket 1 completes its active wor
 
 ### Eligibility
 
-Architect proposes a candidate pair from eligible backlog tickets. Team lead and Architect jointly confirm the pair meets all three criteria:
+Architect proposes a candidate pair from eligible backlog tickets. Before proposing, Architect runs `npm run task -- waves <project>` (task_176) to mechanically compute which `todo` tickets have no `depends_on` edge and no overlapping `touches` globs between them — this replaces ad hoc manual comparison with a computed grouping. Architect presents the computed grouping to the team lead alongside the proposal.
 
-- do not touch overlapping files or modules (non-conflicting)
-- are not dependent on each other (B does not need A to land first)
+**The `waves` command informs the proposal; it does not replace the confirmation gate.** Team lead and Architect still jointly confirm the pair meets all three criteria before any dispatch:
+
+- do not touch overlapping files or modules (non-conflicting) — cross-checked by `waves`' `touches` comparison, but the team lead's judgment governs, not the tool's output alone
+- are not dependent on each other (B does not need A to land first) — cross-checked by `waves`' `depends_on` comparison
 - do not require a merge between them before the second can start
 
-Neither ticket is declared eligible unilaterally — this is a joint call every time.
+Neither ticket is declared eligible unilaterally — this is a joint call every time, computed grouping or not. Architect does not self-select a batch from `waves` output without team lead confirmation.
 
 ### Batch Flow
 
@@ -357,7 +368,8 @@ Each ticket runs its own fail counter independently. A 3rd fail on either ticket
 ### Hard Rules (Batch)
 
 - Max batch size: 2 tickets.
-- Ticket selection is a joint call — Architect proposes, team lead confirms. Architect does not self-select.
+- Ticket selection is a joint call — Architect proposes (using `npm run task -- waves <project>` to compute the candidate grouping, task_176), team lead confirms. Architect does not self-select.
+- Concurrent Builder dispatches, when the team lead approves running a wave in parallel rather than sequentially, are capped at 2 at a time — current practice — unless the team lead explicitly raises the cap. This is prompt-level guidance for Architect, not something `task waves` or any CLI enforces.
 - No auto-merge in batch mode. Team lead merges both at the end.
 - Tickets run sequentially — Ticket 2 does not start until Ticket 1 completes or parks. When Ticket 1 parks, Ticket 2 starts immediately as a defined exception; this is not concurrent execution but a parking carve-out.
 - Architect notifies team lead of each completion as it happens, not only at batch end.
@@ -370,22 +382,19 @@ All three rules below are mandatory during an automation run.
 
 **Local task files are the canonical system of record.** On every lifecycle transition:
 
-1. **Update the local task file first** (this is the authoritative write):
-   - Update `status:` frontmatter field to the new lifecycle state (e.g., `state:in-progress`, `state:ready-for-qa`, `state:qa-passed`, `state:changes-requested`)
-   - Update `fail-count:` frontmatter field when applicable
-   - Set `parked: true` when fail-count reaches 3
-   - Rename the file to reflect the new state token (e.g., `task_N_ready-for-qa_slug.md` → `task_N_changes-requested_slug.md`)
-2. **If a tracker is configured** (presence of a tracker reference field in the task file frontmatter, or workspace tracker config):
-   - **Immediately follow with the mirror update** (this is mandatory, not optional):
-     - Run the active tracker plugin's update-record procedure (see `ticket-lifecycle-mode` Tracker Plugin Contract and `trackers/<plugin-name>.md`) to sync the state change, fail-counter update, and any required comments (e.g. QA reports, handoff notifications)
-   - **If the mirror write fails:**
-     - Append the failure to the task file's `## Log` section (timestamp, attempted action, error)
+1. **Run the state transition CLI** (`npm run task -- transition <id> <new-state>`, see `ticket-lifecycle-mode` State Transition CLI section) instead of hand-editing the frontmatter, renaming the file, and calling the tracker plugin as separate steps:
+   - Updates `status:` frontmatter field to the new lifecycle state (e.g., `state:in-progress`, `state:ready-for-qa`, `state:qa-passed`, `state:changes-requested`) — set `fail-count:` and `parked: true` (when fail-count reaches 3) via `npm run task -- update-field <id> <field> <value>`
+   - Renames the file to reflect the new state token (e.g., `task_N_ready-for-qa_slug.md` → `task_N_changes-requested_slug.md`)
+   - **If a tracker is configured** (presence of a tracker reference field in the task file frontmatter, or workspace tracker config): the same CLI invocation syncs the tracker's `state:*` label and post-verifies it landed — this is mandatory, not optional, and happens automatically as part of the atomic transition
+   - **If the CLI reports a non-zero exit / `ok: false`:**
+     - The JSON output names the specific failed step (`local-write`, `label-sync`, or `verify`) — append the failure to the task file's `## Log` section (timestamp, attempted action, error)
      - Record the failed outbound in Router's `memory/router.md` HOT section under `failed-outbound` (if Router is active)
      - Reconcile the mirror before the ticket is considered closed
-   - **A transition is not complete** until the mirror write succeeds or the failure is explicitly recorded for retry
-3. **No tracker configured:** local-only; no mirror obligation exists
+   - **A transition is not complete** until the CLI reports `ok: true` (exit 0) or the failure is explicitly recorded for retry
+   - Fail-counter and QA-report tracker comments (as opposed to the `state:*` label) still use the active tracker plugin's update-record procedure directly (see `trackers/<plugin-name>.md`)
+2. **No tracker configured:** the CLI performs a local-only transition (`mirror: "skipped (no tracker configured)"` in its output); no mirror obligation exists
 
-The CLI function `changeTaskStatus` handles the atomic local write (frontmatter + filename). Agents performing transitions must call the CLI or perform equivalent atomic updates.
+The CLI (`pipelines/deploy/lib/task-cli.js`) handles the atomic local write (frontmatter + filename) and tracker sync/verify. Agents performing transitions must call the CLI rather than perform equivalent manual updates.
 
 ### Rule 2 — Task tracking (TaskCreate / TaskUpdate)
 

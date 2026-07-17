@@ -6,26 +6,24 @@ This workspace uses custom agent profiles in `.claude/agents/`.
 
 ## Startup Rule
 
-When the user addresses you by an agent name, your **first action** must be three consecutive Read tool calls before any text output or other action:
+When the user addresses you by an agent name, your **first action** must be to read your own profile file, then follow its own "Session Start" section in full — this is the single canonical source for your startup read sequence, so this file does not duplicate it:
 
-1. `.claude/agents/<name>.md` — behavioral contract: identity, skills catalogue, decision rules, prohibitions
-2. `memory/<name>.md` — live state: HOT current work, WARM decisions, COLD stable patterns
-3. `skills/agent-foundations/SKILL.md` — universal guardrails: VBR, WAL, security baseline
+1. `.claude/agents/<name>.md` — behavioral contract: identity, skills catalogue, decision rules, prohibitions. It contains a "Session Start" section listing every file you must read next (memory, always-on skills, any agent-specific bootstrap step) in the exact order to read them.
 
-Read all three before responding.
+Read this file first, then execute every read its "Session Start" section specifies, in the order given, before any text output or other action. Do not stop after this one file, and do not substitute a shorter sequence from anywhere else — the profile's own "Session Start" section is authoritative.
 
-**Invocation context matters.** The three-read sequence applies differently depending on how you were started:
+**Invocation context matters.** This still applies differently depending on how you were started:
 
-- **Direct chat invocation** (the user addresses you by agent name in the chat): all three reads apply exactly as written, including reading your own profile file at step 1.
-- **Agent-tool subagent spawn** (Architect or another agent dispatches you via the Agent tool): your profile is already loaded by the harness as your system prompt from turn zero — re-reading it is redundant. However, the obligation to explicitly read `memory/<name>.md` and the required always-on skill files (`skills/agent-foundations/SKILL.md`, `skills/token-economics/SKILL.md`, `skills/proactive-agent/SKILL.md`) still applies before starting work.
+- **Direct chat invocation** (the user addresses you by agent name in the chat): read your own profile file at step 1, then carry out every read its "Session Start" section specifies.
+- **Agent-tool subagent spawn** (Architect or another agent dispatches you via the Agent tool): your profile is already loaded by the harness as your system prompt from turn zero — re-reading it is redundant. However, every read your profile's "Session Start" section specifies (memory file and all always-on skills it names) still applies before starting work.
 
 ## Bootstrap Self-Check
 
-After the three startup reads, the agent's own profile (read in step 1) tells it to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
+After the profile's own "Session Start" sequence completes, that same sequence tells the agent to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
 
 ## Personalization Context (Optional)
 
-After the three mandatory reads, check whether `workspace.config.json` exists at the repo root. If present, read it for personalization context: operator name/role (`user.name`, `user.role`), organisation (`org`), and per-agent display name (`agents.<id>.displayName`).
+After the profile's "Session Start" sequence completes, check whether `workspace.config.json` exists at the repo root. If present, read it for personalization context: operator name/role (`user.name`, `user.role`), organisation (`org`), and per-agent display name (`agents.<id>.displayName`).
 
 This file is local-only and gitignored — it is never committed to the repo. Its absence is normal, not an error: not every workspace has been through `npm run setup`, and no agent should treat a missing `workspace.config.json` as a deploy defect or broken profile. If it is absent, proceed without it.
 

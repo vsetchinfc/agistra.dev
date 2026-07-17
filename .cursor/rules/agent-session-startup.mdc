@@ -5,65 +5,64 @@ alwaysApply: true
 
 # Agent Session Startup
 
-When you are acting as `@architect`, `@builder`, `@tester`, or `@router`, your **very first action** must be three consecutive Read tool calls before any text output or other action:
+When you are acting as `@architect`, `@builder`, `@tester`, or `@router`, your **very first action** must be to read your own profile file, then follow its own "Session Start" section in full — this is the single canonical source for your startup read sequence, so this file does not duplicate it. After that, check for `workspace.config.json` per below.
 
 ## File paths — hub workspace root only
 
 This workspace has multiple root folders. Agent profiles and memory files both live in the **hub root** (the folder containing `.cursor/agents/`) — NOT in project repo roots.
 
-| Agent | Profile path | Memory path | Personalisation |
-|-------|-------------|------------|----------------|
-| `@architect` | `<hub>/.cursor/agents/architect.md` | `<hub>/memory/architect.md` | `<hub>/workspace.config.json` if present |
-| `@builder`   | `<hub>/.cursor/agents/builder.md`   | `<hub>/memory/builder.md`   | `<hub>/workspace.config.json` if present |
-| `@tester`    | `<hub>/.cursor/agents/tester.md`    | `<hub>/memory/tester.md`    | `<hub>/workspace.config.json` if present |
-| `@router`    | `<hub>/.cursor/agents/router.md`    | `<hub>/memory/router.md`    | `<hub>/workspace.config.json` if present |
+| Agent | Profile path | Personalisation |
+|-------|-------------|----------------|
+| `@architect` | `<hub>/.cursor/agents/architect.md` | `<hub>/workspace.config.json` if present |
+| `@builder`   | `<hub>/.cursor/agents/builder.md`   | `<hub>/workspace.config.json` if present |
+| `@tester`    | `<hub>/.cursor/agents/tester.md`    | `<hub>/workspace.config.json` if present |
+| `@router`    | `<hub>/.cursor/agents/router.md`    | `<hub>/workspace.config.json` if present |
 
 Replace `<hub>` with the actual hub folder name (e.g. `agistra.dev`).
 
-Read the three files in order before writing a single word of response or issuing any other tool call. If `workspace.config.json` is absent, proceed with the first two reads and continue normally.
+Read the profile file first. It contains a "Session Start" section listing every file you must read next (memory, always-on skills, any agent-specific bootstrap step) in the exact order to read them — execute that sequence in full before writing a single word of response or issuing any other tool call. After the profile's own "Session Start" sequence is complete, check whether `<hub>/workspace.config.json` exists; if present, read it for personalisation context. If absent, proceed without it — this is normal, not an error.
 
-## Why both files are required
+## Why the profile file is required
 
 | File | Purpose |
 |------|---------|
-| `.cursor/agents/<agent>.md` | Behavioral contract — identity, skills, decision rules, output formats, absolute prohibitions |
-| `memory/<agent>.md` | Live state — HOT current work, WARM recent decisions, COLD stable patterns |
+| `.cursor/agents/<agent>.md` | Behavioral contract — identity, skills, decision rules, output formats, absolute prohibitions, AND the authoritative "Session Start" read sequence (memory file, always-on skills) |
 | `workspace.config.json` | Personalisation context — user name/role, organisation, per-agent display names |
 
-Neither substitutes for the other.
+Do not hand-list memory or skill files here — the profile's own "Session Start" section is the single source of truth for that sequence, and duplicating it in this file risks the two drifting out of sync.
 
 ## Common failure pattern to avoid
 
-❌ **Wrong** — looks for memory in the project repo workspace root:
-> *[Read tool call: `<project>/memory/builder.md`]* → file not found
+❌ **Wrong** — looks for the profile in the project repo workspace root:
+> *[Read tool call: `<project>/.cursor/agents/builder.md`]* → file not found
 
-❌ **Wrong** — reads memory but skips the profile:
-> *[Read tool call: `<hub>/memory/builder.md`]*  
-> *[starts implementing immediately]*
+❌ **Wrong** — reads the profile but stops instead of following its "Session Start" section:
+> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*
+> *[starts implementing immediately, skipping memory and always-on skills]*
 
-❌ **Wrong** — reads profile and memory but skips `workspace.config.json` when it exists:
-> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*  
-> *[Read tool call: `<hub>/memory/builder.md`]*  
+❌ **Wrong** — completes the profile's "Session Start" sequence but skips `workspace.config.json` when it exists:
+> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*
+> *[follows Session Start: memory + always-on skills]*
 > *[proceeds without checking `workspace.config.json`]*
 
-✅ **Correct** — three Read calls from hub root before any other action when the config file is present:
-> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*  
-> *[Read tool call: `<hub>/memory/builder.md`]*  
-> *[Read tool call: `<hub>/workspace.config.json`]*  
+✅ **Correct** — profile read first, its full "Session Start" sequence executed, then the config check:
+> *[Read tool call: `<hub>/.cursor/agents/builder.md`]*
+> *[follows Session Start section exactly: memory/builder.md, then every always-on skill it names, in order]*
+> *[Read tool call: `<hub>/workspace.config.json`]* (if present)
 > *[task work begins]*
 
 ## Correct invocation prompts
 
 ```text
-@architect Read <hub>/.cursor/agents/architect.md then <hub>/memory/architect.md then <hub>/workspace.config.json if present. Then: [instruction]
-@builder   Read <hub>/.cursor/agents/builder.md   then <hub>/memory/builder.md   then <hub>/workspace.config.json if present. Then: implement projects/<project>/task_N_todo_<slug>.md
-@tester    Read <hub>/.cursor/agents/tester.md    then <hub>/memory/tester.md    then <hub>/workspace.config.json if present. Then: QA projects/<project>/task_N_todo_<slug>.md
-@router    Read <hub>/.cursor/agents/router.md    then <hub>/memory/router.md    then <hub>/workspace.config.json if present. Then: classify and route: [inbound message]
+@architect Read <hub>/.cursor/agents/architect.md and follow its "Session Start" section in full, then check <hub>/workspace.config.json if present. Then: [instruction]
+@builder   Read <hub>/.cursor/agents/builder.md   and follow its "Session Start" section in full, then check <hub>/workspace.config.json if present. Then: implement projects/<project>/task_N_todo_<slug>.md
+@tester    Read <hub>/.cursor/agents/tester.md    and follow its "Session Start" section in full, then check <hub>/workspace.config.json if present. Then: QA projects/<project>/task_N_todo_<slug>.md
+@router    Read <hub>/.cursor/agents/router.md    and follow its "Session Start" section in full, then check <hub>/workspace.config.json if present. Then: classify and route: [inbound message]
 ```
 
 ## Bootstrap Self-Check
 
-After the three startup reads, the agent's own profile (read in step 1) tells it to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
+After the profile's own "Session Start" sequence completes, that same sequence tells the agent to check the Bootstrap Self-Check trigger defined in `skills/agent-foundations/SKILL.md`. That shared skill — not this file — owns the full protocol (trigger condition, the 7-point report, Architect-only fan-out, persistence). This file does not re-implement it.
 
 ## Version Check
 

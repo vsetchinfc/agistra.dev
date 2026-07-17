@@ -122,23 +122,111 @@ Do not substitute CLI queries for browser verification.
 
 ## GitHub And State Actions
 
-Steps 6 and 7 apply to every QA session — CLI/tooling tickets included. The VBR gate is the local task file update; the GitHub comment is the mandatory-when-configured mirror step.
+**The only documented path: `npm run task -- qa-report <id> <verdict> [--gaps <path>] [--findings <path>] [--projects-root <path>]`.** This single command composes the report, posts it to the linked GitHub issue and (if an open PR is discoverable for the current branch) the PR, re-fetches the comment list to confirm each post actually landed (failing loudly, non-zero exit, if not), appends the local `## QA Report` section (and `## Gap Closure` on FAIL/PARTIAL PASS when `--gaps` is supplied), and performs the matching state transition — `state:qa-passed` on PASS, or `state:changes-requested` + the correct `qa-fail-N` label on FAIL/PARTIAL PASS. It replaces Steps 6-8 below with one call. `--projects-root <path>` (task_187) reliably resolves task files regardless of which repo the CLI process itself is running from — pass it whenever the task file lives outside the CLI's own cwd (e.g. Tester running from the source repo against task files under the deployed hub's `projects/` directory).
+
+- Write findings/gap-closure content to a temp file first (avoids inline multi-line `--body` escaping), then pass its path via `--findings` and/or `--gaps`.
+- Check the command's JSON output `ok` field and exit code. `ok: false` means the report did not verifiably land, or the transition failed — do not treat any output as success without checking `ok`.
+- **If the CLI command errors, do not fall back to manually editing the task file or the GitHub issue.** Read the JSON `error` field, fix the underlying cause (missing `--projects-root`, invalid id, `gh` auth, etc.) and retry the command. There is no manual-edit fallback path — per ADR-023, exactly one documented path exists for this operation.
+
+Steps 6 and 7 below describe the sequence the CLI command automates internally; they remain a reference for what the command does — not an alternative manual procedure to perform by hand. The VBR gate is the local task file update; the GitHub comment is the mandatory-when-configured mirror step.
 
 ### Step 6 - Write QA Report to local task file (VBR gate)
 
 **This is the primary VBR gate.** A verdict is not complete until the local task file is updated with the QA report and the state transition is recorded.
 
 1. **Append a `## QA Report` section** to the task file with the same report content (verdict, AC table, date, defects, observations).
-2. **Update the frontmatter**:
+2. **On a FAIL or PARTIAL PASS verdict, also append a `## Gap Closure` section** — see Gap Closure Section below. This is required on every FAIL/PARTIAL PASS verdict, not optional documentation.
+3. **Update the frontmatter**:
    - Set `status:` to the new lifecycle state
    - Update `fail-count:` if applicable (increment on FAIL or PARTIAL PASS)
    - Set `parked: true` if fail-count reaches 3
-3. **Rename the file** to reflect the new state token:
+4. **Rename the file** to reflect the new state token:
    - PASS → `task_N_done_<slug>.md` (or `task_N_qa-passed_<slug>.md` if not terminal)
    - FAIL or PARTIAL PASS → `task_N_changes-requested_<slug>.md`
    - BLOCKED → leave as `ready-for-qa` and note blocker in the QA Report section
 
-**VBR check:** Verify the local task file now has the `## QA Report` section and the filename reflects the new state before proceeding to Step 7.
+**VBR check:** Verify the local task file now has the `## QA Report` section (and, on FAIL/PARTIAL PASS, the `## Gap Closure` section) and the filename reflects the new state before proceeding to Step 7.
+
+## Gap Closure Section
+
+On a FAIL or PARTIAL PASS verdict, Tester appends a `## Gap Closure` section to the task file — one entry per failed acceptance criterion. This turns the fix guidance from prose Tester writes once and Builder re-derives from, into a structured work list Builder consumes directly on 1st-fail re-dispatch (see `task-automation-flow`'s 1st Fail path) and Architect corrects directly on 2nd-fail review (see `task-automation-flow`'s 2nd Fail path), instead of rewriting the ticket body.
+
+### Format
+
+Write the section via the task CLI's `append-task-section` operation (`npm run task -- append-section <id> "Gap Closure" <content> [--projects-root <path>]`, piping multi-line content via stdin — see `ticket-lifecycle-mode` State Transition CLI section for the CLI's general usage pattern). Do not hand-edit the section with a text editor — the CLI is the only documented path (ADR-023); if it errors, fix the underlying cause and retry, do not bypass it with a manual `Edit`.
+
+Each entry is a `### Gap N` subsection with these fields:
+
+- **AC:** the acceptance criterion number/reference this gap closes
+- **Observed:** what Tester actually saw (URL, rendered text, visible state, or command output)
+- **Expected:** what the AC requires
+- **Suspected location:** (optional) file/line/component Tester suspects is responsible — a hint for Builder, not a diagnosis Builder must accept as-is
+
+One `### Gap N` entry per failed AC. Passing ACs do not get an entry — the Gap Closure section is the failure work list, not a full AC recap (the AC table in `## QA Report` already covers pass/fail per AC).
+
+### Worked example
+
+Ticket has 3 ACs. Tester verdict is FAIL — AC 2 and AC 3 fail, AC 1 passes. Tester runs:
+
+```bash
+npm run task -- append-section "demo#42" "Gap Closure" "$(cat <<'EOF'
+### Gap 1
+
+- **AC:** 2
+- **Observed:** Submitting the form with an empty email field shows no validation
+  message; the request is sent to the server and returns a 500.
+- **Expected:** AC 2 requires client-side validation to block submission and show
+  "Email is required" inline before any request is sent.
+- **Suspected location:** src/components/SignupForm.tsx — no onBlur/onSubmit
+  validation wired for the email field.
+
+### Gap 2
+
+- **AC:** 3
+- **Observed:** Success toast never appears after a valid submission; console shows
+  `Cannot read properties of undefined (reading 'toast')`.
+- **Expected:** AC 3 requires a visible success toast within 2s of a valid submit.
+- **Suspected location:** src/hooks/useSignup.ts — toast import likely missing after
+  the recent notifications refactor.
+EOF
+)"
+```
+
+Resulting section appended to the task file:
+
+```markdown
+## Gap Closure
+
+### Gap 1
+
+- **AC:** 2
+- **Observed:** Submitting the form with an empty email field shows no validation
+  message; the request is sent to the server and returns a 500.
+- **Expected:** AC 2 requires client-side validation to block submission and show
+  "Email is required" inline before any request is sent.
+- **Suspected location:** src/components/SignupForm.tsx — no onBlur/onSubmit
+  validation wired for the email field.
+
+### Gap 2
+
+- **AC:** 3
+- **Observed:** Success toast never appears after a valid submission; console shows
+  `Cannot read properties of undefined (reading 'toast')`.
+- **Expected:** AC 3 requires a visible success toast within 2s of a valid submit.
+- **Suspected location:** src/hooks/useSignup.ts — toast import likely missing after
+  the recent notifications refactor.
+```
+
+On re-dispatch, Builder marks each gap closed directly in this section as part of the fix commit (e.g. appending `**Status:** closed — <one-line fix summary>` under each `### Gap N`) rather than deleting or rewriting the entries — this keeps the section a durable record across fail attempts.
+
+### Re-QA: per-gap verification (no blanket verdict)
+
+When re-running QA against a task file that carries a `## Gap Closure` section from a prior fail, Tester verifies each gap entry individually — not a blanket re-test of the whole ticket:
+
+1. For each `### Gap N` entry, re-run the specific check described in **Observed**/**Expected** and record PASS or FAIL for that gap specifically, with fresh evidence (URL, rendered text, or command output) — the prior FAIL evidence is not reusable as re-QA evidence.
+2. If Builder marked a gap closed but Tester's re-check shows the underlying behavior still fails, record it as still FAILING with the new observed behavior — do not accept the `**Status:** closed` annotation as evidence.
+3. The overall verdict is PASS only when every gap in the section (plus all other ACs) passes. A single remaining FAIL gap keeps the overall verdict FAIL/PARTIAL PASS, per the existing verdict rules — this section does not change verdict vocabulary.
+4. On the next FAIL, append a new `## Gap Closure` entry set (or update the existing one) following the same format — do not silently drop gaps that are still open.
 
 ### Step 7 - Post report to GitHub (mandatory — hard requirement)
 
@@ -179,14 +267,12 @@ For CLI/tooling tickets with no deployed URL, set **Environment:** to `local / C
 
 ### Step 8 - Align ticket state labels (hard requirement — when tracker configured)
 
-**Aligning ticket state and renaming the local task file are hard requirements.**
+**Covered automatically by `npm run task -- qa-report`** — the CLI command performs the state transition and label sync as part of the same call. The description below is a reference for what the command does internally, not an alternative manual procedure — do not run `gh issue edit` by hand as a substitute.
 
-When a tracker is configured, apply GitHub issue labels to mirror the local state:
+**Aligning ticket state and renaming the local task file are hard requirements**, both performed atomically by the CLI:
 
-- PASS → `gh issue edit <N> --remove-label "state:ready-for-qa" --add-label "state:qa-passed"` and rename task file to `_qa-passed_`
-- FAIL or PARTIAL PASS → `gh issue edit <N> --remove-label "state:ready-for-qa" --add-label "state:changes-requested"` (also apply `qa-fail-*` label mirroring local `fail-count:`), leave task file at `_ready-for-qa_` (Builder picks it up)
-
-The local task file was already renamed in Step 6; this step applies the mirror labels.
+- PASS → `state:qa-passed` label applied, task file renamed to `_qa-passed_`
+- FAIL or PARTIAL PASS → `state:changes-requested` label applied (also syncs the `qa-fail-*` label to match local `fail-count:`), task file renamed to `_changes-requested_` (Builder picks it up)
 
 **memory/tester.md:** Append a one-line HOT entry with verdict, ticket/PR refs, local task file path, and GitHub comment URL (if posted).
 

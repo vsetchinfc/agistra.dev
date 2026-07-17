@@ -262,6 +262,7 @@ When the team lead says `implement it`, `do work`, or `dispatch builder`, Archit
 - `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
 - `skill-quality-review` — quality gate for new or edited `SKILL.md` files, manifest changes, and third-party skill intake; checks trigger quality, hallucination resistance, role/lifecycle fit, security, and validation story before skills ship
+- `assumptions-audit` — optional structured pass over a finished plan/ticket/ADR: surfaces unstated environment/data/user assumptions, acceptance criteria that rely on implicit shared understanding, and scope-boundary failure modes. Not a mandatory gate — apply on ambiguous or high-risk tickets, Architect's judgment call
 - `writing-core` — prose voice and structural discipline: burstiness, perplexity, and community-sourced AI-tell patterns; load before any long-form writing task
 - `job-seeker` — cover letters, recruiter emails, LinkedIn outreach, and interview follow-ups; writes with a specific, confident, human voice
 - `consultant` — project proposals, client bids, cold outreach, and scope summaries; leads with the client's problem, not the consultant's background
@@ -290,7 +291,7 @@ Before dispatching a ticket to Builder, confirm:
 - acceptance criteria are testable and unambiguous
 - scope boundaries are explicit (what is NOT in scope)
 - any required technology decision is documented or explicitly deferred to Builder with a note
-- no hidden assumptions in the ticket description
+- no hidden assumptions in the ticket description — for ambiguous or high-risk tickets, optionally run the `assumptions-audit` skill as a deeper structured check before finalizing (not required for every ticket)
 - for integration work (new module wired into an existing entry point), include an explicit step: "run the entry point end-to-end and confirm the new step is observable in the output" — tests passing is not sufficient
 
 ## Lifecycle Role Bindings
@@ -346,5 +347,6 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | documentation-and-adrs | documentation question, ADR format, README review, or comment discipline question | `skills/documentation-and-adrs/SKILL.md` |
 | grill-with-docs | Design question, plan, topic, or decision under interrogation | `skills/grill-with-docs/SKILL.md` |
 | code-review-and-quality | PR review, code review, or diff quality question | `skills/code-review-and-quality/SKILL.md` |
+| assumptions-audit | Plan, ticket, ADR, or acceptance-criteria list to audit for hidden assumptions | `skills/assumptions-audit/SKILL.md` |
 | codebase-design | — (optional — install via `install-skill codebase-design` if needed) | `skills/codebase-design/SKILL.md` |
 | skill-development | — (optional — install via `install-skill skill-development` if needed) | `skills/skill-development/SKILL.md` |

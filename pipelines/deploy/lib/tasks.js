@@ -181,7 +181,7 @@ function stateToToken(state) {
 /**
  * Serialize frontmatter object to YAML-like string.
  */
-function serializeFrontmatter(meta) {
+export function serializeFrontmatter(meta) {
 	const lines = [];
 	for (const [key, value] of Object.entries(meta)) {
 		if (Array.isArray(value)) {
@@ -249,6 +249,254 @@ export function changeTaskStatus(taskPath, targetState = 'closed', frontmatterUp
 	}
 
 	return newPath;
+}
+
+/**
+ * Edit frontmatter fields on a task file WITHOUT renaming it (no state
+ * transition). Use `changeTaskStatus` when a rename is also required.
+ *
+ * @param {string} taskPath
+ * @param {object} fields - map of frontmatter key -> value to set/overwrite
+ * @returns {string} the (unchanged) task file path
+ */
+export function updateTaskFields(taskPath, fields) {
+	const raw = fs.readFileSync(taskPath, 'utf-8');
+	const { meta, body } = parseFrontmatter(raw);
+
+	for (const [key, value] of Object.entries(fields)) {
+		meta[key] = String(value);
+	}
+
+	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${body}`;
+	fs.writeFileSync(taskPath, newContent, 'utf-8');
+	return taskPath;
+}
+
+/**
+ * Append content to a named section (e.g. `## Gap Closure`, `## QA Report`,
+ * `## Log`) in a task file's body. If the section heading already exists,
+ * the content is appended underneath it (after a blank line); otherwise a
+ * new `## <section>` heading is added at the end of the body.
+ *
+ * Does not touch frontmatter or filename — use `changeTaskStatus` /
+ * `updateTaskFields` for those.
+ *
+ * @param {string} taskPath
+ * @param {string} section - section name without the `##` prefix, e.g. "Gap Closure"
+ * @param {string} content - markdown content to append under the section
+ * @returns {string} the (unchanged) task file path
+ */
+export function appendTaskSection(taskPath, section, content) {
+	const raw = fs.readFileSync(taskPath, 'utf-8');
+	const { meta, body } = parseFrontmatter(raw);
+
+	const heading = `## ${section}`;
+	const headingRegex = new RegExp(`^${heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*$`, 'm');
+
+	let newBody;
+	if (headingRegex.test(body)) {
+		// Section exists — append content under it, before the next `## ` heading (or EOF).
+		const lines = body.split('\n');
+		const headingIdx = lines.findIndex(line => headingRegex.test(line));
+		let nextHeadingIdx = lines.findIndex((line, i) => i > headingIdx && /^##\s/.test(line));
+		if (nextHeadingIdx === -1) nextHeadingIdx = lines.length;
+
+		const before = lines.slice(0, nextHeadingIdx);
+		const after = lines.slice(nextHeadingIdx);
+		// Trim trailing blank lines from `before` so we control spacing precisely.
+		while (before.length && before[before.length - 1].trim() === '') before.pop();
+
+		newBody = [...before, '', content.trim(), '', ...after].join('\n');
+	} else {
+		const trimmedBody = body.replace(/\s+$/, '');
+		newBody = `${trimmedBody}\n\n${heading}\n\n${content.trim()}\n`;
+	}
+
+	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${newBody}`;
+	fs.writeFileSync(taskPath, newContent, 'utf-8');
+	return taskPath;
+}
+
+// ── Wave computation (task_176) ─────────────────────────────────────────────
+
+/**
+ * Extract a numeric task id from a filename or a depends_on/id reference
+ * string. Accepts "task_170_todo_x.md", "task_170", or bare "170".
+ * Returns the id as a string (e.g. "170"), or null if no digits found.
+ */
+function extractTaskId(value) {
+	if (typeof value !== 'string') return null;
+	const m = value.match(/(\d+)/);
+	return m ? m[1] : null;
+}
+
+/**
+ * Convert a glob pattern (supporting `*` within a segment and `**` as a
+ * whole path segment meaning "zero or more segments") into an anchored
+ * RegExp.
+ */
+function globToRegex(glob) {
+	const segments = glob.split('/').map(seg => {
+		if (seg === '**') return '.*';
+		const escaped = seg.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+		return escaped.replace(/\*/g, '[^/]*');
+	});
+	return new RegExp('^' + segments.join('/') + '$');
+}
+
+/**
+ * Produce a concrete sample path from a glob by replacing wildcard segments
+ * with a literal placeholder, preserving literal segments and extensions.
+ */
+function globSample(glob) {
+	return glob.split('/').map(seg => {
+		if (seg === '**') return 'x';
+		return seg.replace(/\*/g, 'x');
+	}).join('/');
+}
+
+/**
+ * Heuristic overlap check between two glob patterns: true if either
+ * pattern's regex matches a sample derived from the other (or they are
+ * identical). This is a practical approximation of glob intersection —
+ * sufficient for detecting the common "same file" / "same directory tree"
+ * conflicts task `touches` frontmatter is meant to flag, without pulling in
+ * a full glob-intersection dependency.
+ */
+export function globsOverlap(a, b) {
+	if (a === b) return true;
+	const regexA = globToRegex(a);
+	const regexB = globToRegex(b);
+	return regexA.test(globSample(b)) || regexB.test(globSample(a));
+}
+
+/**
+ * Compute wave-parallel groups of dispatchable (`todo`) tasks for a project
+ * (task_176). Read/compute-only — never mutates task state or dispatches
+ * anything; the caller (Architect) proposes the result to the team lead for
+ * confirmation per `task-automation-flow`.
+ *
+ * Algorithm:
+ *  1. Parse every task file in the project (todo, in-flight, and done) to
+ *     build the full `depends_on` graph, keyed by numeric task id.
+ *  2. Detect cycles across that full graph — reachable from any todo task —
+ *     via DFS. A cycle is a hard error (`ok: false`), not a silently wrong
+ *     or empty wave.
+ *  3. Restrict candidates to tasks in the `todo` state (dispatchable).
+ *  4. Two candidates conflict (cannot share a wave) when either:
+ *       - a direct `depends_on` edge exists between them (either direction), or
+ *       - any of their `touches` globs overlap (see `globsOverlap`).
+ *     Tasks with no `touches` declared impose no glob-based conflict.
+ *  5. Greedily assign candidates (in ascending task-id order) to the first
+ *     wave with no conflicting member, opening a new wave otherwise.
+ *
+ * Returns `{ ok: true, project, waves: string[][] }` (array of arrays of
+ * task id strings, e.g. `[["170","172"],["175"]]`) or
+ * `{ ok: false, error }` on a missing project or a dependency cycle.
+ */
+export function computeWaves(project, { projectsRoot = 'projects' } = {}) {
+	if (!project) return { ok: false, error: 'project is required' };
+
+	const all = listAllTasks(projectsRoot);
+	const entry = all.find(e => e.project === project);
+	if (!entry) return { ok: false, error: `project not found: ${project}` };
+
+	const fileEntries = [
+		...entry.todos.map(file => ({ file, state: 'todo' })),
+		...entry.inFlight,
+		...entry.dones.map(file => ({ file, state: 'done' })),
+	];
+
+	/** @type {Map<string, {id: string, file: string, state: string, dependsOn: string[], touches: string[]}>} */
+	const nodes = new Map();
+
+	for (const { file, state } of fileEntries) {
+		const id = extractTaskId(file);
+		if (!id) continue;
+
+		const rootPath = path.join(entry.projectDir, file);
+		const filePath = fs.existsSync(rootPath) ? rootPath : path.join(doneTasksDir(entry.projectDir), file);
+		if (!fs.existsSync(filePath)) continue;
+
+		const raw = fs.readFileSync(filePath, 'utf-8');
+		const { meta } = parseFrontmatter(raw);
+
+		const dependsOnRaw = Array.isArray(meta.depends_on) ? meta.depends_on : [];
+		const dependsOn = dependsOnRaw.map(extractTaskId).filter(Boolean);
+		const touches = Array.isArray(meta.touches) ? meta.touches : [];
+
+		nodes.set(id, { id, file, state, dependsOn, touches });
+	}
+
+	// Cycle detection over the full depends_on graph (WHITE/GRAY/BLACK DFS).
+	const WHITE = 0, GRAY = 1, BLACK = 2;
+	const color = new Map();
+	for (const id of nodes.keys()) color.set(id, WHITE);
+
+	function dfs(id, stack) {
+		color.set(id, GRAY);
+		stack.push(id);
+		const node = nodes.get(id);
+		if (node) {
+			for (const depId of node.dependsOn) {
+				if (!nodes.has(depId)) continue; // dangling reference: not a cycle risk
+				if (color.get(depId) === GRAY) {
+					const cycleStart = stack.indexOf(depId);
+					return [...stack.slice(cycleStart), depId];
+				}
+				if (color.get(depId) === WHITE) {
+					const found = dfs(depId, stack);
+					if (found) return found;
+				}
+			}
+		}
+		stack.pop();
+		color.set(id, BLACK);
+		return null;
+	}
+
+	for (const id of nodes.keys()) {
+		if (color.get(id) !== WHITE) continue;
+		const cycle = dfs(id, []);
+		if (cycle) {
+			return { ok: false, error: `dependency cycle detected: ${cycle.map(c => `task_${c}`).join(' -> ')}` };
+		}
+	}
+
+	// Candidates: dispatchable (todo) tasks only.
+	const candidates = [...nodes.values()]
+		.filter(n => n.state === 'todo')
+		.sort((a, b) => Number(a.id) - Number(b.id));
+
+	if (candidates.length === 0) {
+		return { ok: true, project, waves: [] };
+	}
+
+	function conflicts(a, b) {
+		if (a.dependsOn.includes(b.id) || b.dependsOn.includes(a.id)) return true;
+		for (const globA of a.touches) {
+			for (const globB of b.touches) {
+				if (globsOverlap(globA, globB)) return true;
+			}
+		}
+		return false;
+	}
+
+	const waves = [];
+	for (const candidate of candidates) {
+		let placed = false;
+		for (const wave of waves) {
+			const hasConflict = wave.some(memberId => conflicts(candidate, nodes.get(memberId)));
+			if (!hasConflict) {
+				wave.push(candidate.id);
+				placed = true;
+				break;
+			}
+		}
+		if (!placed) waves.push([candidate.id]);
+	}
+
+	return { ok: true, project, waves };
 }
 
 /**

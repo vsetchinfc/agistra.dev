@@ -38,8 +38,66 @@ The following fields define the authoritative state and configuration for every 
 | `parked`                   | `true` \| `false` (or absent)                                                                                                                                 | `Developer Lead` when fail-count reaches 3 | A parked task is not auto-dispatched; requires team lead direction to resume                        |
 | tracker reference field    | format defined by the active tracker plugin (e.g. `github-issue: <url>` for the GitHub plugin) | `Developer Lead` at ticket creation | **Mandatory when a tracker is configured** (see Tracker Creation Obligation and Tracker Plugin Contract below); its presence signals the mirror-update obligation applies. Only projects with no tracker configured at all are exempt. This field is not retroactively required for existing tickets created before this rule — it applies to newly created tickets going forward. The exact field name and value format are specified by the active tracker plugin (see `trackers/<plugin-name>.md`). |
 | `token-budget`             | integer token count                                                                                                                                            | `Developer Lead` at ticket creation        | **Optional** per-ticket spend ceiling; absent means no budget enforcement applies to the ticket. See `## Token Spend` log convention below and the pre-dispatch check in `task-automation-flow` |
+| `depends_on`               | list of task ids (e.g. `task_170`, `170`)                                                                                                                       | `Developer Lead` at ticket creation        | **Optional** (task_176). Declares a hard ordering constraint: this ticket must not start until every listed id has landed. Backward compatible — absent on existing task files, which continue to parse normally. Consumed by `npm run task -- waves <project>` to exclude conflicting pairs from the same wave and to detect dependency cycles. |
+| `touches`                  | list of glob patterns (e.g. `pipelines/deploy/lib/*.js`)                                                                                                        | `Developer Lead` at ticket creation        | **Optional** (task_176). Declares the files/paths this ticket is expected to modify. Backward compatible — absent means no glob-overlap constraint is inferred for this ticket. Consumed by `npm run task -- waves <project>` to exclude tickets with overlapping `touches` from the same wave. |
 
 Agents update these fields on every lifecycle transition. The CLI keeps the filename infix in sync with `status:` when performing transitions.
+
+## State Transition CLI
+
+`task-cli.js` (`pipelines/deploy/lib/task-cli.js`, invoked via `npm run task --`) is the
+single mechanism agents use for task state reads and transitions — it replaces manual
+frontmatter edits, hand-renamed filenames, and hand-run `gh label` calls. It shares its
+frontmatter parser with `check:tickets` (`ticket-drift.js`), so local files and drift
+detection never disagree about how a task file is parsed.
+
+Commands:
+
+| Command | Effect |
+| --- | --- |
+| `npm run task -- read <id>` | Read a task file's frontmatter + body as JSON. |
+| `npm run task -- list <project> [--state S]` | List task files for a project, optionally filtered by state token. |
+| `npm run task -- transition <id> <new-state>` | Atomic, ordered transition (see below). |
+| `npm run task -- update-field <id> <field> <value>` | Edit one frontmatter field without a rename/transition. |
+| `npm run task -- waves <project>` | Compute eligible parallel groups of `todo` tasks (task_176). Read/compute-only — never dispatches or transitions state. Output: `{ ok, project, waves: string[][] }`, one inner array per group of mutually independent, non-overlapping task ids. Errors (`ok: false`) on a `depends_on` cycle. See `task-automation-flow` Batch Mode for how this feeds the team-lead confirmation gate. |
+| `npm run task -- append-section <id> <section-name> [content]` | Append markdown content under a `## <section-name>` heading in the task file's body (creates the heading if absent, appends beneath it if present) — never touches frontmatter or filename. If `content` is omitted, content is read from stdin (use for multi-line markdown via a heredoc, avoiding shell-escaping). Primary use: Tester writing the `## Gap Closure` section on a FAIL/PARTIAL PASS verdict (task_177) — see `qa-ticket-workflow`. |
+| `npm run task -- qa-report <id> <verdict> [--gaps <path>] [--findings <path>]` | Compose and post a QA report to the linked GitHub issue and (if an open PR is discoverable for the current branch) the PR, re-fetch the comment list to confirm each post landed (non-zero exit if not), append the local `## QA Report`/`## Gap Closure` sections, and perform the matching state transition — `state:qa-passed` on PASS, or `state:changes-requested` + the correct `qa-fail-N` label on FAIL/PARTIAL PASS (task_186). Collapses Tester's "post comment, verify it landed, transition state, sync labels" sequence into one call with the same loud-fail/verify-before-success contract as `transition`. See `qa-ticket-workflow`. |
+
+`<id>` accepts `<project>#<query>` (task number or slug fragment), a bare query searched
+across every project, or a literal path to the task file.
+
+**`--projects-root <path>` (task_187)** — every command above accepts this global flag
+(anywhere in the argument list, before or after the command name). It reliably resolves
+task files at `<path>` regardless of which repo/directory the CLI process itself is
+running from — the fix for the recurring cross-repo failure (Tester/Builder running the
+CLI from the source repo, `setchin-agent-profiles`, against task files that live under
+the deployed hub's `projects/` directory). A missing value or a path that doesn't exist
+is a clean, non-zero-exit error (`--projects-root not found: <path>`) — never a silent
+fall-back to the cwd-relative default and never a partial write. There is no manual
+fallback for cross-repo resolution; always pass `--projects-root` when the task file's
+location differs from the CLI process's own cwd.
+
+**`transition` is atomic and ordered:**
+
+1. update `status:` frontmatter
+2. rename the filename infix to match
+3. when a tracker reference field is present in frontmatter (e.g. `github:` /
+   `github-issue:`), sync the tracker label via `gh` (remove the old `state:*` label,
+   add the new one)
+4. post-verify the label landed via a follow-up `gh issue view` — reports explicit
+   failure if the new label is not present (no silent success)
+
+Output is always JSON on stdout. Exit code is `0` only when every step that ran
+succeeded; any partial failure (e.g. local write succeeds but the tracker label sync or
+post-verify fails) exits non-zero with the specific failed step named in the output, and
+the local write remains in place (local write is authoritative and happens first, per
+the Mirror Update Obligation below).
+
+Backend note: `task-cli.js` implements the repo-files task store operations from the
+Storage Plugin Contract in `agent-foundations/SKILL.md` (`read-task`, `list-tasks`,
+`update-task-fields`, `transition-state`). A future storage backend (e.g. an obsidian
+plugin) would implement the same operations behind this CLI's module boundary without
+changing the CLI surface agents call.
 
 ## Token Spend Log Convention
 
@@ -133,9 +191,9 @@ When creating a new ticket for a project that has a tracker configured, a matchi
 
 When a tracker is configured for a project — signalled by a tracker reference field in the task file frontmatter (e.g. `github-issue:` for the GitHub plugin) or a workspace-level tracker config — **every lifecycle transition must update both the local task file and the corresponding tracker record as part of the same transition.**
 
-- The **local write is authoritative and happens first**: update `status:` frontmatter, `fail-count:`, and filename infix.
-- The **mirror write is a required follow-on step**: run the active plugin's update-record procedure (defined in `trackers/<plugin-name>.md`) to sync the state change, fail-counter update, and any required comments (e.g. QA reports) to the tracker record.
-- A transition is **not complete** until the mirror write succeeds **or** the failure is explicitly recorded for retry.
+- The **local write is authoritative and happens first**: update `status:` frontmatter, `fail-count:`, and filename infix. Run this via the state transition CLI (`npm run task -- transition <id> <new-state>`, see State Transition CLI above) rather than by hand.
+- The **mirror write is a required follow-on step**: the same CLI invocation syncs and post-verifies the tracker label (currently the GitHub plugin's `state:*` label via `gh`) as part of the atomic transition — no separate manual step is needed for the GitHub tracker. Comments (e.g. QA reports) still use the active plugin's update-record procedure directly (defined in `trackers/<plugin-name>.md`).
+- A transition is **not complete** until the mirror write succeeds **or** the failure is explicitly recorded for retry — the CLI reports this via a non-zero exit code and a named failed step; do not treat a non-zero exit as success.
 - "I updated the local file" is not a complete transition when a tracker is configured.
 
 **Failed mirror write handling:**
@@ -167,7 +225,7 @@ When a tracker is configured for a project — signalled by a tracker reference 
 
 `state:qa-passed` is normally reached via `QA`. The sole exception is when the ticket's verifier field is set to `Architect`: in that case the `Developer Lead` (acting as verifier) transitions directly from `state:ready-for-review` to `state:qa-passed` after reviewing engineering quality and verifying all ACs — no separate QA phase is required. In all other verifier paths, a `Developer Lead` completing an engineering review must advance to `state:ready-for-qa`, never directly to `state:qa-passed`.
 
-**On every state transition:** update the local task file first (frontmatter `status:`, filename infix, `fail-count:` if applicable). If a tracker is configured, immediately follow with the mirror update using the active plugin's update-record procedure. See Mirror Update Obligation above.
+**On every state transition:** run the state transition CLI — `npm run task -- transition <id> <new-state>` — instead of manually editing the frontmatter, renaming the file, and calling the tracker plugin as separate steps. The CLI performs the local write (frontmatter `status:` + filename infix) and, when a tracker is configured, the mirror update and post-verify in one atomic, ordered call. See State Transition CLI below and Mirror Update Obligation above.
 
 ## Typical Direct Lane Flow
 
@@ -196,8 +254,8 @@ All of these should be true:
 - required migrations, edge functions, seed data, or environment setup are ready for QA
 - the target QA environment is live, reachable, and configured for the intended handoff path
 - the Developer -> QA handoff payload is complete
-- **the local task file is renamed from `_in-progress_` to `_ready-for-qa_` (update the filename infix to match `status: state:ready-for-qa`)**
-- **tracker record is updated** (when tracker configured): run the active plugin's update-record procedure to reflect the new state (see `trackers/<plugin-name>.md`)
+- **the state transition CLI has been run** (`npm run task -- transition <id> state:ready-for-qa`) — this atomically updates `status:` frontmatter, renames the filename infix, and (when a tracker is configured) syncs and verifies the tracker label in one ordered operation; do not hand-rename the file or hand-edit labels
+- **tracker record is updated** (when tracker configured): the same CLI invocation performs this — see State Transition CLI below
 
 ### Before `state:qa-passed`
 
