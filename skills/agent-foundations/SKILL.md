@@ -210,26 +210,38 @@ Before reading `memory/<agent>.md` or any other relative-path file at Session St
 
    Probe the single path that matches your adapter. Do not try all four paths; the adapter is unambiguous from the system prompt you have already received.
 
-2. If the file resolves, cwd is confirmed as the hub root. Proceed with the normal Session Start read sequence.
+2. If the file resolves, cwd is confirmed as the hub root. **Immediately capture that cwd as an absolute path — the pinned hub root — before proceeding.** Do not re-derive it later from a fresh `pwd`; store it once, here, and carry it forward for the rest of the session. Proceed with the normal Session Start read sequence.
 3. If the file does not resolve, **stop**. Do not proceed with relative-path reads. Report:
    - The working directory that was active (use `pwd` / `$PWD` or the shell equivalent).
    - Which file was attempted and did not resolve.
    - A one-line instruction to the team lead: "Relaunch this agent from the hub root directory (`<expected root path>`) and retry."
    - Do not guess at the root, do not silently skip startup reads, do not attempt to resolve the path by trial and error.
 
+### Pin and Reuse (post-probe)
+
+**The law:** The probe verifies cwd once. It does not, by itself, protect any read or write that happens later in the same session after cwd changes. Once step 2 above succeeds, the pinned hub root is the single source of truth for every subsequent relative-path memory or skill operation — not whatever the shell's working directory happens to be at that later moment.
+
+1. **Pin immediately.** The instant the probe resolves, record the absolute path as the pinned hub root (e.g. `D:\dev\agistra.dev`). This is a one-time capture, done once per session, at Session Start — never re-derived mid-session.
+2. **Resolve every later relative path against the pin, not live cwd.** Every subsequent read or write to `memory/<agent>.md`, any `skills/**` file, or any other hub-relative path must be resolved by joining the pinned hub root with the relative path — regardless of what directory a later Bash command, `cd`, or dispatch instruction has made current. If the active shell cwd and the pinned hub root ever disagree, the pinned hub root wins for hub-relative paths.
+3. **Cross-repo dispatch case — the two paths are never conflated.** It is a normal, legitimate pattern for a dispatch to hand an agent a working directory in a different repo for code changes (e.g. Architect tells Builder "working directory: `<source-of-truth code repo>`" because that is where the ticket's code lives). That code working directory and the pinned hub root are two distinct, independently-tracked values:
+   - The **code working directory** is wherever the dispatch says the ticket's code lives, and is used for `git`, build, lint, and test commands during implementation.
+   - The **pinned hub root** is wherever Session Start's probe succeeded, and is used for every `memory/<agent>.md` and `skills/**` read or write, for the entire session, with no exceptions.
+   - A dispatch instruction that sets cwd to a code repo for implementation work never overrides, refreshes, or replaces the pinned hub root. An agent should never need to be told where its own memory file lives — that is resolved entirely from the Session Start pin, independent of any later cwd the dispatch prompt establishes for code work.
+4. **No new probe.** This pin-and-reuse step adds no new adapter probe and does not repeat the Session Start check above — it only governs what happens with the root that check already confirmed.
+
 ### Scope
 
-This check runs once per Session Start, before step 1 of the read sequence. It does not repeat during the session. It applies to all four agents (Architect, Builder, Tester, Router) regardless of invocation path.
+This check runs once per Session Start, before step 1 of the read sequence. It does not repeat during the session. It applies to all four agents (Architect, Builder, Tester, Router) regardless of invocation path. The pin captured in "Pin and Reuse" above persists for the full session and governs every relative-path memory/skill operation after the initial check, including any operation that happens after the agent's cwd changes for code work in a different repo.
 
 ### Adapter Notes
 
-All four adapters face the same cwd risk. The probe path differs per adapter (see Protocol step 1 table above); the pass/fail logic is identical.
+All four adapters face the same cwd risk. The probe path differs per adapter (see Protocol step 1 table above); the pass/fail logic is identical. In every adapter below, once the probe succeeds, pin the resolved absolute path per "Pin and Reuse" above and reuse that pin for the rest of the session — including after a later dispatch or Bash command changes cwd into a different repo (e.g. a code working directory) for legitimate code-editing work. The pin is never refreshed from a later `pwd`; it is captured once, at Session Start, per adapter, as described here.
 
-- **Claude Code (direct session):** cwd is set by where the user launched `claude`; usually the hub root, but not guaranteed when the user launched from a subdirectory. Probe: `.claude/agents/<name>.md`.
-- **Cursor:** cwd is set by the editor's workspace root; usually correct, but subagent spawns may inherit a different working directory. Probe: `.cursor/agents/<name>.md`.
-- **GitHub Copilot:** cwd is set by the editor's workspace root. Agent files use the `.agent.md` suffix, not plain `.md`. Probe: `.github/agents/<name>.agent.md`.
-- **Codex:** cwd is set by the Codex environment. Agent files are TOML, not Markdown. Probe: `.codex/agents/<name>.toml`.
-- **Agent-tool subagent (any adapter):** cwd is set by the harness, not the parent agent's cwd. The harness may resolve to a nested path (observed: `agistra.dev/projects/setchin-agent-profiles/` instead of `agistra.dev/`) — this is the primary failure mode this protocol guards against. The same adapter-specific probe path applies; the subagent knows which adapter it is from its system prompt.
+- **Claude Code (direct session):** cwd is set by where the user launched `claude`; usually the hub root, but not guaranteed when the user launched from a subdirectory. Probe: `.claude/agents/<name>.md`. Once resolved, pin that absolute path; a later `cd` into a code repo (e.g. via `Bash`) for implementation work never changes the pinned hub root used for `memory/<agent>.md` and `skills/**` reads/writes.
+- **Cursor:** cwd is set by the editor's workspace root; usually correct, but subagent spawns may inherit a different working directory. Probe: `.cursor/agents/<name>.md`. Once resolved, pin that absolute path; if a later task switches the active workspace or terminal cwd to a code repo, memory/skill operations still resolve against the pinned hub root, not the new terminal cwd.
+- **GitHub Copilot:** cwd is set by the editor's workspace root. Agent files use the `.agent.md` suffix, not plain `.md`. Probe: `.github/agents/<name>.agent.md`. Once resolved, pin that absolute path; a later terminal command targeting a different repo for code changes does not move the pin.
+- **Codex:** cwd is set by the Codex environment. Agent files are TOML, not Markdown. Probe: `.codex/agents/<name>.toml`. Once resolved, pin that absolute path; a later environment/session command that changes into a code repo for implementation work does not move the pin.
+- **Agent-tool subagent (any adapter):** cwd is set by the harness, not the parent agent's cwd. The harness may resolve to a nested path (observed: `agistra.dev/projects/setchin-agent-profiles/` instead of `agistra.dev/`) — this is the primary failure mode this protocol guards against. The same adapter-specific probe path applies; the subagent knows which adapter it is from its system prompt. This is also the exact cross-repo dispatch case from "Pin and Reuse": if a dispatch prompt additionally specifies a code working directory in a different repo (e.g. `setchin-agent-profiles`) for the ticket's code changes, that code working directory is used only for `git`/build/lint/test commands — it is never confused with, and never overwrites, the pinned hub root used for every `memory/<agent>.md` and `skills/**` operation in that same session.
 
 ## Security Baseline
 
