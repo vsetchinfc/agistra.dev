@@ -1,4 +1,14 @@
-# Agistra Dev (V1.0.0)
+# Agistra Dev
+
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)](VERSION)
+[![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg)](package.json)
+[![Python](https://img.shields.io/badge/Python-3-3776AB.svg)](tools/export-letter.py)
+
+[![Claude Code](https://img.shields.io/badge/Claude_Code-supported-blue.svg)](.claude/agents)
+[![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-supported-blue.svg)](.github/agents)
+[![Cursor](https://img.shields.io/badge/Cursor-supported-blue.svg)](.cursor/agents)
+[![Codex](https://img.shields.io/badge/Codex-supported-blue.svg)](.codex/agents)
 
 > Agistra Dev AI Team — Architect, Builder, Tester, and Router — that plan, build, test, and coordinate your software projects with shared memory, a live task queue, GitHub Issues and Telegram integration, ticket lifecycle tracking, and a project health scanner that keeps the whole team on the same page across every session and project.
 
@@ -87,7 +97,7 @@ Each agent runs in its own Claude Code workspace with its own identity, memory f
 
 ## Built with Agistra
 
-![vladsetchin.me preview](cli/assets/vlad.setchin-me.png)
+![vladsetchin.me preview](pipelines/deploy/assets/vlad.setchin-me.png)
 
 **[vladsetchin.me](https://vladsetchin.me)** — a personal portfolio and blog, planned and built end-to-end through Agistra's own ticket workflow: GitHub issues, task files in `projects/vladsetchin.me/`, feature branches, and PRs, the same loop described above. Design decisions, content passes, and ongoing iteration all run through the same Architect → Builder → Tester lifecycle as any other project added with `npm run scan`.
 
@@ -104,7 +114,7 @@ cd my-hub
 
 ### 2. Claude, Cursor, GitHub Copilot, Codex
 
-Out of the box, Agistra provides agent definitions for claude, cursor, GitHub Copilot, and Codex. You can remove the ones you don't need. See .claude, cursor, .github, and .codex folders for details.
+Out of the box, Agistra provides agent definitions for claude, cursor, GitHub Copilot, and Codex. You can remove the ones you don't need. See .claude, .cursor, .github, and .codex folders for details.
 
 The memory files in `memory/` are shared between all models — if you switch from Claude to Cursor, the same memory carries over. Skills are also model-agnostic — if you switch models, the same skills load.
 
@@ -204,7 +214,7 @@ npm run launch   -- <project>     # launch Claude in the project directory
 Target a specific task:
 
 ```powershell
-node cli/index.js dispatch <project> --task 6
+node pipelines/deploy/index.js dispatch <project> --task 6
 ```
 
 Advance and immediately launch Claude on the next task:
@@ -216,7 +226,7 @@ npm run advance -- <project> && npm run launch -- <project>
 Preview what `scan` would generate without writing files:
 
 ```powershell
-node cli/index.js scan <project> --dry-run
+node pipelines/deploy/index.js scan <project> --dry-run
 ```
 
 ### Install an optional skill
@@ -229,6 +239,28 @@ npm run install-skill -- frontend-design
 
 This fetches the named skill directly from its declared source into this hub's own `skills/<name>/`. Re-running is idempotent — if nothing changed upstream, it reports `unchanged` rather than rewriting the file. An agent profile that references an optional skill works fine before you install it; the skill is simply treated as not yet available, not as an error.
 
+### Nightly dreaming (Windows only)
+
+On Windows, `npm run setup` asks whether to enable nightly automated end-of-day memory
+consolidation — a Windows Scheduled Task that runs `claude -p "Good night Team" --model
+claude-haiku-4-5-20251001` once a day (off-peak, local time), with its working directory
+pinned to this hub root. This is the same `dreaming` skill trigger you'd normally say by
+hand at the end of a session; the task exists so it doesn't depend on remembering to say it.
+This prompt does not appear on macOS/Linux (Mac/Linux support is deferred to a future release).
+
+- **Opt-in, not default-on.** Declining (or pressing Enter, since the default answer is No)
+  skips registration entirely — setup still completes normally either way.
+- **Turning it off again:**
+  ```powershell
+  npm run setup -- --disable-nightly-dreaming
+  ```
+  Removes the registered Scheduled Task (if any) without running the rest of the interactive
+  wizard, and updates `workspace.config.json` so a future `npm run setup` re-run won't
+  re-offer it as already-enabled. You can also decline it directly the next time `npm run
+  setup` prompts you.
+- **Retroactive offer for existing hubs:** if your hub was set up before this shipped, `npm
+  run doctor` surfaces a warning with a hint to re-run `npm run setup` and opt in.
+
 ### Check hub health
 
 ```powershell
@@ -238,6 +270,8 @@ npm run doctor
 Runs a battery of checks against the hub (config files, `.mcp.json`, agent profiles, relay wiring if enabled, etc.) and prints a pass/fail/warn report. Missing `memory/<agent>.md` files are scaffolded automatically in the same run — the required agent list is derived from whatever agent profiles are actually deployed under `.claude/agents/`, so doctor never invents memory files for agents that aren't installed in this hub. Existing memory files are never touched.
 
 **`.gitattributes` check (check 3):** doctor verifies the hub's `.gitattributes` declares `tools/*.sh eol=lf` and `tools/*.txt eol=lf`, in addition to the existing `merge=ours` personalization entries. These rules force the shell scripts under `tools/` to stay LF-terminated even on a Windows checkout with `core.autocrlf=true` — without them, git's checkout-time normalization injects `\r` bytes that break `set -euo pipefail` and other bash syntax. If your hub was deployed before this rule existed and already committed `tools/*.sh` with CRLF line endings, redeploying alone will not fix files already stored in git's object store with the wrong line endings — the `.gitattributes` rule only governs future checkouts. After redeploying (which updates `.gitattributes`), run `git add --renormalize .` once to rewrite the affected blobs back to LF, then commit the result.
+
+**Nightly dreaming check (check 18, Windows only):** doctor never registers the Scheduled Task itself — every check that needs your consent for a side effect hints back at `npm run setup` rather than acting on its own. It warns with a "not configured" hint on hubs that predate this feature (see [Nightly dreaming](#nightly-dreaming-windows-only) above), skips cleanly when you've explicitly declined, passes when the task is confirmed registered, and warns on drift if `workspace.config.json` says it's enabled but the Scheduled Task is no longer actually registered (e.g. removed manually via Task Scheduler).
 
 ---
 
@@ -250,6 +284,8 @@ Task files are markdown with YAML front matter. The front matter tells Claude wh
 agent: builder
 mode: engineering
 model: claude-sonnet-4-6
+status: state:ready-for-implementation
+verifier: Tester
 finding-id: tst-low-coverage
 skills:
   - scan-tst

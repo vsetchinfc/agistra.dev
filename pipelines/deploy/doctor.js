@@ -19,6 +19,7 @@ import { CLAUDE_SETTINGS_PATH, readJsonSafe } from './wizard.js';
 import { DEFAULT_DAEMON_PORT } from './relay/core/config.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
 import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
+import { isNightlyDreamingTaskRegistered, NIGHTLY_DREAMING_TASK_NAME } from './lib/nightly-dreaming.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -367,17 +368,32 @@ function checkHubType({ hubRoot, fsMod }) {
 	const agentIds = discoverDeployedAgentIds({ hubRoot, fsMod });
 	const agentSet = new Set(agentIds);
 
-	if (!hubType || !['dev', 'ops', 'dev:sub'].includes(hubType)) {
+	if (!hubType || !['dev', 'dev:graph', 'ops', 'dev:sub'].includes(hubType)) {
 		// Warn and fall back to dev checks
 		const missingDev = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
 		if (missingDev.length > 0) {
 			return warn(15, 'hub type',
 				`hubType not set — defaulting to dev checks; missing profiles: ${missingDev.join(', ')}`,
-				'set hubType in workspace.config.json ("dev", "ops", or "dev:sub"), then redeploy');
+				'set hubType in workspace.config.json ("dev", "dev:graph", "ops", or "dev:sub"), then redeploy');
 		}
 		return warn(15, 'hub type',
 			'hubType not set in workspace.config.json — defaulting to dev verification',
-			'set hubType: "dev", "ops", or "dev:sub" in workspace.config.json');
+			'set hubType: "dev", "dev:graph", "ops", or "dev:sub" in workspace.config.json');
+	}
+
+	if (hubType === 'dev:graph') {
+		const missingAgents = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
+		if (missingAgents.length > 0) {
+			return fail(15, 'hub type',
+				`hubType=dev:graph but missing profiles: ${missingAgents.join(', ')}`,
+				'run: npm run package:dev:graph then unzip to reinstall the hub');
+		}
+		if (agentSet.has('cao')) {
+			return warn(15, 'hub type',
+				'hubType=dev:graph but cao profile found — unexpected in a dev:graph hub',
+				'remove cao or change hubType in workspace.config.json');
+		}
+		return pass(15, 'hub type', 'hubType=dev:graph — architect, builder, tester, router all present');
 	}
 
 	if (hubType === 'dev:sub') {
@@ -421,6 +437,53 @@ function checkHubType({ hubRoot, fsMod }) {
 }
 
 /**
+ * Check 18: nightly dreaming Scheduled Task readiness (task_208 / issue #381).
+ *
+ * Windows-only, applies uniformly across hub tiers (not gated by hubType) — a core
+ * check, not a "*.doctor-plugin.js" tier plugin, so it always runs alongside whichever
+ * optional tier-specific plugin checks (ids 16/17) also run; id 18 is the next free
+ * slot to avoid colliding with those.
+ *
+ * This is the "retroactive catch-up" backfill AC4 requires for hubs set up before this
+ * feature shipped: it never registers the task itself (doctor.js has no interactive
+ * prompting anywhere — every other check in this file that needs customer consent for a
+ * side effect, e.g. checkRelayMcp/checkTelegramConfig, warns with a hint pointing back at
+ * `npm run setup` rather than acting unilaterally) — silently registering a background
+ * task that spends API usage without being asked is exactly what this feature's own
+ * scope decision (task_208) rules out.
+ */
+function checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform = process.platform }) {
+	if (platform !== 'win32') {
+		return skip(18, 'nightly dreaming', 'Windows-only feature — not applicable on this platform');
+	}
+	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
+	if (skipReason) return skip(18, 'nightly dreaming', skipReason);
+
+	const nightlyDreaming = config?.nightlyDreaming;
+	if (!nightlyDreaming) {
+		// Never configured — the exact hubs-set-up-before-this-shipped case AC4 targets.
+		// No need to query schtasks to know the answer here.
+		return warn(18, 'nightly dreaming',
+			'not configured — opt-in nightly end-of-day memory consolidation is available',
+			'run: npm run setup (enable nightly automated end-of-day memory consolidation)');
+	}
+	if (nightlyDreaming.enabled !== true) {
+		return skip(18, 'nightly dreaming', 'disabled by choice (declined during setup)');
+	}
+
+	// Config says enabled — cross-check reality rather than trusting the config value
+	// (VBR: "config exists" != "feature works"). Covers drift, e.g. the task was
+	// manually removed via the Task Scheduler GUI after setup registered it.
+	const taskName = nightlyDreaming.taskName ?? NIGHTLY_DREAMING_TASK_NAME;
+	if (isNightlyDreamingTaskRegistered({ taskName, execFn })) {
+		return pass(18, 'nightly dreaming', `Scheduled Task "${taskName}" registered`);
+	}
+	return warn(18, 'nightly dreaming',
+		`enabled in workspace.config.json but Scheduled Task "${taskName}" is not registered`,
+		'run: npm run setup (re-enable nightly dreaming to re-register the Scheduled Task)');
+}
+
+/**
  * Checks 16+: optional tier-specific readiness (dev:sub, ops, publish hubs only).
  *
  * Manifest-driven, not hardcoded: some hub tiers ship one or more additional
@@ -456,11 +519,22 @@ async function checkOptionalTierReadiness({
 	const results = [];
 	for (const file of pluginFiles) {
 		const mod = await import(`./lib/${file}`);
-		results.push(await mod.check({
+		const result = await mod.check({
 			hubRoot, fsMod, execFn, platform, env, fetchFn,
 			readHubConfig, pass, fail, warn, skip,
 			...pluginOptions,
-		}));
+		});
+		// A plugin's check() may return either a single check object (the
+		// original convention, used by most plugins) or an array of check
+		// objects (used by any plugin that legitimately reports more than one
+		// check per hub). Flatten either shape into `results` so
+		// formatReport() always sees individual check objects, never a
+		// nested array.
+		if (Array.isArray(result)) {
+			results.push(...result);
+		} else {
+			results.push(result);
+		}
 	}
 	return results;
 }
@@ -528,6 +602,7 @@ export async function runChecks({
 		checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }),
 		checkProjectsDir({ hubRoot, fsMod }),
 		checkHubType({ hubRoot, fsMod }),
+		checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform }),
 		...(await checkOptionalTierReadiness({ hubRoot, fsMod, execFn, platform, env, fetchFn, pluginOptions })),
 	];
 }

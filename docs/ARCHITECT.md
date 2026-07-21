@@ -61,6 +61,14 @@ QA needed?     → dispatch Tester
 
 ---
 
+## Sample Prompts
+
+- `architect this: we need to add rate limiting to the public API — walk through the design options and produce an ADR.` (triggers `architecture-mode`)
+- `scope this: the client wants a CSV export added to the reporting dashboard — give me an estimate and a draft proposal.` (triggers `planner-mode`)
+- `good morning — give me the standup brief.` (triggers `morning-standup`, pulls HOT state from Builder, Tester, and Router)
+
+---
+
 ## Memory
 
 Live state lives in `memory/architect.md` — HOT / WARM / COLD tiers. Read at the start of every session.

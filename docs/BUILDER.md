@@ -73,6 +73,14 @@ Each lens enforces a specific readiness gate before `state:ready-for-qa`.
 
 ---
 
+## Sample Prompts
+
+- `implement projects/my-project/task_12_todo_add-csv-export.md` (loads `software-engineer-mode`, runs the read → branch → implement → validate → PR workflow)
+- `debug — the checkout flow's test suite is failing on my-project, walk through the six-step triage loop.` (triggers `debugging-and-error-recovery`, applies Stop-the-Line)
+- `this ticket touches the /api/users RPC contract — apply csv-lens before marking ready-for-qa.` (activates the `csv-lens` domain lens gate)
+
+---
+
 ## Memory
 
 Live state lives in `memory/builder.md` — HOT / WARM / COLD tiers. Read at the start of every session.

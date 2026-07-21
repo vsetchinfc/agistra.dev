@@ -62,6 +62,14 @@ Free-form outbound messages are refused.
 
 ---
 
+## Sample Prompts
+
+- `Inbound from the remote team: "need an ADR on the new auth flow" — classify and dispatch.` (routes to Architect per the Design/planning row)
+- `Ticket task_12 just moved to state:ready-for-qa on a remote-team ticket — relay the outbound notification.` (Outbound Rules, `ticket-lifecycle-mode`)
+- `Inbound message: "can we approve the pricing change?" — this needs a decision, not a dispatch.` (routes to HOT memory → team lead per the Decision required row)
+
+---
+
 ## Memory
 
 Live state lives in `memory/router.md` — HOT / WARM / COLD tiers. HOT = pending inbound, failed outbound. Read at the start of every session.

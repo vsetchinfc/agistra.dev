@@ -17,6 +17,11 @@ import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
 import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
+import {
+	NIGHTLY_DREAMING_TASK_NAME,
+	registerNightlyDreamingTask as registerNightlyDreamingTaskDefault,
+	removeNightlyDreamingTask as removeNightlyDreamingTaskDefault,
+} from './lib/nightly-dreaming.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -50,6 +55,80 @@ async function defaultSetupTierPlugin(opts) {
 // Present when running `npm run setup` from inside the setchin-agent-profiles repo itself.
 // Absent in a deployed hub (agents/profiles/ is a source-repo-only concept there).
 const SOURCE_PROFILES_ROOT = path.resolve(__dirname, '..', '..', 'agents', 'profiles');
+
+/**
+ * Read the static hub-type config file injected into the archive by the packaging
+ * profile (e.g. package-dev-graph.js → pipelines/deploy/.hub-config.json).
+ * Returns the parsed object, or null if absent or unparseable.
+ *
+ * Used by setup.js to determine the hub tier on first run (before
+ * workspace.config.json exists and prev.hubType is set).
+ *
+ * @param {string} [deployDir]  Directory containing .hub-config.json (defaults to __dirname).
+ * @returns {{ hubType?: string }|null}
+ */
+export function readHubConfig(deployDir = __dirname) {
+	const p = path.join(deployDir, '.hub-config.json');
+	if (!fs.existsSync(p)) return null;
+	try {
+		return JSON.parse(fs.readFileSync(p, 'utf-8'));
+	} catch {
+		return null;
+	}
+}
+
+/**
+ * Resolve the hubType to write into workspace.config.json, reconciling a
+ * previously-stored hubType (from an existing workspace.config.json) against
+ * the packaged tier sentinel (.hub-config.json, read via readHubConfig()).
+ *
+ * A stored hubType is trusted as-is when there is nothing to compare it
+ * against (no packaged sentinel — e.g. a "dev" hub) or when it agrees with
+ * the packaged value (the common no-op rerun case — no prompt, no output).
+ * When the two disagree, the customer is warned and asked whether to correct
+ * hubType to the packaged value. Neither value is ever silently applied over
+ * the other: a stored hubType is never overridden without asking, and a
+ * disagreeing packaged value is never ignored without saying so.
+ *
+ * task_200: this reconciliation closes the gap where a stale
+ * workspace.config.json — e.g. left over from an earlier "dev" setup run in
+ * the same target directory, which a fresh archive's unzip-merge never
+ * removes because the archive itself never ships workspace.config.json —
+ * silently locked in the wrong tier forever with no way to recover except
+ * hand-editing the file.
+ *
+ * @param {object} deps
+ * @param {string|undefined} deps.prevHubType      hubType from an existing workspace.config.json, if any.
+ * @param {string|undefined} deps.packagedHubType  hubType from readHubConfig(), if any.
+ * @param {function(string, boolean=): Promise<boolean>} deps.askYN
+ * @param {function(string): void} deps.warn        Writer for warning lines (e.g. process.stdout.write).
+ * @returns {Promise<string>} the resolved hubType to store.
+ */
+export async function resolveHubType({ prevHubType, packagedHubType, askYN, warn }) {
+	if (!prevHubType) {
+		// First run (or an unparsable/absent previous config) — trust the
+		// packaged sentinel if present, else fall back to the free "dev" tier.
+		return packagedHubType ?? 'dev';
+	}
+	if (!packagedHubType || packagedHubType === prevHubType) {
+		// No packaged sentinel to compare against, or it agrees with the
+		// stored value — nothing to reconcile, no prompt.
+		return prevHubType;
+	}
+	// Mismatch: a stored hubType exists and disagrees with this package's own
+	// tier. Never silently let either value win — warn and ask.
+	warn(
+		`\n  WARNING: stored hub type "${prevHubType}" does not match this package's hub type "${packagedHubType}".\n` +
+		'  This can happen if an old workspace.config.json survived from a previous setup in this same directory.\n',
+	);
+	const acceptPackaged = await askYN(
+		`Correct hubType to the packaged value ("${packagedHubType}")?`,
+		true,
+	);
+	if (acceptPackaged) return packagedHubType;
+	warn(`  Keeping stored hubType "${prevHubType}". Re-run setup later if this was unintentional.\n`);
+	return prevHubType;
+}
 
 // ── Pure helpers (exported for testing) ───────────────────────────────────────
 
@@ -273,17 +352,33 @@ export const TOKEN_SENTINEL = '[token set — press Enter to keep]';
  *   Absolute path to the workspace root being configured.
  * @param {function(): {installed: boolean, authenticated: boolean}} [deps.checkGh]
  *   Injectable `gh` CLI probe (see checkGhCli). Defaults to the real probe.
+ * @param {function(string=): ({hubType?: string}|null)} [deps.readHubConfig]
+ *   Injectable packaged-tier sentinel reader (see readHubConfig). Defaults to the real
+ *   reader, which reads .hub-config.json from disk (not via fsMod — see readHubConfig's
+ *   own doc comment for why it is a separate, always-real-fs read).
+ * @param {string} [deps.platform]
+ *   Injectable process.platform, used only to pick the right `gh` CLI install
+ *   instructions to print when it's missing. Defaults to the real process.platform.
+ * @param {function} [deps.registerNightlyDreamingTask]
+ *   Injectable nightly dreaming Scheduled Task registration (see lib/nightly-dreaming.js).
+ * @param {function} [deps.removeNightlyDreamingTask]
+ *   Injectable nightly dreaming Scheduled Task removal (see lib/nightly-dreaming.js).
  * @returns {function(): Promise<void>}
  */
 export function createRun({
 	ask,
 	askYN,
+	askSecret,
 	line,
 	fsMod,
 	cliOutputRoot,
 	checkGh = checkGhCli,
+	readHubConfig: readHubConfigFn = readHubConfig,
 	setupTierPlugin = defaultSetupTierPlugin,
 	tierPluginPort,
+	platform = process.platform,
+	registerNightlyDreamingTask = registerNightlyDreamingTaskDefault,
+	removeNightlyDreamingTask = removeNightlyDreamingTaskDefault,
 }) {
 	return async function run() {
 		// ── Read existing config (pre-populate defaults) ──────────────────────────
@@ -375,6 +470,19 @@ export function createRun({
 				process.stdout.write(
 					'  WARNING: `gh` CLI not found on PATH. Builder/Tester will not be able to create PRs until it is installed.\n',
 				);
+				if (platform === 'win32') {
+					process.stdout.write(
+						'  Install it with:  winget install --id GitHub.cli --source winget\n',
+					);
+				} else if (platform === 'darwin') {
+					process.stdout.write(
+						'  Install it with:  brew install gh\n',
+					);
+				} else {
+					process.stdout.write(
+						'  Install instructions for your platform: https://github.com/cli/cli/blob/trunk/docs/install_linux.md\n',
+					);
+				}
 			} else if (!authenticated) {
 				process.stdout.write(
 					'  WARNING: `gh` CLI is installed but not authenticated. Run `gh auth login` before Builder/Tester create PRs.\n',
@@ -425,14 +533,25 @@ export function createRun({
 			}
 		}
 
+		// hubType controls which agent profiles are expected by `npm run doctor`.
+		//   "dev"       — expects: architect, builder, tester, router (no cao)
+		//   "dev:graph" — same profiles as dev; Graphify setup and doctor checks active
+		//   "ops"       — expects: architect, builder, tester, router, cao
+		// On first setup in a packaged archive, .hub-config.json (injected by the
+		// packaging profile) provides the hub type rather than defaulting to "dev".
+		// A stored hubType that disagrees with the packaged sentinel is never
+		// silently trusted — resolveHubType() warns and asks (task_200).
+		const hubType = await resolveHubType({
+			prevHubType: prev.hubType,
+			packagedHubType: readHubConfigFn()?.hubType,
+			askYN,
+			warn: (msg) => process.stdout.write(msg),
+		});
+
 		const config = {
 			user: { name: userName, role: userRole },
 			org: orgName,
-			// hubType controls which agent profiles are expected by `npm run doctor`.
-			//   "dev"  — expects: architect, builder, tester, router (no cao)
-			//   "ops"  — expects: architect, builder, tester, router, cao
-			// Defaults to "dev" on first setup. Edit manually for an ops hub.
-			hubType: prev.hubType ?? 'dev',
+			hubType,
 			remoteTeam,
 			githubWorkflows,
 			...(telegramMcp ? { telegram: telegramMcp } : {}),
@@ -490,6 +609,76 @@ export function createRun({
 			});
 		}
 
+		if (config.hubType === 'dev:graph') {
+			// The tier plugin (dev:graph-only, discovered generically by filename
+			// convention) handles Graphify installation and semantic extraction opt-in.
+			// ask/askYN/askSecret are passed so the plugin can prompt the user
+			// interactively using the same injectable I/O as the rest of setup.
+			// askSecret masks the API key input — it is never echoed to the terminal.
+			await setupTierPlugin({
+				hubRoot: cliOutputRoot,
+				ask,
+				askYN,
+				askSecret,
+				readJsonSafe: (p) => readJsonSafe(p, fsMod),
+				writeJsonSafe: (p, v) => writeJsonSafe(p, v, fsMod),
+			});
+		}
+
+		// ── Nightly dreaming (Windows only, task_208 / issue #381) ────────────────
+		// Applies uniformly across hub tiers — not gated by hubType. Runs last (after
+		// the tier plugin steps above) and does its own read-merge-write of
+		// workspace.config.json, the same incremental-update pattern
+		// dev-graph.setup-plugin.js already uses for its own `graphify` block, so the
+		// earlier base `config` write above never needs to know about this feature.
+		if (platform === 'win32') {
+			line('Nightly dreaming (Windows only) ');
+			process.stdout.write(
+				'  Nightly dreaming runs "Good night Team" automatically every night via a\n' +
+				'  Windows Scheduled Task, so end-of-day memory consolidation does not depend\n' +
+				'  on remembering to say it. Off by default; you can turn it off again at any\n' +
+				'  time (npm run setup -- --disable-nightly-dreaming, or decline here).\n',
+			);
+			const prevNightlyDreaming = prev.nightlyDreaming ?? {};
+			const prevNightlyEnabled = prevNightlyDreaming.enabled === true;
+			const enableNightlyDreaming = await askYN(
+				'Enable nightly automated end-of-day memory consolidation?',
+				prevNightlyEnabled,
+			);
+
+			let nightlyDreaming;
+			if (enableNightlyDreaming) {
+				const result = registerNightlyDreamingTask({ hubRoot: cliOutputRoot });
+				if (result.ok) {
+					process.stdout.write(`  Nightly Scheduled Task registered (${NIGHTLY_DREAMING_TASK_NAME}).\n`);
+					nightlyDreaming = { enabled: true, taskName: NIGHTLY_DREAMING_TASK_NAME };
+				} else {
+					process.stdout.write(`  WARNING: could not register the nightly Scheduled Task: ${result.error}\n`);
+					process.stdout.write('  Setup will continue — re-run npm run setup to retry.\n');
+					nightlyDreaming = { enabled: false };
+				}
+			} else {
+				if (prevNightlyEnabled) {
+					const removeResult = removeNightlyDreamingTask({
+						taskName: prevNightlyDreaming.taskName ?? NIGHTLY_DREAMING_TASK_NAME,
+					});
+					if (removeResult.ok) {
+						process.stdout.write('  Nightly Scheduled Task removed.\n');
+					} else {
+						process.stdout.write(
+							`  WARNING: could not remove the existing nightly Scheduled Task: ${removeResult.error}\n`,
+						);
+					}
+				}
+				nightlyDreaming = { enabled: false };
+			}
+
+			const onDisk = fsMod.existsSync(configPath)
+				? JSON.parse(fsMod.readFileSync(configPath, 'utf-8'))
+				: config;
+			fsMod.writeFileSync(configPath, JSON.stringify({ ...onDisk, nightlyDreaming }, null, 2) + '\n', 'utf-8');
+		}
+
 		line('Done ');
 		process.stdout.write(`  Config written → ${configPath}\n`);
 
@@ -518,6 +707,62 @@ export function createRun({
 	};
 }
 
+/**
+ * Disable/remove the nightly dreaming Scheduled Task (AC5, task_208 / issue #381) without
+ * running the full interactive wizard. Windows-only — a no-op safe-degrade on any other
+ * platform, matching this feature's own "Windows-only for v1" scope everywhere else.
+ *
+ * Also flips `nightlyDreaming.enabled` to false in workspace.config.json when that key
+ * already exists, so a subsequent `npm run setup` re-run's default answer reflects the
+ * disable rather than re-offering the previously-accepted "enabled: true" default.
+ *
+ * @param {object} opts
+ * @param {string} opts.cliOutputRoot
+ * @param {object} [opts.fsMod]
+ * @param {string} [opts.platform]
+ * @param {function} [opts.removeTask]  Injectable removeNightlyDreamingTask (testing).
+ * @param {string} [opts.taskName]
+ * @param {function(string): void} [opts.log]
+ * @returns {{ ok: boolean, removed?: boolean, skipped?: boolean, error?: string }}
+ */
+export function runDisableNightlyDreaming({
+	cliOutputRoot,
+	fsMod = fs,
+	platform = process.platform,
+	removeTask = removeNightlyDreamingTaskDefault,
+	taskName = NIGHTLY_DREAMING_TASK_NAME,
+	log = (s) => process.stdout.write(s),
+}) {
+	if (platform !== 'win32') {
+		log('Nightly dreaming is Windows-only — nothing to disable on this platform.\n');
+		return { ok: true, skipped: true };
+	}
+	const result = removeTask({ taskName });
+	if (result.ok) {
+		log(
+			result.removed
+				? 'Nightly dreaming Scheduled Task removed.\n'
+				: 'Nightly dreaming Scheduled Task was not registered — nothing to remove.\n',
+		);
+	} else {
+		log(`ERROR: could not remove nightly dreaming Scheduled Task: ${result.error}\n`);
+	}
+
+	const configPath = path.join(cliOutputRoot, 'workspace.config.json');
+	if (fsMod.existsSync(configPath)) {
+		try {
+			const cfg = JSON.parse(fsMod.readFileSync(configPath, 'utf-8'));
+			if (cfg.nightlyDreaming) {
+				cfg.nightlyDreaming.enabled = false;
+				fsMod.writeFileSync(configPath, JSON.stringify(cfg, null, 2) + '\n', 'utf-8');
+			}
+		} catch {
+			// Unparseable/unreadable config — never block the disable flow on this.
+		}
+	}
+	return result;
+}
+
 // ── CLI entry point (only runs when executed directly, not when imported) ──────
 
 export function parseCliArgs(argv) {
@@ -543,6 +788,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 	const cliArgs = parseCliArgs(process.argv.slice(2));
 	const cliOutputRoot = cliArgs.output ? path.resolve(cliArgs.output) : path.resolve('.');
 
+	if (cliArgs['disable-nightly-dreaming']) {
+		const result = runDisableNightlyDreaming({ cliOutputRoot });
+		process.exit(result.ok ? 0 : 1);
+	}
+
 	const rl = readline.createInterface({ input, output });
 
 	function ask(question, defaultValue = '') {
@@ -559,13 +809,43 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
 		});
 	}
 
+	// Masked/non-echoing prompt for secrets (e.g. API keys). Temporarily
+	// intercepts the readline interface's output writer so typed characters
+	// are never echoed to the terminal — only the prompt text itself is shown.
+	function askSecret(question) {
+		const prompt = `${question}: `;
+		const hasMasking = typeof rl._writeToOutput === 'function';
+		if (!hasMasking) {
+			// Fallback: no masking hook available — still don't log the value anywhere.
+			return rl.question(prompt).then(a => a.trim());
+		}
+		const originalWrite = rl._writeToOutput.bind(rl);
+		let promptWritten = false;
+		rl._writeToOutput = function (str) {
+			if (!promptWritten) {
+				originalWrite(str); // let the initial prompt text render once
+				promptWritten = str.includes(prompt) || promptWritten;
+				return;
+			}
+			if (str === '\r\n' || str === '\n') {
+				originalWrite(str);
+				return;
+			}
+			// Suppress echo of typed characters.
+		};
+		return rl.question(prompt).then(answer => {
+			rl._writeToOutput = originalWrite;
+			return answer.trim();
+		});
+	}
+
 	function line(label = '') {
 		const dashes = '─'.repeat(Math.max(0, 44 - label.length));
 		process.stdout.write(`\n── ${label}${dashes}\n\n`);
 	}
 
 	const tierPluginPort = cliArgs['tier-plugin-port'];
-	const run = createRun({ ask, askYN, line, fsMod: fs, cliOutputRoot, tierPluginPort });
+	const run = createRun({ ask, askYN, askSecret, line, fsMod: fs, cliOutputRoot, tierPluginPort });
 
 	run().then(() => {
 		rl.close();
