@@ -2,12 +2,35 @@
  * Nightly dreaming auto-trigger — Windows Scheduled Task registration.
  *
  * Registers an opt-in nightly Windows Scheduled Task that invokes headless Claude Code
- * with "Good night Team" (the `dreaming` skill's end-of-day memory-consolidation trigger),
- * reusing the exact invocation pattern already proven by the Telegram relay daemon's
- * Router auto-dispatch (see relay/adapters/claude-code.js's dispatchRouter(), which spawns
- * `claude -p "<prompt>" --model claude-haiku-4-5-20251001` with `cwd: hubRoot`).
+ * with a directive prompt that triggers the `dreaming` skill's end-of-day memory
+ * consolidation, reusing the exact invocation pattern already proven by the Telegram
+ * relay daemon's Router auto-dispatch (see relay/adapters/claude-code.js's
+ * dispatchRouter(), which spawns `claude -p "<prompt>" --model claude-haiku-4-5-20251001`
+ * with `cwd: hubRoot`).
  *
  * Windows-only for v1 (task_208 / issue #381) — Mac/Linux (cron/launchd) deferred.
+ *
+ * **Prompt wording (task_213 / issue #389):** the original v1 prompt was a bare
+ * `"Good night Team"`, which reliably fails in a cold, non-interactive session — reproduced
+ * directly (not guessed): `cmd.exe /c claude -p "Good night Team" --model
+ * claude-haiku-4-5-20251001` returns a generic "Good night! Rest well." with zero tool
+ * calls and zero file reads. The bare phrase only works interactively because the user has
+ * usually already addressed an agent by name first, which pulls CLAUDE.md's Startup Rule
+ * (and from there the `dreaming` skill's trigger-phrase catalogue) into active play. A cold
+ * headless turn with no prior context has nothing to anchor "Good night Team" to an agent
+ * identity, so the model treats it as generic small talk instead. The fix addresses the
+ * prompt to Architect by name (the same entity `agents/skills/dreaming/SKILL.md`'s own
+ * "Dispatch behaviour" section documents as owning the full-team consolidation cascade when
+ * it receives the trigger directly) and adds an explicit non-interactive directive so the
+ * model performs real file reads/writes instead of only replying in words. Proven via a
+ * real, unmocked end-to-end run against a scratch hub copy (see PR description) — an actual
+ * memory file was rewritten with genuine current-state content, not just an exit-0 process.
+ *
+ * **Permission mode (task_213 / issue #389):** memory consolidation is all file-writing
+ * tool calls, and a Scheduled Task run has no TTY and nobody present at 2am to approve a
+ * permission prompt — those writes would otherwise be silently blocked. `claude --help`
+ * documents `--permission-mode bypassPermissions` for exactly this non-interactive case;
+ * it is now included in the registered task's Arguments alongside the directive prompt.
  *
  * Registration uses a full Task Scheduler XML definition (not the simple
  * `schtasks /create /tr "..."` command-line form). The XML schema's <WorkingDirectory>
@@ -32,7 +55,17 @@ import { execFileSync } from 'node:child_process';
 export const NIGHTLY_DREAMING_TASK_NAME = 'AgistraDevNightlyDreaming';
 export const DEFAULT_NIGHTLY_DREAMING_TIME = '02:00';
 export const NIGHTLY_DREAMING_MODEL = 'claude-haiku-4-5-20251001';
-export const NIGHTLY_DREAMING_PROMPT = 'Good night Team';
+// Addressed to Architect by name (required for the cold-session CLAUDE.md Startup Rule to
+// fire at all) plus an explicit non-interactive directive (required so the model performs
+// real file reads/writes instead of a conversational acknowledgement). See the file header
+// comment above for the full root-cause writeup and real E2E proof (task_213 / issue #389).
+export const NIGHTLY_DREAMING_PROMPT =
+	'Architect, Good night Team. Run the dreaming skill end-of-day memory consolidation now. ' +
+	'This is an unattended automated run, not interactive chat -- actually perform the file ' +
+	'reads and writes yourself, do not just acknowledge in words.';
+// Non-interactive permission mode — nobody is present overnight to approve a permission
+// prompt for the file-writing tool calls consolidation requires (task_213 / issue #389).
+export const NIGHTLY_DREAMING_PERMISSION_MODE = 'bypassPermissions';
 
 /**
  * Minimal XML text escaping for the values interpolated into the task definition
@@ -78,6 +111,8 @@ export function localDateString(d = new Date()) {
  *   (the task recurs daily thereafter regardless of this date). Defaults to today (local).
  * @param {string} [opts.model]
  * @param {string} [opts.prompt]
+ * @param {string} [opts.permissionMode]  Non-interactive permission mode (see file header
+ *   comment — file-writing tool calls need this with nobody present to approve them).
  * @returns {string} XML document text (CRLF line endings, as Windows tooling expects).
  */
 export function buildNightlyDreamingTaskXml({
@@ -86,12 +121,13 @@ export function buildNightlyDreamingTaskXml({
 	startDate = localDateString(),
 	model = NIGHTLY_DREAMING_MODEL,
 	prompt = NIGHTLY_DREAMING_PROMPT,
+	permissionMode = NIGHTLY_DREAMING_PERMISSION_MODE,
 }) {
 	if (!hubRoot) {
 		throw new Error('buildNightlyDreamingTaskXml: hubRoot is required');
 	}
 	const startBoundary = `${startDate}T${time}:00`;
-	const args = `/c claude -p "${prompt}" --model ${model}`;
+	const args = `/c claude -p "${prompt}" --model ${model} --permission-mode ${permissionMode}`;
 	return [
 		'<?xml version="1.0" encoding="UTF-16"?>',
 		'<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">',

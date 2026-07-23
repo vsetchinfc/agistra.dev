@@ -242,11 +242,17 @@ This fetches the named skill directly from its declared source into this hub's o
 ### Nightly dreaming (Windows only)
 
 On Windows, `npm run setup` asks whether to enable nightly automated end-of-day memory
-consolidation — a Windows Scheduled Task that runs `claude -p "Good night Team" --model
-claude-haiku-4-5-20251001` once a day (off-peak, local time), with its working directory
-pinned to this hub root. This is the same `dreaming` skill trigger you'd normally say by
-hand at the end of a session; the task exists so it doesn't depend on remembering to say it.
-This prompt does not appear on macOS/Linux (Mac/Linux support is deferred to a future release).
+consolidation — a Windows Scheduled Task that runs headless Claude Code (`claude -p "..."
+--model claude-haiku-4-5-20251001 --permission-mode bypassPermissions`) once a day (off-peak,
+local time), with its working directory pinned to this hub root. The prompt addresses
+Architect by name and directs it to run the `dreaming` skill's end-of-day consolidation —
+a bare, unaddressed `"Good night Team"` does not reliably trigger the skill in a cold,
+non-interactive session, so the registered prompt is more explicit
+than what you'd normally type by hand at the end of an interactive session; the task exists
+so consolidation doesn't depend on remembering to trigger it at all. `--permission-mode
+bypassPermissions` is required because consolidation is all file-writing tool calls and
+nobody is present overnight to approve a permission prompt. This does not appear on
+macOS/Linux (Mac/Linux support is deferred to a future release).
 
 - **Opt-in, not default-on.** Declining (or pressing Enter, since the default answer is No)
   skips registration entirely — setup still completes normally either way.
