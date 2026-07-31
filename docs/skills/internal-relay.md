@@ -16,7 +16,7 @@ Inbound message classification vocabulary for Router. Maps trigger signals from 
 | `ci_failed` | "CI failed", "test failed", "build failed" | Builder (include CI exception) |
 | `qa_requested` | "ready for QA", "needs QA", "retest" | Tester (Pre-QA Readiness Check mode — no live test execution) |
 | `blocked` | "blocked", "waiting on", "cannot proceed" | Builder if engineering blocker; HOT memory if decision blocker |
-| `vlad_decision_required` | "needs approval", "scope", "price", "timeline", "client promise" | HOT memory — surfaces to you at next standup or dreaming |
+| `decision_required` | "needs approval", "scope", "price", "timeline", "client promise" | HOT memory — surfaces to you at next standup or dreaming |
 | `info_only` | "FYI", "status update", no requested action | Short ack — no agent dispatch |
 | `unclear` | Missing issue/PR reference, state, owner, or requested action | Ask one clarifying question — no dispatch until resolved |
 

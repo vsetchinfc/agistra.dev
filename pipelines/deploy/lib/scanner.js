@@ -116,7 +116,7 @@ export function generateTasks({ allFindings, projectName, projectsDir }) {
 function round(n) { return Math.round(n * 100) / 100; }
 
 function collectExistingTaskFiles(projectsDir) {
-	// Match all task states from ADR-005 canonical vocabulary
+	// Match all task states from the ticket-lifecycle-mode canonical vocabulary
 	const tokenPattern = TASK_STATE_TOKENS.join('|');
 	const pattern = new RegExp(`^task_\\d+_(?:${tokenPattern})_`);
 	const entries = [];

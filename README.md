@@ -3,7 +3,6 @@
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)](VERSION)
 [![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg)](package.json)
-[![Python](https://img.shields.io/badge/Python-3-3776AB.svg)](tools/export-letter.py)
 
 [![Claude Code](https://img.shields.io/badge/Claude_Code-supported-blue.svg)](.claude/agents)
 [![GitHub Copilot](https://img.shields.io/badge/GitHub_Copilot-supported-blue.svg)](.github/agents)
@@ -30,6 +29,7 @@ Run [scan](#project-health-scanner) on any existing project to analyse it and ge
 - [Task file format](#task-file-format)
 - [Agent memory](#agent-memory)
 - [Ticket lifecycle](#ticket-lifecycle)
+- [Upgrade path](#upgrade-path)
 - [Open source](#open-source)
 
 ---
@@ -376,6 +376,37 @@ npm run version:check
 Returns JSON `{"status": "up-to-date" | "update-available" | "offline", "local": "...", "remote": "..."}`.
 
 **Bump the version:** Edit `VERSION` manually or via release-please. The deploy step automatically copies `VERSION` to the hub output root.
+
+---
+
+## Upgrade path
+
+This free tier (`agistra.dev`) is the foundation. Three paid tiers build directly on top of it, each adding its own tech stack — no pricing or feature detail here, just what each tier technically adds.
+
+### `agistra.dev:graph`
+
+[![Graphify](https://img.shields.io/badge/Graphify-MIT-3776AB.svg)](https://github.com/Graphify-Labs/graphify)
+[![uv](https://img.shields.io/badge/uv-managed_Python-DE5FE9.svg)](https://docs.astral.sh/uv/)
+
+A one-time-purchase bundle: this free core with [Graphify](https://github.com/Graphify-Labs/graphify), an MIT-licensed codebase knowledge-graph tool, layered in. Graphify installs at setup time via [uv](https://docs.astral.sh/uv/), which manages its own private Python runtime — no separate Python install required. Code-only graph parsing needs no account or API key; an optional semantic-extraction layer can call your own Anthropic/OpenAI account.
+
+### `agistra.dev:sub`
+
+[![Obsidian](https://img.shields.io/badge/Obsidian-vault-7C3AED.svg)](https://obsidian.md)
+[![qmd](https://img.shields.io/badge/qmd-MCP_retrieval-blue.svg)](https://www.npmjs.com/package/@tobilu/qmd)
+[![Claude Code](https://img.shields.io/badge/Claude_Code-first--supported-blue.svg)](.claude/agents)
+
+The same free agent system, with agent working state (memory, tasks, docs) relocated from repo files into an Obsidian vault, indexed and retrieved through `qmd`'s native MCP integration. Claude-first: you bring your own Claude Code subscription or API key.
+
+### `agistra.dev:ops`
+
+[![LangGraph](https://img.shields.io/badge/LangGraph-orchestration-1C3C3C.svg)](https://www.langchain.com/langgraph)
+[![LangChain](https://img.shields.io/badge/LangChain-model_abstraction-1C3C3C.svg)](https://www.langchain.com)
+[![Ollama](https://img.shields.io/badge/Ollama-model_provider-000000.svg)](https://ollama.com)
+[![n8n](https://img.shields.io/badge/n8n-automation_shell-EA4B71.svg)](https://n8n.io)
+[![Telegram](https://img.shields.io/badge/Telegram-control_surface-26A5E4.svg)](https://telegram.org)
+
+A full superset of `agistra.dev:sub`'s Obsidian + qmd storage stack, plus a LangGraph runtime orchestration layer, LangChain for multi-provider model abstraction (Claude, plus Ollama-hosted models), Ollama as a model provider, n8n as an outer automation shell, and Telegram as a control surface.
 
 ---
 

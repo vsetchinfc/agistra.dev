@@ -19,7 +19,12 @@ import { CLAUDE_SETTINGS_PATH, readJsonSafe } from './wizard.js';
 import { DEFAULT_DAEMON_PORT } from './relay/core/config.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
 import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
-import { isNightlyDreamingTaskRegistered, NIGHTLY_DREAMING_TASK_NAME } from './lib/nightly-dreaming.js';
+import {
+	isNightlyDreamingTaskRegistered,
+	NIGHTLY_DREAMING_TASK_NAME,
+	getNightlyDreamingTaskRuntimeInfo,
+	findMostRecentArchiveDate,
+} from './lib/nightly-dreaming.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -437,20 +442,20 @@ function checkHubType({ hubRoot, fsMod }) {
 }
 
 /**
- * Check 18: nightly dreaming Scheduled Task readiness (task_208 / issue #381).
+ * Check 18: nightly dreaming Scheduled Task readiness.
  *
  * Windows-only, applies uniformly across hub tiers (not gated by hubType) — a core
  * check, not a "*.doctor-plugin.js" tier plugin, so it always runs alongside whichever
  * optional tier-specific plugin checks (ids 16/17) also run; id 18 is the next free
  * slot to avoid colliding with those.
  *
- * This is the "retroactive catch-up" backfill AC4 requires for hubs set up before this
- * feature shipped: it never registers the task itself (doctor.js has no interactive
- * prompting anywhere — every other check in this file that needs customer consent for a
- * side effect, e.g. checkRelayMcp/checkTelegramConfig, warns with a hint pointing back at
- * `npm run setup` rather than acting unilaterally) — silently registering a background
- * task that spends API usage without being asked is exactly what this feature's own
- * scope decision (task_208) rules out.
+ * This is a retroactive catch-up backfill for hubs set up before this feature shipped:
+ * it never registers the task itself (doctor.js has no interactive prompting anywhere —
+ * every other check in this file that needs customer consent for a side effect, e.g.
+ * checkRelayMcp/checkTelegramConfig, warns with a hint pointing back at `npm run setup`
+ * rather than acting unilaterally) — silently registering a background task that spends
+ * API usage without being asked is exactly what this feature's own scope decision rules
+ * out.
  */
 function checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform = process.platform }) {
 	if (platform !== 'win32') {
@@ -481,6 +486,67 @@ function checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform = process.p
 	return warn(18, 'nightly dreaming',
 		`enabled in workspace.config.json but Scheduled Task "${taskName}" is not registered`,
 		'run: npm run setup (re-enable nightly dreaming to re-register the Scheduled Task)');
+}
+
+// A dated archive snapshot older than this many days, despite the Scheduled Task's last
+// reported result being success (exit 0), is treated as the known regression pattern:
+// Windows-level success with no real consolidation work underneath it.
+const NIGHTLY_DREAMING_STALE_ARCHIVE_DAYS = 2;
+
+/**
+ * Check 19: nightly dreaming consolidation freshness.
+ *
+ * Check 18 above only confirms the Scheduled Task is registered — it never verifies the
+ * task actually did anything. Real production evidence showed the task firing overnight,
+ * reporting `LastTaskResult: 0` (success) and `NumberOfMissedRuns: 0`, while zero
+ * consolidation work happened: no dated archive snapshot was written and no memory
+ * compaction occurred. This check closes that specific gap by cross-checking the task's
+ * own last-run outcome against the newest dated archive snapshot under
+ * `memory/archive/` — flagging exactly the "Windows says success, nothing actually
+ * happened" pattern that made the original regression invisible until someone asked by
+ * hand.
+ */
+function checkNightlyDreamingConsolidationFreshness({ hubRoot, fsMod, execFn, platform = process.platform }) {
+	if (platform !== 'win32') {
+		return skip(19, 'nightly dreaming freshness', 'Windows-only feature — not applicable on this platform');
+	}
+	const { config, skipReason } = readHubConfig(hubRoot, fsMod);
+	if (skipReason) return skip(19, 'nightly dreaming freshness', skipReason);
+
+	const nightlyDreaming = config?.nightlyDreaming;
+	if (!nightlyDreaming || nightlyDreaming.enabled !== true) {
+		return skip(19, 'nightly dreaming freshness', 'nightly dreaming not enabled — nothing to check');
+	}
+
+	// Deliberately does not call isNightlyDreamingTaskRegistered() separately — that
+	// would be a second, redundant `schtasks` call for the same task (check 18 already
+	// covers "not registered" as its own drift case). A missing/never-run task and an
+	// unregistered task both surface here as "no usable last-run info", which is the
+	// correct skip either way — check 18 is still the authoritative source for the
+	// registered/not-registered distinction itself.
+	const taskName = nightlyDreaming.taskName ?? NIGHTLY_DREAMING_TASK_NAME;
+	const { lastRunTime, lastResult } = getNightlyDreamingTaskRuntimeInfo({ taskName, execFn });
+	if (!lastRunTime || /^(N\/A|Never)$/i.test(lastRunTime)) {
+		return skip(19, 'nightly dreaming freshness', 'Scheduled Task not registered or has not run yet — see check 18');
+	}
+
+	const latestArchiveDate = findMostRecentArchiveDate({ hubRoot, agent: 'architect', fsMod });
+	const staleDays = latestArchiveDate
+		? Math.floor((Date.now() - Date.parse(latestArchiveDate)) / 86_400_000)
+		: Infinity;
+
+	if (lastResult === 0 && staleDays > NIGHTLY_DREAMING_STALE_ARCHIVE_DAYS) {
+		return fail(19, 'nightly dreaming freshness',
+			`Scheduled Task last reported success (exit 0, ${lastRunTime}) but the newest archived ` +
+			`memory snapshot (memory/archive/architect-*.md) is ${latestArchiveDate ?? 'missing entirely'}` +
+			`${latestArchiveDate ? ` (${staleDays} days old)` : ''} — the task reported success but ` +
+			'consolidation did not actually run',
+			`inspect logs/nightly-dreaming-<date>.log; re-run manually via: schtasks /run /tn ${taskName}`);
+	}
+	return pass(19, 'nightly dreaming freshness',
+		latestArchiveDate
+			? `most recent archived snapshot: ${latestArchiveDate} (task last ran ${lastRunTime}, exit ${lastResult})`
+			: `task last ran ${lastRunTime} (exit ${lastResult}); no stale-success gap detected`);
 }
 
 /**
@@ -603,6 +669,7 @@ export async function runChecks({
 		checkProjectsDir({ hubRoot, fsMod }),
 		checkHubType({ hubRoot, fsMod }),
 		checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform }),
+		checkNightlyDreamingConsolidationFreshness({ hubRoot, fsMod, execFn, platform }),
 		...(await checkOptionalTierReadiness({ hubRoot, fsMod, execFn, platform, env, fetchFn, pluginOptions })),
 	];
 }

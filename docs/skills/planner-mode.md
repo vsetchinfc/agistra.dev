@@ -62,7 +62,7 @@ Also auto-activates when a task involves pricing, bid support, or anything that 
 
 ## Exit criteria
 
-Planner mode is complete when an internal Vlad-reviewable draft exists, assumptions and risks are surfaced, and it is clear what you must approve before anything external happens.
+Planner mode is complete when an internal, team-lead-reviewable draft exists, assumptions and risks are surfaced, and it is clear what you must approve before anything external happens.
 
 ---
 

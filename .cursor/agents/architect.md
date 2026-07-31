@@ -76,6 +76,8 @@ Then load task-specific skills as the work requires.
 | Skill | When to load |
 | --- | --- |
 | `grill-with-docs` | Load before any design interrogation, scoping session, or ADR work |
+| `external-skill-intake` | Load before any external skill/workflow/tool is installed, promoted, or adapted — "intake this repo/skill", "evaluate external skill", "should we adopt X" |
+| `migration-completeness-check` | Load when the team lead points Architect at a prior hub path and asks it to check for or perform additional migration — "migrate my data from `<path>`", "check what didn't get migrated" |
 
 ## Memory
 
@@ -260,6 +262,8 @@ When the team lead says `implement it`, `do work`, or `dispatch builder`, Archit
 - `token-economics` — token budgeting from session start: prompt compression, context hygiene, handoff packing, and HOT memory pruning
 - `stop-slop` — external prose quality gate: removes AI-tell patterns from ADRs, proposals, GitHub comments, and client-facing wording before output leaves the team
 - `skill-quality-review` — quality gate for new or edited `SKILL.md` files, manifest changes, and third-party skill intake; checks trigger quality, hallucination resistance, role/lifecycle fit, security, and validation story before skills ship
+- `external-skill-intake` — front-door evaluation of external skills, workflows, and capability artifacts before install, promotion, or adaptation; ends in Install candidate / Adapt concept / Reject with evidence, including a hard license-fit check; complements (does not replace) `skill-quality-review`, which remains the shipping/reliance gate
+- `migration-completeness-check` — on-demand, repeatably-invocable agent-assisted migration discovery pass: read-only walk of a prior hub, diff against the fixed scripted migration scope plus any existing migration report, one-at-a-time candidate confirmation, delegates every write to the existing `migrateFromSourceHub()`/`migrateFromSourceHubIntoVault()` primitives, appends an "Agent-Assisted Additions" section to the existing migration report. Not wired into Bootstrap Self-Check by design
 - `assumptions-audit` — optional structured pass over a finished plan/ticket/ADR: surfaces unstated environment/data/user assumptions, acceptance criteria that rely on implicit shared understanding, and scope-boundary failure modes. Not a mandatory gate — apply on ambiguous or high-risk tickets, Architect's judgment call
 - `ui-audit-lens` — stack-agnostic UI methodology for research, structural audit, and pre-handoff UI state coverage; business-specific child skills load this first, then layer organisation-specific standards on top
 - `security-audit-lens` — stack-agnostic, standing security audit methodology covering hardcoded secrets, injection-prone constructs, auth/debug backdoors, and insecure config defaults; complements (does not replace) the built-in `/security-review` command. Not a mandatory gate on every ticket — apply on general codebase assessments, before migration/rewrite planning, or on request
@@ -334,6 +338,8 @@ Skills for this agent live in `skills/`. Read the relevant file before entering 
 | self-improving-agent | Correction, unexpected error, capability gap, or recurring pattern to log or promote | `skills/self-improving-agent/SKILL.md` |
 | stop-slop | Prose to review, draft to clean, or writing scored below 35/50 | `skills/stop-slop/SKILL.md` |
 | skill-quality-review | Skill path, manifest diff, plugin bundle, third-party skill candidate, or skill audit request | `skills/skill-quality-review/SKILL.md` |
+| external-skill-intake | Candidate repo/skill URL, name, or adoption question ('should we adopt X') | `skills/external-skill-intake/SKILL.md` |
+| migration-completeness-check | Path to a prior agistra.dev hub, plus a migration-completeness or 'check what's missing' request | `skills/migration-completeness-check/SKILL.md` |
 | writing-core | Load before job-seeker, consultant, or any other human-voice writing skill | `skills/writing-core/SKILL.md` |
 | job-seeker | Cover letter, recruiter email, LinkedIn message, or follow-up to draft or review | `skills/job-seeker/SKILL.md` |
 | consultant | Project proposal, bid, cold client email, or scope summary to draft or review | `skills/consultant/SKILL.md` |

@@ -36,7 +36,7 @@ Claude Code or Cursor in the hub workspace (`agistra.dev`). Confirm relay MCP to
 - `mcp__relay__relay_status`
 - `mcp__relay__relay_send`
 
-Redeploy agents after merging task_32 so Router manifest includes these tools:
+Redeploy agents after these relay tools land so Router's manifest includes them:
 
 ```bash
 npm run deploy -- --output <hub-path>
@@ -83,7 +83,7 @@ Invoke-RestMethod http://127.0.0.1:17391/outbound -Method Post `
 
 ## GitHub Copilot path
 
-GitHub Router has no relay MCP yet. Post outbound via daemon HTTP (see `profiles/router-workspace/ROUTING.md` curl example) until task_34 lands the GitHub adapter.
+GitHub Router has no relay MCP yet. Post outbound via daemon HTTP (see `profiles/router-workspace/ROUTING.md` curl example) until the GitHub adapter lands.
 
 ---
 
@@ -93,5 +93,5 @@ GitHub Router has no relay MCP yet. Post outbound via daemon HTTP (see `profiles
 | ------- | --- |
 | `relay daemon not reachable` | Start daemon (step 1) |
 | Router refuses free-form send | Use state-transition dispatch (step 3) |
-| Router has no `relay_send` tool | Redeploy hub; confirm task_32 merged |
+| Router has no `relay_send` tool | Redeploy hub with the latest relay tooling |
 | MCP path missing | Relay MCP server lives in profiles repo until hub deploy copies `cli/relay/` |

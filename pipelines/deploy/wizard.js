@@ -176,7 +176,7 @@ export function wireRelayMcp({
 }
 
 /**
- * @deprecated Use wireRelayMcp — see ADR-004. Scheduled for removal after relay stack E2E (task_35).
+ * @deprecated Use wireRelayMcp instead. Scheduled for removal after the relay stack's E2E lands.
  */
 export function wireTelegramMcp({
 	config,
@@ -187,9 +187,9 @@ export function wireTelegramMcp({
 	warn = (msg) => process.stderr.write(msg + '\n'),
 }) {
 	warn(
-		'DEPRECATED: wireTelegramMcp is deprecated; setup now uses wireRelayMcp (ADR-004). ' +
+		'DEPRECATED: wireTelegramMcp is deprecated; setup now uses wireRelayMcp. ' +
 		'The Claude official Telegram plugin is not the production group relay. ' +
-		'Removal planned after task_35.',
+		'Removal planned once the relay stack fully replaces this path.',
 	);
 
 	const wrote = [];

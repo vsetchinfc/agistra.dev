@@ -1,6 +1,6 @@
 # Relay GitHub Runbook
 
-GitHub Copilot can use the same **relay MCP** as Claude/Cursor when wired in repo or user settings (see task_35). Until then, this adapter uses a **tracking issue** for inbound and an optional **labeled issue + Action** for outbound — both talk to the same local relay daemon.
+GitHub Copilot can use the same **relay MCP** as Claude/Cursor once wired in repo or user settings. Until then, this adapter uses a **tracking issue** for inbound and an optional **labeled issue + Action** for outbound — both talk to the same local relay daemon.
 
 ---
 
@@ -74,7 +74,7 @@ Prompts for `Relay tracking issue (owner/repo#N)` and writes `relay.github.track
 
 ## Supersedes
 
-Replaces the inbound half of task_18 (standalone GitHub poller). See ADR-004.
+Replaces a prior standalone GitHub poller's inbound half with the unified relay daemon design.
 
 ---
 
@@ -92,8 +92,8 @@ Once Copilot repo MCP points at `cli/relay/mcp/server.js --hub <hub>`, agent-dri
 
 **Cleanup guidance (future):**
 
-- After task_35 lands and Copilot MCP is verified on your hub, you may **skip installing** `.github/workflows/relay-notify.yml` — no requirement to delete the template from `setchin-agent-profiles`.
+- Once Copilot MCP is verified on your hub, you may **skip installing** `.github/workflows/relay-notify.yml` — no requirement to delete the template from `setchin-agent-profiles`.
 - Remove the installed workflow from a hub repo only if you confirm nobody uses label-triggered outbound and you rely entirely on MCP + daemon.
 - Do **not** remove `github.js` tracking-issue inbound until `relay_inbox_peek` fully replaces that path for GitHub-primary hubs.
 
-Track optional cleanup in task_35 or a follow-up ticket after Copilot MCP E2E passes.
+Track optional cleanup in a follow-up ticket after Copilot MCP E2E passes.

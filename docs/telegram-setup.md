@@ -1,6 +1,6 @@
 # Telegram setup (deprecated for group relay)
 
-> **Superseded by [relay-setup.md](./relay-setup.md)** (ADR-004). Production group relay uses the hub relay daemon + `mcpServers.relay`, not the Claude official Telegram plugin.
+> **Superseded by [relay-setup.md](./relay-setup.md)**. Production group relay uses the hub relay daemon + `mcpServers.relay`, not the Claude official Telegram plugin.
 
 This file is kept for reference and troubleshooting legacy setups.
 
@@ -8,8 +8,8 @@ This file is kept for reference and troubleshooting legacy setups.
 
 ## What changed
 
-| Old (task_17) | New (task_29–35) |
-| ------------- | ---------------- |
+| Old | New |
+| --- | --- |
 | `mcpServers.telegram` + bun plugin | `mcpServers.relay` → local daemon |
 | Direct MCP Telegram I/O | Daemon poll/send + Router `relay_*` tools |
 | `wireTelegramMcp` in setup | `wireRelayMcp` in setup |

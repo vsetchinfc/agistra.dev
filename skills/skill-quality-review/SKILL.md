@@ -99,6 +99,14 @@ Check for:
 - safe handling of third-party skills and plugin content
 - no guidance that encourages impersonation, credential harvesting, hidden profiling, or coercive
   behavior
+- no proper names, internal ticket/issue identifiers (e.g. `task_NNN`, `issue #NNN`), or internal
+  architecture-decision-record citations (e.g. `ADR-NNN`) in content destined to ship inside a
+  customer hub. Illustrative examples and rule rationale must be written generically at authoring
+  time: a rule can state that a decision was made and why, without citing the internal record
+  number or the internal individual's name. An automated packaging-time gate catches the
+  regex-derivable cases; this manual check exists because free-form narrative (a paraphrased
+  anecdote that still identifies an internal process without a ticket number) will not always
+  match a fixed pattern.
 
 For relay, OSINT, security, or research skills, require stronger wording around legality, consent,
 data minimization, and operator approval.

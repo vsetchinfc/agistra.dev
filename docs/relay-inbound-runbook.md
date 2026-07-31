@@ -27,7 +27,7 @@ npm run relay -- --hub D:/dev/agistra.dev
 Example from Max (remote agent) — must address Router by configured display name (`Atlas` in this hub) or `Router` when unset:
 
 ```text
-Atlas, PR #66 ready for review — issue #59, branch feat/issue-59-telegram-relay-inbound
+Atlas, PR #<N> ready for review — issue #<N>, branch feat/issue-<N>-example-feature
 ```
 
 Messages without the Router salutation are ignored by the daemon (not enqueued).
@@ -66,7 +66,7 @@ Message from a Telegram user **not** in `relay.allowedSenders`:
 
 ---
 
-## Auto-dispatch (Phase P2 — task_36)
+## Auto-dispatch
 
 When `relay.autoDispatch: true` is set in `workspace.config.json`, the daemon spawns a headless Claude Code Router session automatically on each new inbox job. No open chat session required.
 
@@ -98,4 +98,4 @@ When `relay.autoDispatch: true` is set in `workspace.config.json`, the daemon sp
 | ------- | --- |
 | No job after group message | Confirm chat ID matches `relay_group_id`; restart daemon |
 | `job: null` on peek | Message may be from wrong chat or unknown sender escalated |
-| Router lacks peek/ack | Redeploy hub after task_33 merge |
+| Router lacks peek/ack | Redeploy hub with the latest relay tooling |

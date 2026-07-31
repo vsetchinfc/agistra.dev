@@ -37,7 +37,7 @@ By role:
 
 Text changes ≠ behaviour changes. Action taken ≠ outcome verified.
 
-**Duplicate-content check (applies to Builder and Architect equally):** When a fix touches content that is duplicated or copy-pasted across multiple files rather than referenced from one canonical source, verification is not complete until you have grepped for the OLD pattern across the whole repo and confirmed zero remaining instances — not just that the NEW pattern exists where you added it. "I fixed X" and "I confirmed no other copy of the old X survives" are different claims; VBR requires both when duplication is possible. Concrete example that produced this rule: the Working Directory Verification probe path was copy-pasted into five places (one shared skill + four `SOUL.md` files). A PR rework fixed only the shared skill; Architect's review confirmed the new adapter table was correct and approved — but never grepped for the old hardcoded `attempt to read \`.claude/agents/<name>.md\`` line, so four stale copies survived into the merged commit. Vlad caught it on second review. The fix is one grep before reporting complete: `grep -rn "<old pattern>" .` — if it returns hits, the job is not done.
+**Duplicate-content check (applies to Builder and Architect equally):** When a fix touches content that is duplicated or copy-pasted across multiple files rather than referenced from one canonical source, verification is not complete until you have grepped for the OLD pattern across the whole repo and confirmed zero remaining instances — not just that the NEW pattern exists where you added it. "I fixed X" and "I confirmed no other copy of the old X survives" are different claims; VBR requires both when duplication is possible. Concrete example that produced this rule: the Working Directory Verification probe path was copy-pasted into five places (one shared skill + four `SOUL.md` files). A PR rework fixed only the shared skill; Architect's review confirmed the new adapter table was correct and approved — but never grepped for the old hardcoded `attempt to read \`.claude/agents/<name>.md\`` line, so four stale copies survived into the merged commit. The team lead caught it on second review. The fix is one grep before reporting complete: `grep -rn "<old pattern>" .` — if it returns hits, the job is not done.
 
 For investigation discipline before proposing a fix, see RBR below.
 
@@ -86,6 +86,7 @@ Concrete triggers that require an immediate write:
 - **After a full ticket automation flow completes** (qa-passed + merged, or parked) — close out the ticket's state before moving to the next item
 - **After a repo/workspace review or discovery pass** (install attempts, scan results, health checks, "what is this project") that surfaces a fact not already in memory — e.g. stack, blockers, sibling-project layout, next lanes of work
 - **Before returning results from any dispatch** (subagent spawn or direct session) — write a HOT-section entry to `memory/<agent>.md` summarising what was done, ticket and PR references, and any carry-forward items. This applies even to narrowly-scoped one-shot dispatches that terminate immediately after reporting. The write is for the NEXT dispatch of that agent and for other agents reading its memory, not for protecting the current instance's own future turns.
+- **Referenced-but-unlocatable prior discussion:** if the team lead references a past decision/discussion/topic and a search of memory, ADRs, and the repo turns up no record of it, write a stub HOT entry immediately — noting the reference, what was searched, and that it is unverified/missing — before asking the team lead to restate it. An empty-but-flagged entry is still a successful write; silently asking without writing anything is the failure this closes.
 
 **Clock verification (applies before any dated write):** Before writing a date or time into memory, a ticket, a report, or a document — or computing a relative date such as "tomorrow" or "this Friday" — verify against the system clock: `date` (POSIX/bash) or `Get-Date` (PowerShell). Never derive the weekday or time of day from the context-supplied date alone; the context date is accurate for the calendar date but does not carry weekday or wall-clock time. Include the timezone when time-of-day precision matters.
 
@@ -349,7 +350,7 @@ Used by: documentation-and-adrs, planner/architecture outputs.
 | `create-document(collection, name, content)` | Write a document under the named collection (ADRs, reports, proposals). |
 | `read-document(collection, name)` | Read a document by collection and name. |
 
-Out of contract deliberately: retrieval/search (qmd's job, ADR-019), tracker mirroring
+Out of contract deliberately: retrieval/search (qmd's job), tracker mirroring
 (tracker plugin's job, `trackers/<name>.md`), and vault write-path guarding
 (`packages/vault/vault-guard.cjs`).
 

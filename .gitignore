@@ -32,3 +32,4 @@ copilot-instructions.md
 .env
 # Third-party skills
 codebase-design/
+logs/

@@ -42,7 +42,7 @@ ADRs capture the reasoning behind significant technical decisions. They are the 
 
 ### Storage Path
 
-Store ADRs in `docs/decisions/` with sequential numbering: `ADR-001`, `ADR-002`, and so on.
+Store ADRs in `docs/decisions/` with sequential numbering: `ADR-<N>`, incrementing by one for each new record.
 
 ### ADR Structure
 
@@ -59,7 +59,7 @@ Every ADR must include these sections:
 | **Assumptions** | What must be true for this decision to hold? If any assumption is invalidated, this ADR should be revisited. |
 
 ```markdown
-# ADR-001: [Short imperative title]
+# ADR-<N>: [Short imperative title]
 
 ## Status
 Accepted
@@ -144,7 +144,7 @@ if (now - windowStart > WINDOW_SIZE_MS) {
  * If called after hydration, causes a flash of unstyled content
  * because the theme context is not available during SSR.
  *
- * See ADR-003 for the full design rationale.
+ * See ADR-<N> for the full design rationale.
  */
 export function initializeTheme(theme: Theme): void {
   // ...

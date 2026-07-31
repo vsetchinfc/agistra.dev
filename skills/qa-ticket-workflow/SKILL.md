@@ -122,11 +122,11 @@ Do not substitute CLI queries for browser verification.
 
 ## GitHub And State Actions
 
-**The only documented path: `npm run task -- qa-report <id> <verdict> [--gaps <path>] [--findings <path>] [--projects-root <path>]`.** This single command composes the report, posts it to the linked GitHub issue and (if an open PR is discoverable for the current branch) the PR, re-fetches the comment list to confirm each post actually landed (failing loudly, non-zero exit, if not), appends the local `## QA Report` section (and `## Gap Closure` on FAIL/PARTIAL PASS when `--gaps` is supplied), and performs the matching state transition — `state:qa-passed` on PASS, or `state:changes-requested` + the correct `qa-fail-N` label on FAIL/PARTIAL PASS. It replaces Steps 6-8 below with one call. `--projects-root <path>` (task_187) reliably resolves task files regardless of which repo the CLI process itself is running from — pass it whenever the task file lives outside the CLI's own cwd (e.g. Tester running from the source repo against task files under the deployed hub's `projects/` directory).
+**The only documented path: `npm run task -- qa-report <id> <verdict> [--gaps <path>] [--findings <path>] [--projects-root <path>]`.** This single command composes the report, posts it to the linked GitHub issue and (if an open PR is discoverable for the current branch) the PR, re-fetches the comment list to confirm each post actually landed (failing loudly, non-zero exit, if not), appends the local `## QA Report` section (and `## Gap Closure` on FAIL/PARTIAL PASS when `--gaps` is supplied), and performs the matching state transition — `state:qa-passed` on PASS, or `state:changes-requested` + the correct `qa-fail-N` label on FAIL/PARTIAL PASS. It replaces Steps 6-8 below with one call. `--projects-root <path>` reliably resolves task files regardless of which repo the CLI process itself is running from — pass it whenever the task file lives outside the CLI's own cwd (e.g. Tester running from the source repo against task files under the deployed hub's `projects/` directory).
 
 - Write findings/gap-closure content to a temp file first (avoids inline multi-line `--body` escaping), then pass its path via `--findings` and/or `--gaps`.
 - Check the command's JSON output `ok` field and exit code. `ok: false` means the report did not verifiably land, or the transition failed — do not treat any output as success without checking `ok`.
-- **If the CLI command errors, do not fall back to manually editing the task file or the GitHub issue.** Read the JSON `error` field, fix the underlying cause (missing `--projects-root`, invalid id, `gh` auth, etc.) and retry the command. There is no manual-edit fallback path — per ADR-023, exactly one documented path exists for this operation.
+- **If the CLI command errors, do not fall back to manually editing the task file or the GitHub issue.** Read the JSON `error` field, fix the underlying cause (missing `--projects-root`, invalid id, `gh` auth, etc.) and retry the command. There is no manual-edit fallback path — exactly one documented path exists for this operation.
 
 Steps 6 and 7 below describe the sequence the CLI command automates internally; they remain a reference for what the command does — not an alternative manual procedure to perform by hand. The VBR gate is the local task file update; the GitHub comment is the mandatory-when-configured mirror step.
 
@@ -153,7 +153,7 @@ On a FAIL or PARTIAL PASS verdict, Tester appends a `## Gap Closure` section to 
 
 ### Format
 
-Write the section via the task CLI's `append-task-section` operation (`npm run task -- append-section <id> "Gap Closure" <content> [--projects-root <path>]`, piping multi-line content via stdin — see `ticket-lifecycle-mode` State Transition CLI section for the CLI's general usage pattern). Do not hand-edit the section with a text editor — the CLI is the only documented path (ADR-023); if it errors, fix the underlying cause and retry, do not bypass it with a manual `Edit`.
+Write the section via the task CLI's `append-task-section` operation (`npm run task -- append-section <id> "Gap Closure" <content> [--projects-root <path>]`, piping multi-line content via stdin — see `ticket-lifecycle-mode` State Transition CLI section for the CLI's general usage pattern). Do not hand-edit the section with a text editor — the CLI is the only documented path; if it errors, fix the underlying cause and retry, do not bypass it with a manual `Edit`.
 
 Each entry is a `### Gap N` subsection with these fields:
 

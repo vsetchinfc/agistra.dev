@@ -13,7 +13,7 @@ import readline from 'node:readline/promises';
 import { stdin as input, stdout as output } from 'node:process';
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
 import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
@@ -27,29 +27,48 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 /**
- * Manifest-driven, not hardcoded: some hub tiers ship an additional setup
- * step as a self-contained plugin module under lib/ (filename convention:
- * "*.setup-plugin.js"). deployExtras() only copies that plugin file into
- * non-free hub tiers (see pipelines/deploy/lib/extras.js); a free "dev" hub
- * never receives it, and its own setup wizard always writes hubType: 'dev',
- * so it can never reach the branch below that would call this loader. This
- * keeps setup.js itself generic and free of any tier-specific feature names.
+ * Manifest-driven, not hardcoded: some hub tiers ship one or more additional
+ * setup steps as self-contained plugin modules under lib/ (filename
+ * convention: "*.setup-plugin.js"). deployExtras() only copies plugin files
+ * into non-free hub tiers (see pipelines/deploy/lib/extras.js); a free "dev"
+ * hub never receives any of them, and its own setup wizard always writes
+ * hubType: 'dev', so it can never reach the branch below that would call this
+ * loader. This keeps setup.js itself generic and free of any tier-specific
+ * feature names.
  *
- * @returns {function|null}  The plugin's run(opts) function, or null if no
- *   plugin file is present in this hub.
+ * Discovers every plugin file present on disk (sorted, so run order is
+ * stable) and runs each one in turn with the same opts, awaiting each before
+ * starting the next — mirrors doctor.js's checkOptionalTierReadiness(),
+ * which already runs every "*.doctor-plugin.js" file rather than just one.
+ * Previously exactly one "*.setup-plugin.js" file was ever present per hub,
+ * so this was equivalent to running only the first; a hub built with
+ * --with-graphify now ships a tier's own plugin (dev-sub.setup-plugin.js /
+ * ops.setup-plugin.js) alongside dev-graph.setup-plugin.js, and both must
+ * run — the tier's own base setup responsibilities are not optional just
+ * because Graphify was added on.
+ *
+ * @param {object} opts  Forwarded unchanged to every discovered plugin's run(opts) —
+ *   each plugin destructures only the properties it needs, so passing the
+ *   union of every tier's opts to every plugin is safe (unused properties on
+ *   a destructured parameter object are simply ignored).
+ * @param {object} [deps]
+ * @param {string} [deps.libDir]  Directory to scan for "*.setup-plugin.js" files.
+ *   Defaults to this file's own lib/ dir (production). Overridable for testing.
+ * @returns {Promise<void>}
  */
-async function defaultSetupTierPlugin(opts) {
+export async function defaultSetupTierPlugin(opts, { libDir = path.join(__dirname, 'lib') } = {}) {
 	let pluginFiles = [];
 	try {
-		pluginFiles = fs.readdirSync(path.join(__dirname, 'lib'))
+		pluginFiles = fs.readdirSync(libDir)
 			.filter(f => f.endsWith('.setup-plugin.js'))
 			.sort();
 	} catch {
 		pluginFiles = [];
 	}
-	if (pluginFiles.length === 0) return;
-	const mod = await import(`./lib/${pluginFiles[0]}`);
-	return mod.run(opts);
+	for (const file of pluginFiles) {
+		const mod = await import(pathToFileURL(path.join(libDir, file)).href);
+		await mod.run(opts);
+	}
 }
 // Source-repo agents/profiles/ dir, relative to this script's own location (not cliOutputRoot).
 // Present when running `npm run setup` from inside the setchin-agent-profiles repo itself.
@@ -90,7 +109,7 @@ export function readHubConfig(deployDir = __dirname) {
  * the other: a stored hubType is never overridden without asking, and a
  * disagreeing packaged value is never ignored without saying so.
  *
- * task_200: this reconciliation closes the gap where a stale
+ * This reconciliation closes the gap where a stale
  * workspace.config.json — e.g. left over from an earlier "dev" setup run in
  * the same target directory, which a fresh archive's unzip-merge never
  * removes because the archive itself never ships workspace.config.json —
@@ -540,7 +559,7 @@ export function createRun({
 		// On first setup in a packaged archive, .hub-config.json (injected by the
 		// packaging profile) provides the hub type rather than defaulting to "dev".
 		// A stored hubType that disagrees with the packaged sentinel is never
-		// silently trusted — resolveHubType() warns and asks (task_200).
+		// silently trusted — resolveHubType() warns and asks.
 		const hubType = await resolveHubType({
 			prevHubType: prev.hubType,
 			packagedHubType: readHubConfigFn()?.hubType,
@@ -592,6 +611,27 @@ export function createRun({
 			}
 		}
 
+		// Each branch below builds the same superset of opts (ask/askYN/askSecret/
+		// portOverride/platforms/readJsonSafe/writeJsonSafe) regardless of which one
+		// fires, rather than a narrower per-tier subset. A hub built with
+		// --with-graphify ships dev-graph.setup-plugin.js ALONGSIDE the tier's own
+		// plugin file, and setupTierPlugin() (defaultSetupTierPlugin()) now runs every
+		// "*.setup-plugin.js" file present, not just one — so whichever tier branch
+		// below fires must supply everything ANY discovered plugin might need (e.g.
+		// askSecret, for the Graphify add-on's masked API-key prompt), not just what
+		// that tier's own primary plugin uses. Each plugin's own run() destructures
+		// only the properties it needs; unused ones are ignored.
+		const tierPluginOpts = {
+			hubRoot: cliOutputRoot,
+			portOverride: tierPluginPort,
+			platforms,
+			ask,
+			askYN,
+			askSecret,
+			readJsonSafe: (p) => readJsonSafe(p, fsMod),
+			writeJsonSafe: (p, v) => writeJsonSafe(p, v, fsMod),
+		};
+
 		if (config.hubType === 'dev:sub') {
 			line('Knowledge retrieval ');
 			// The tier plugin (dev:sub-only, discovered generically above) owns
@@ -599,14 +639,11 @@ export function createRun({
 			// hook wiring (SessionStart/PostToolUse/Stop) — passing
 			// platforms/readJsonSafe/writeJsonSafe lets it merge into
 			// .claude/settings.json itself without setup.js importing anything
-			// tier-specific directly.
-			await setupTierPlugin({
-				hubRoot: cliOutputRoot,
-				portOverride: tierPluginPort,
-				platforms,
-				readJsonSafe: (p) => readJsonSafe(p, fsMod),
-				writeJsonSafe: (p, v) => writeJsonSafe(p, v, fsMod),
-			});
+			// tier-specific directly. ask/askYN are also passed through so the
+			// plugin can prompt for a prior-hub migration using the same
+			// injectable I/O as the rest of setup — mirroring how the
+			// dev:graph tier plugin already receives them.
+			await setupTierPlugin(tierPluginOpts);
 		}
 
 		if (config.hubType === 'dev:graph') {
@@ -615,17 +652,20 @@ export function createRun({
 			// ask/askYN/askSecret are passed so the plugin can prompt the user
 			// interactively using the same injectable I/O as the rest of setup.
 			// askSecret masks the API key input — it is never echoed to the terminal.
-			await setupTierPlugin({
-				hubRoot: cliOutputRoot,
-				ask,
-				askYN,
-				askSecret,
-				readJsonSafe: (p) => readJsonSafe(p, fsMod),
-				writeJsonSafe: (p, v) => writeJsonSafe(p, v, fsMod),
-			});
+			await setupTierPlugin(tierPluginOpts);
 		}
 
-		// ── Nightly dreaming (Windows only, task_208 / issue #381) ────────────────
+		if (config.hubType === 'ops') {
+			// The tier plugin (ops-only, discovered generically by filename
+			// convention — lib/ops.setup-plugin.js) owns the prior-hub migration
+			// prompt only. ops has no other non-migration setup responsibility
+			// wired here yet — a pre-existing, separately-flagged gap, not this
+			// ticket's scope. ask/askYN are passed through the same way the
+			// dev:graph/dev:sub tier plugins already receive them.
+			await setupTierPlugin(tierPluginOpts);
+		}
+
+		// ── Nightly dreaming (Windows only) ──────────────────────────────────────
 		// Applies uniformly across hub tiers — not gated by hubType. Runs last (after
 		// the tier plugin steps above) and does its own read-merge-write of
 		// workspace.config.json, the same incremental-update pattern
@@ -708,8 +748,8 @@ export function createRun({
 }
 
 /**
- * Disable/remove the nightly dreaming Scheduled Task (AC5, task_208 / issue #381) without
- * running the full interactive wizard. Windows-only — a no-op safe-degrade on any other
+ * Disable/remove the nightly dreaming Scheduled Task without running the full
+ * interactive wizard. Windows-only — a no-op safe-degrade on any other
  * platform, matching this feature's own "Windows-only for v1" scope everywhere else.
  *
  * Also flips `nightlyDreaming.enabled` to false in workspace.config.json when that key

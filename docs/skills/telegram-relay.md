@@ -31,7 +31,7 @@ Router's rules for bridging your team and a configured remote team via Telegram.
 | CI or build failure | `ci_failed` | Builder (with CI exception details) |
 | Ready for QA, retest | `qa_requested` | Tester (Pre-QA Readiness Check mode only — no live tests) |
 | Blocked, waiting | `blocked` | Builder if engineering blocker; HOT memory if decision blocker |
-| Approval, scope, price, timeline | `vlad_decision_required` | HOT memory → surfaces to you at next standup or dreaming |
+| Approval, scope, price, timeline | `decision_required` | HOT memory → surfaces to you at next standup or dreaming |
 | FYI, status update | `info_only` | Short ack — no dispatch |
 | Missing context | `unclear` | One clarifying question — no dispatch until resolved |
 
@@ -61,7 +61,7 @@ Every outbound message is checked before it leaves:
 | --- | --- |
 | **Inter-team-sharable** — PR status, defect summaries, QA verdicts on remote-team tickets | Yes |
 | **Internal** — architecture rationale, internal planning, agent debate | No |
-| **Vlad-only** — scope, price, timeline, client commitments | No |
+| **Team-lead-only** — scope, price, timeline, client commitments | No |
 
 When in doubt: if the ticket originated from the remote team, share progress. Otherwise refuse and escalate to HOT memory.
 

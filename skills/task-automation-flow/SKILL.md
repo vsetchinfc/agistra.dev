@@ -332,7 +332,7 @@ Sequential means Ticket 2 does not start until Ticket 1 completes its active wor
 
 ### Eligibility
 
-Architect proposes a candidate pair from eligible backlog tickets. Before proposing, Architect runs `npm run task -- waves <project>` (task_176) to mechanically compute which `todo` tickets have no `depends_on` edge and no overlapping `touches` globs between them — this replaces ad hoc manual comparison with a computed grouping. Architect presents the computed grouping to the team lead alongside the proposal.
+Architect proposes a candidate pair from eligible backlog tickets. Before proposing, Architect runs `npm run task -- waves <project>` to mechanically compute which `todo` tickets have no `depends_on` edge and no overlapping `touches` globs between them — this replaces ad hoc manual comparison with a computed grouping. Architect presents the computed grouping to the team lead alongside the proposal.
 
 **The `waves` command informs the proposal; it does not replace the confirmation gate.** Team lead and Architect still jointly confirm the pair meets all three criteria before any dispatch:
 
@@ -376,7 +376,7 @@ Each ticket runs its own fail counter independently. A 3rd fail on either ticket
 ### Hard Rules (Batch)
 
 - Max batch size: 2 tickets.
-- Ticket selection is a joint call — Architect proposes (using `npm run task -- waves <project>` to compute the candidate grouping, task_176), team lead confirms. Architect does not self-select.
+- Ticket selection is a joint call — Architect proposes (using `npm run task -- waves <project>` to compute the candidate grouping), team lead confirms. Architect does not self-select.
 - Concurrent Builder dispatches, when the team lead approves running a wave in parallel rather than sequentially, are capped at 2 at a time — current practice — unless the team lead explicitly raises the cap. This is prompt-level guidance for Architect, not something `task waves` or any CLI enforces.
 - No auto-merge in batch mode. Team lead merges both at the end.
 - Tickets run sequentially — Ticket 2 does not start until Ticket 1 completes or parks. When Ticket 1 parks, Ticket 2 starts immediately as a defined exception; this is not concurrent execution but a parking carve-out.

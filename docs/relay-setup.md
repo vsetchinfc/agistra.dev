@@ -1,6 +1,6 @@
 # Relay setup guide
 
-Unified inter-team relay (ADR-004): Telegram group I/O via a local daemon, agent tools via **relay MCP** — not the Claude official Telegram plugin.
+Unified inter-team relay: Telegram group I/O via a local daemon, agent tools via **relay MCP** — not the Claude official Telegram plugin.
 
 ---
 

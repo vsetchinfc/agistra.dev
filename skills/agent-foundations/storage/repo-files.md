@@ -49,7 +49,7 @@ overwrite, not an append.
 Task files live at `projects/<project>/task_<id>_<state>_<slug>.md`.
 
 The filename infix `<state>` is the derived index of `status:` frontmatter; the
-`status:` field is authoritative (ADR-005). The CLI reconciles the infix with
+`status:` field is authoritative. The CLI reconciles the infix with
 frontmatter on every transition (`check:tickets` / `fix:tickets`).
 
 ### create-task(project, id, frontmatter, body)
@@ -112,7 +112,7 @@ Documents live under `docs/<collection>/`. Common collections: `decisions` (ADRs
 ### create-document(collection, name, content)
 
 Write a new file at `docs/<collection>/<name>`. The `name` argument includes the
-file extension (e.g. `ADR-022-foo.md`). Create the directory if it does not exist.
+file extension (e.g. `ADR-NNN-foo.md`). Create the directory if it does not exist.
 
 ### read-document(collection, name)
 

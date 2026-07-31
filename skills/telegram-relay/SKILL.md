@@ -6,7 +6,7 @@ argument-hint: "Inbound Telegram message, remote agent request, outbound state t
 
 # Telegram Relay
 
-Use this skill when Router needs to bridge your team and the remote team across Telegram. The skill defines Router's behaviour rules on top of the hub relay daemon (`cli/relay/`). Router calls `relay_send` for outbound; inbound arrives as parsed jobs via `relay_inbox_peek` (task_33).
+Use this skill when Router needs to bridge your team and the remote team across Telegram. The skill defines Router's behaviour rules on top of the hub relay daemon (`cli/relay/`). Router calls `relay_send` for outbound; inbound arrives as parsed jobs via `relay_inbox_peek`.
 
 ## Scope
 

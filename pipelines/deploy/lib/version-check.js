@@ -48,7 +48,7 @@ function fetchRemoteVersion(url) {
 
 /**
  * Compute the version-check result for a given hub root. Extracted so other
- * callers (e.g. session-cli.js's `session init`, task_182) can reuse this
+ * callers (e.g. session-cli.js's `session init`) can reuse this
  * logic directly instead of shelling out to this script or duplicating it.
  *
  * Returns the same `{ status, local, remote }` shape this script prints.

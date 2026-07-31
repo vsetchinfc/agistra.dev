@@ -8,9 +8,9 @@
  * dispatchRouter(), which spawns `claude -p "<prompt>" --model claude-haiku-4-5-20251001`
  * with `cwd: hubRoot`).
  *
- * Windows-only for v1 (task_208 / issue #381) — Mac/Linux (cron/launchd) deferred.
+ * Windows-only for v1 — Mac/Linux (cron/launchd) deferred.
  *
- * **Prompt wording (task_213 / issue #389):** the original v1 prompt was a bare
+ * **Prompt wording:** the original v1 prompt was a bare
  * `"Good night Team"`, which reliably fails in a cold, non-interactive session — reproduced
  * directly (not guessed): `cmd.exe /c claude -p "Good night Team" --model
  * claude-haiku-4-5-20251001` returns a generic "Good night! Rest well." with zero tool
@@ -26,7 +26,7 @@
  * real, unmocked end-to-end run against a scratch hub copy (see PR description) — an actual
  * memory file was rewritten with genuine current-state content, not just an exit-0 process.
  *
- * **Permission mode (task_213 / issue #389):** memory consolidation is all file-writing
+ * **Permission mode:** memory consolidation is all file-writing
  * tool calls, and a Scheduled Task run has no TTY and nobody present at 2am to approve a
  * permission prompt — those writes would otherwise be silently blocked. `claude --help`
  * documents `--permission-mode bypassPermissions` for exactly this non-interactive case;
@@ -51,6 +51,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { execFileSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 export const NIGHTLY_DREAMING_TASK_NAME = 'AgistraDevNightlyDreaming';
 export const DEFAULT_NIGHTLY_DREAMING_TIME = '02:00';
@@ -58,13 +59,13 @@ export const NIGHTLY_DREAMING_MODEL = 'claude-haiku-4-5-20251001';
 // Addressed to Architect by name (required for the cold-session CLAUDE.md Startup Rule to
 // fire at all) plus an explicit non-interactive directive (required so the model performs
 // real file reads/writes instead of a conversational acknowledgement). See the file header
-// comment above for the full root-cause writeup and real E2E proof (task_213 / issue #389).
+// comment above for the full root-cause writeup and real E2E proof.
 export const NIGHTLY_DREAMING_PROMPT =
 	'Architect, Good night Team. Run the dreaming skill end-of-day memory consolidation now. ' +
 	'This is an unattended automated run, not interactive chat -- actually perform the file ' +
 	'reads and writes yourself, do not just acknowledge in words.';
 // Non-interactive permission mode — nobody is present overnight to approve a permission
-// prompt for the file-writing tool calls consolidation requires (task_213 / issue #389).
+// prompt for the file-writing tool calls consolidation requires.
 export const NIGHTLY_DREAMING_PERMISSION_MODE = 'bypassPermissions';
 
 /**
@@ -127,12 +128,20 @@ export function buildNightlyDreamingTaskXml({
 		throw new Error('buildNightlyDreamingTaskXml: hubRoot is required');
 	}
 	const startBoundary = `${startDate}T${time}:00`;
-	const args = `/c claude -p "${prompt}" --model ${model} --permission-mode ${permissionMode}`;
+	// The Exec action no longer calls `claude` directly — it calls this same module's
+	// own CLI entry point (see the `isMain` block at the bottom of this file), which
+	// wraps the exact same `cmd.exe /c claude ...` invocation but captures real
+	// stdout/stderr to a dated log file under logs/ first. Routed through this module
+	// (rather than a separate wrapper script) so log-capture logic lives in one place,
+	// stays covered by the same DI test pattern as the rest of this file, and never
+	// needs a second entry added to extras.js/package-*.js's lib-file allowlists.
+	const scriptPath = path.win32.join(hubRoot, 'pipelines', 'deploy', 'lib', 'nightly-dreaming.js');
+	const args = `/c node "${scriptPath}" "${prompt}" ${model} ${permissionMode}`;
 	return [
 		'<?xml version="1.0" encoding="UTF-16"?>',
 		'<Task version="1.2" xmlns="http://schemas.microsoft.com/windows/2004/02/mit/task">',
 		'  <RegistrationInfo>',
-		'    <Description>Agistra Dev nightly end-of-day memory consolidation ("Good night Team"). Opt-in, registered by npm run setup (task_208 / issue #381).</Description>',
+		'    <Description>Agistra Dev nightly end-of-day memory consolidation ("Good night Team"). Opt-in, registered by npm run setup.</Description>',
 		'  </RegistrationInfo>',
 		'  <Triggers>',
 		'    <CalendarTrigger>',
@@ -252,7 +261,7 @@ export function registerNightlyDreamingTask({
 	// path.win32 explicitly rather than the OS-native path module — on a non-Windows CI
 	// runner, plain path.join would treat the drive-letter-prefixed tmpDir as an opaque
 	// POSIX segment and join it with a forward slash, producing a mixed-separator path
-	// that never matches the Windows-style path schtasks/tests expect (task_208 Gap 1).
+	// that never matches the Windows-style path schtasks/tests expect.
 	const xmlPath = path.win32.join(tmpDir, `${taskName}.xml`);
 	try {
 		// schtasks requires the XML definition file to be Unicode (UTF-16) AND
@@ -304,4 +313,133 @@ export function removeNightlyDreamingTask({
 	} catch (err) {
 		return { ok: false, removed: false, error: err.message ?? String(err) };
 	}
+}
+
+/**
+ * Runs the exact same `cmd.exe /c claude ...` invocation the Scheduled Task used to
+ * call directly, but captures real stdout/stderr to a dated log file first. This
+ * closes a real production gap: the Scheduled Task could report exit 0 with
+ * `NumberOfMissedRuns: 0` on a real overnight run, yet no consolidation work would
+ * happen and there was zero way to see why from outside the process. This function
+ * is the Exec action's actual entry point now (see the `isMain` CLI block below) —
+ * every future run leaves a real, inspectable artifact under `logs/`, unconditionally,
+ * whether the run succeeds, fails, or hangs and gets killed by ExecutionTimeLimit.
+ *
+ * @param {object} [opts]
+ * @param {string} [opts.hubRoot]         Defaults to process.cwd() — correct because the
+ *   Scheduled Task's <WorkingDirectory> already sets cwd to the hub root before this
+ *   script runs, so no separate argument needs to travel through cmd.exe/XML quoting.
+ * @param {string} [opts.prompt]
+ * @param {string} [opts.model]
+ * @param {string} [opts.permissionMode]
+ * @param {function} [opts.execFn]  Injectable execFileSync for testing.
+ * @param {object}   [opts.fsMod]   Injectable fs module for testing.
+ * @param {function} [opts.now]     Injectable clock (returns a Date) for testing.
+ * @returns {{ ok: boolean, exitCode: number, logPath: string }}
+ */
+export function runNightlyDreamingWithLogging({
+	hubRoot = process.cwd(),
+	prompt = NIGHTLY_DREAMING_PROMPT,
+	model = NIGHTLY_DREAMING_MODEL,
+	permissionMode = NIGHTLY_DREAMING_PERMISSION_MODE,
+	execFn = execFileSync,
+	fsMod = fs,
+	now = () => new Date(),
+} = {}) {
+	const logDir = path.join(hubRoot, 'logs');
+	fsMod.mkdirSync(logDir, { recursive: true });
+	const logPath = path.join(logDir, `nightly-dreaming-${localDateString(now())}.log`);
+	const append = (text) => fsMod.appendFileSync(logPath, text);
+
+	append(`\n=== nightly-dreaming run started ${now().toISOString()} ===\n`);
+	append(`cwd: ${hubRoot}\nmodel: ${model}\npermission-mode: ${permissionMode}\n\n`);
+
+	let exitCode = 0;
+	try {
+		const output = execFn(
+			'cmd.exe',
+			['/c', 'claude', '-p', prompt, '--model', model, '--permission-mode', permissionMode],
+			{ cwd: hubRoot, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 },
+		);
+		append(output ?? '');
+	} catch (err) {
+		exitCode = typeof err.status === 'number' ? err.status : 1;
+		append(`${err.stdout ?? ''}${err.stderr ?? ''}\n[nightly-dreaming-runner] error: ${err.message}\n`);
+	}
+	append(`\n=== nightly-dreaming run finished ${now().toISOString()} (exit ${exitCode}) ===\n`);
+	return { ok: exitCode === 0, exitCode, logPath };
+}
+
+/**
+ * Queries the live registered task's last-run outcome directly from `schtasks`, so a
+ * monitoring/doctor check can compare "task reports success" against "memory archive
+ * actually advanced" without trusting either signal alone.
+ *
+ * @param {object} [opts]
+ * @param {string} [opts.taskName]
+ * @param {function} [opts.execFn]
+ * @returns {{ lastRunTime: string|null, lastResult: number|null }}
+ */
+export function getNightlyDreamingTaskRuntimeInfo({
+	taskName = NIGHTLY_DREAMING_TASK_NAME,
+	execFn = execFileSync,
+} = {}) {
+	try {
+		const raw = execFn('schtasks', ['/query', '/tn', taskName, '/fo', 'LIST', '/v'], {
+			stdio: 'pipe',
+			encoding: 'utf-8',
+		}).toString();
+		const lastRunMatch = /Last Run Time:\s*(.+)/i.exec(raw);
+		const lastResultMatch = /Last Result:\s*(\d+)/i.exec(raw);
+		return {
+			lastRunTime: lastRunMatch ? lastRunMatch[1].trim() : null,
+			lastResult: lastResultMatch ? Number(lastResultMatch[1]) : null,
+		};
+	} catch {
+		return { lastRunTime: null, lastResult: null };
+	}
+}
+
+/**
+ * Finds the most recent dated archive snapshot for an agent under memory/archive/
+ * (e.g. `architect-2026-07-30.md`). Returns the YYYY-MM-DD date string of the newest
+ * one found, or null if none exist. Used to detect a known regression pattern: the
+ * Scheduled Task reporting success while the dreaming skill's own archive-before-
+ * compact step never actually ran.
+ *
+ * @param {object} opts
+ * @param {string} opts.hubRoot
+ * @param {string} [opts.agent]
+ * @param {object} [opts.fsMod]
+ * @returns {string|null}
+ */
+export function findMostRecentArchiveDate({ hubRoot, agent = 'architect', fsMod = fs }) {
+	const archiveDir = path.join(hubRoot, 'memory', 'archive');
+	let files;
+	try {
+		files = fsMod.readdirSync(archiveDir);
+	} catch {
+		return null;
+	}
+	const pattern = new RegExp(`^${agent}-(\\d{4}-\\d{2}-\\d{2})\\.md$`);
+	const dates = files.map((f) => pattern.exec(f)).filter(Boolean).map((m) => m[1]).sort();
+	return dates.length ? dates[dates.length - 1] : null;
+}
+
+// ── CLI entry point ──────────────────────────────────────────────────────────────
+// Invoked by the registered Scheduled Task (see buildNightlyDreamingTaskXml above) as:
+//   node <hubRoot>\pipelines\deploy\lib\nightly-dreaming.js "<prompt>" <model> <permissionMode>
+// Also runnable manually for a real, faithful repro of the exact registered command
+// without needing to reconstruct the cmd.exe invocation by hand.
+const isMain = process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url));
+if (isMain) {
+	const [, , promptArg, modelArg, permissionModeArg] = process.argv;
+	const result = runNightlyDreamingWithLogging({
+		hubRoot: process.cwd(),
+		prompt: promptArg || NIGHTLY_DREAMING_PROMPT,
+		model: modelArg || NIGHTLY_DREAMING_MODEL,
+		permissionMode: permissionModeArg || NIGHTLY_DREAMING_PERMISSION_MODE,
+	});
+	process.stdout.write(`nightly-dreaming: exit ${result.exitCode}, log: ${result.logPath}\n`);
+	process.exit(result.exitCode);
 }

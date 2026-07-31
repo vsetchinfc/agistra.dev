@@ -2,7 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 /**
- * Canonical set of task state tokens per ADR-005.
+ * Canonical set of task state tokens (ticket-lifecycle-mode State Vocabulary).
  * Used in filename patterns and state validation across CLI tools.
  */
 export const TASK_STATE_TOKENS = [
@@ -128,7 +128,7 @@ export function listAllTasks(projectsRoot) {
 /**
  * Find a specific task by number or slug.
  * Matches any state token (todo, in-progress, ready-for-review, ready-for-qa, changes-requested, qa-passed, done).
- * e.g. query "6" matches "task_6_in-progress_feature.md"
+ * e.g. query "6" matches "task_<id>_in-progress_feature.md" where <id> is 6
  * Returns the absolute file path, or null if not found.
  */
 export function findTaskByQuery(projectDir, query) {
@@ -159,7 +159,7 @@ export function loadSkillContent(skillsRoot, skillName) {
 
 /**
  * Map lifecycle state to filename token.
- * Per ADR-005 state vocabulary.
+ * Per the ticket-lifecycle-mode state vocabulary.
  * Throws on unknown state to prevent silent bugs.
  */
 function stateToToken(state) {
@@ -317,11 +317,11 @@ export function appendTaskSection(taskPath, section, content) {
 	return taskPath;
 }
 
-// ── Wave computation (task_176) ─────────────────────────────────────────────
+// ── Wave computation ─────────────────────────────────────────────────────────
 
 /**
  * Extract a numeric task id from a filename or a depends_on/id reference
- * string. Accepts "task_170_todo_x.md", "task_170", or bare "170".
+ * string. Accepts "task_<id>_todo_x.md", "task_<id>", or a bare numeric id.
  * Returns the id as a string (e.g. "170"), or null if no digits found.
  */
 function extractTaskId(value) {
@@ -371,8 +371,8 @@ export function globsOverlap(a, b) {
 }
 
 /**
- * Compute wave-parallel groups of dispatchable (`todo`) tasks for a project
- * (task_176). Read/compute-only — never mutates task state or dispatches
+ * Compute wave-parallel groups of dispatchable (`todo`) tasks for a project.
+ * Read/compute-only — never mutates task state or dispatches
  * anything; the caller (Architect) proposes the result to the team lead for
  * confirmation per `task-automation-flow`.
  *

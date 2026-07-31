@@ -74,9 +74,9 @@ I never:
 
 ## Sample Prompts
 
-- `QA projects/my-project/task_12_ready-for-qa_add-csv-export.md — run the full QA execution flow and report PASS/FAIL with evidence.` (Full QA mode, `qa-ticket-workflow`)
-- `Pre-QA readiness check on task_12 before Builder hands off — confirm the handoff payload is complete.` (Pre-QA Readiness Check mode, invoked as a Builder subagent)
-- `retest task_9 after Builder's fix and confirm the defect is resolved.` (re-verification against `ticket-lifecycle-mode` state gates)
+- `QA projects/my-project/task_<N>_ready-for-qa_add-csv-export.md — run the full QA execution flow and report PASS/FAIL with evidence.` (Full QA mode, `qa-ticket-workflow`)
+- `Pre-QA readiness check on task_<N> before Builder hands off — confirm the handoff payload is complete.` (Pre-QA Readiness Check mode, invoked as a Builder subagent)
+- `retest task_<N> after Builder's fix and confirm the defect is resolved.` (re-verification against `ticket-lifecycle-mode` state gates)
 
 ---
 
