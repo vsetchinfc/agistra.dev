@@ -50,7 +50,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 export const NIGHTLY_DREAMING_TASK_NAME = 'AgistraDevNightlyDreaming';
@@ -332,7 +332,12 @@ export function removeNightlyDreamingTask({
  * @param {string} [opts.prompt]
  * @param {string} [opts.model]
  * @param {string} [opts.permissionMode]
- * @param {function} [opts.execFn]  Injectable execFileSync for testing.
+ * @param {function} [opts.execFn]  Injectable `spawnSync`-shaped function for testing —
+ *   must return `{ stdout, stderr, status, error? }`. Using `spawnSync` (rather than
+ *   `execFileSync`) is deliberate: `spawnSync` never throws for a non-zero exit code or a
+ *   failed spawn — both outcomes are reported via the returned result object — so stdout
+ *   and stderr are captured identically on every path (clean exit 0, non-zero exit, and a
+ *   spawn failure) instead of only inside a catch block reached on a thrown/non-zero exit.
  * @param {object}   [opts.fsMod]   Injectable fs module for testing.
  * @param {function} [opts.now]     Injectable clock (returns a Date) for testing.
  * @returns {{ ok: boolean, exitCode: number, logPath: string }}
@@ -342,7 +347,7 @@ export function runNightlyDreamingWithLogging({
 	prompt = NIGHTLY_DREAMING_PROMPT,
 	model = NIGHTLY_DREAMING_MODEL,
 	permissionMode = NIGHTLY_DREAMING_PERMISSION_MODE,
-	execFn = execFileSync,
+	execFn = spawnSync,
 	fsMod = fs,
 	now = () => new Date(),
 } = {}) {
@@ -354,18 +359,21 @@ export function runNightlyDreamingWithLogging({
 	append(`\n=== nightly-dreaming run started ${now().toISOString()} ===\n`);
 	append(`cwd: ${hubRoot}\nmodel: ${model}\npermission-mode: ${permissionMode}\n\n`);
 
-	let exitCode = 0;
-	try {
-		const output = execFn(
-			'cmd.exe',
-			['/c', 'claude', '-p', prompt, '--model', model, '--permission-mode', permissionMode],
-			{ cwd: hubRoot, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 },
-		);
-		append(output ?? '');
-	} catch (err) {
-		exitCode = typeof err.status === 'number' ? err.status : 1;
-		append(`${err.stdout ?? ''}${err.stderr ?? ''}\n[nightly-dreaming-runner] error: ${err.message}\n`);
+	const result = execFn(
+		'cmd.exe',
+		['/c', 'claude', '-p', prompt, '--model', model, '--permission-mode', permissionMode],
+		{ cwd: hubRoot, encoding: 'utf-8', maxBuffer: 10 * 1024 * 1024 },
+	);
+	// Append stdout and stderr unconditionally — both are captured on every outcome,
+	// not only when the process exits non-zero. This is the real fix: the prior
+	// execFileSync-based implementation only appended stderr inside the catch block
+	// reached on a thrown/non-zero exit, silently discarding it on a clean exit 0.
+	append(result.stdout ?? '');
+	append(result.stderr ?? '');
+	if (result.error) {
+		append(`[nightly-dreaming-runner] error: ${result.error.message}\n`);
 	}
+	const exitCode = typeof result.status === 'number' ? result.status : 1;
 	append(`\n=== nightly-dreaming run finished ${now().toISOString()} (exit ${exitCode}) ===\n`);
 	return { ok: exitCode === 0, exitCode, logPath };
 }
