@@ -73,6 +73,7 @@ Before producing any artifact, identify:
 - Purpose and scope of the decision
 - Entry lens: user, test, system, analytics, or debug
 - Source material reviewed (tickets, files, docs, existing ADRs)
+  - If the current hub has an optional codebase-intelligence lens skill with pre-computed artifacts available, review those artifacts as source material before running Grep/Read exploration — cite them like any other evidence.
 - Exact evidence already available and the specific artifacts or boundaries it comes from
 - Current system constraints and existing patterns
 - Functional requirements

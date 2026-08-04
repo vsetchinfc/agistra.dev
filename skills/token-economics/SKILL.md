@@ -25,6 +25,7 @@ Before every response, ask: is this response as compact as it can be while still
 
 ## Read Hygiene
 
+- If the current hub has an optional codebase-intelligence lens skill, check for existing pre-computed artifacts before a multi-file Grep sweep — pre-computed graphs answer caller/callee/hotspot questions for free; paying for repeated Grep passes over source that's already indexed is a budget leak.
 - Don't re-read a file you already read in the same session unless its content may have changed.
 - Don't re-read a skill or profile already loaded this session.
 - When a tool result is large, extract only the relevant fragment and discard the rest mentally.
