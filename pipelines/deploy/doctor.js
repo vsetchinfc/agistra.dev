@@ -16,7 +16,6 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { CLAUDE_SETTINGS_PATH, readJsonSafe } from './wizard.js';
-import { DEFAULT_DAEMON_PORT } from './relay/core/config.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
 import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
 import {
@@ -176,6 +175,13 @@ async function checkRelayDaemonAsync({ hubRoot, fsMod, probeHealth }) {
 	if (!isRemoteTeamEnabled(config)) {
 		return skip(6, 'relay daemon', 'remoteTeam not enabled — relay check skipped');
 	}
+
+	// relay/core/config.js is only present on hubs where relay/ was deployed
+	// (extras.js copies it conditionally). Dynamic import here — placed after
+	// early-return guards — ensures doctor.js loads without error on hubs that
+	// don't have relay/ at all. By this point remoteTeam.enabled is true, so
+	// the relay directory is guaranteed present.
+	const { DEFAULT_DAEMON_PORT } = await import('./relay/core/config.js');
 
 	const port = Number(config?.relay?.daemonPort) || DEFAULT_DAEMON_PORT;
 	const result = await probeHealth(port);
