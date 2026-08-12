@@ -33,3 +33,6 @@ copilot-instructions.md
 # Third-party skills
 codebase-design/
 logs/
+.claude/.graph-lens-state.json
+# memory-index CLI local index — regenerated via `npm run memory-index -- build`
+.memory-index.json

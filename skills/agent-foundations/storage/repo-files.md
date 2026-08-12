@@ -24,6 +24,15 @@ Read `memory/<agent>.md` from the hub root.
 
 Example: `memory/builder.md`, `memory/architect.md`.
 
+### list-memory-agents()
+
+List the `.md` files directly under `memory/` (top-level only, non-recursive).
+Excludes `memory/archive/` (a subdirectory, not an agent file) and non-agent files
+such as `memory/working-buffer.md`. Each remaining filename, minus the `.md`
+extension, is an agent id (e.g. `architect`, `builder`, `router`, `tester`). Supports
+tooling such as the memory-index CLI, which must enumerate every agent's memory
+file rather than read one known agent at a time.
+
 ### write-memory-entry(agent, tier, content)
 
 Edit the HOT, WARM, or COLD section of `memory/<agent>.md`. The tier argument

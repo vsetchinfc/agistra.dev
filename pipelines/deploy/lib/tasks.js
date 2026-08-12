@@ -38,11 +38,18 @@ export function doneTasksDir(projectDir) {
 /**
  * Parse YAML-like frontmatter from a markdown file.
  * Supports scalar string values and simple string arrays (  - item).
- * Returns { meta: object, body: string }
+ * Returns { meta: object, body: string, hadFrontmatter: boolean }.
+ *
+ * `hadFrontmatter: false` signals a legacy task file with no `---...---`
+ * YAML block — the entire original content came back as `body`. Callers
+ * that write a fresh YAML `status:` frontmatter block onto such a file
+ * (`changeTaskStatus`, `updateTaskFields`) use this flag to strip the
+ * stale `**State:**` bold-text line from `body` so the rewritten file
+ * has a single source of truth for state, not a duplicate contradictory field.
  */
 export function parseFrontmatter(content) {
 	const match = content.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
-	if (!match) return { meta: {}, body: content };
+	if (!match) return { meta: {}, body: content, hadFrontmatter: false };
 
 	const meta = {};
 	const lines = match[1].split(/\r?\n/);
@@ -64,7 +71,19 @@ export function parseFrontmatter(content) {
 		}
 	}
 
-	return { meta, body: match[2] };
+	return { meta, body: match[2], hadFrontmatter: true };
+}
+
+/**
+ * Strip a legacy `**State:** <value>` bold-text line from a task file body.
+ * Only ever called for the no-frontmatter case — i.e. when the body about
+ * to be rewritten under a fresh YAML frontmatter block is the *entire*
+ * original legacy-format file content. Matches and removes only the first
+ * `**State:** ...` line; no other legacy bold-text field (`**Verifier:**`,
+ * `**Repo:**`, `**GitHub:**`, etc.) is touched.
+ */
+function stripLegacyStateLine(body) {
+	return body.replace(/^\*\*State:\*\*[ \t]*.*\r?\n?/m, '');
 }
 
 /**
@@ -214,7 +233,8 @@ export function serializeFrontmatter(meta) {
 export function changeTaskStatus(taskPath, targetState = 'closed', frontmatterUpdates = {}) {
 	const projectDir = projectDirFromTaskPath(taskPath);
 	const raw = fs.readFileSync(taskPath, 'utf-8');
-	const { meta, body } = parseFrontmatter(raw);
+	const { meta, body, hadFrontmatter } = parseFrontmatter(raw);
+	const newBody = hadFrontmatter ? body : stripLegacyStateLine(body);
 
 	// Update frontmatter
 	meta.status = targetState;
@@ -242,7 +262,7 @@ export function changeTaskStatus(taskPath, targetState = 'closed', frontmatterUp
 	const newPath = path.join(targetDir, newBasename);
 
 	// Write atomically: update content, then rename
-	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${body}`;
+	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${newBody}`;
 	fs.writeFileSync(taskPath, newContent, 'utf-8');
 	if (taskPath !== newPath) {
 		fs.renameSync(taskPath, newPath);
@@ -261,13 +281,23 @@ export function changeTaskStatus(taskPath, targetState = 'closed', frontmatterUp
  */
 export function updateTaskFields(taskPath, fields) {
 	const raw = fs.readFileSync(taskPath, 'utf-8');
-	const { meta, body } = parseFrontmatter(raw);
+	const { meta, body, hadFrontmatter } = parseFrontmatter(raw);
+
+	// Only strip the legacy `**State:**` body line when this write is about
+	// to introduce a `status` frontmatter field on a previously-frontmatter-
+	// less file — that's the only case where a duplicate/contradictory-state
+	// field would be created (e.g. `task update-field <id> status <value>`
+	// on a legacy file). Updating an unrelated field (e.g. `fail-count`) on
+	// a legacy file must NOT strip `**State:**` — doing so would delete the
+	// file's only source of truth for state instead of de-duplicating it.
+	const introducesStatus = hadFrontmatter === false && Object.prototype.hasOwnProperty.call(fields, 'status');
+	const newBody = introducesStatus ? stripLegacyStateLine(body) : body;
 
 	for (const [key, value] of Object.entries(fields)) {
 		meta[key] = String(value);
 	}
 
-	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${body}`;
+	const newContent = `---\n${serializeFrontmatter(meta)}\n---\n${newBody}`;
 	fs.writeFileSync(taskPath, newContent, 'utf-8');
 	return taskPath;
 }

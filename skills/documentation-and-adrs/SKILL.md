@@ -54,6 +54,7 @@ Every ADR must include these sections:
 | **Date** | ISO date when the decision was recorded |
 | **Context** | Problem being solved and constraints in force at the time |
 | **Decision** | What was decided |
+| **Sources** | List of file paths, command outputs, or URLs that ground the Context and Decision sections — the evidence a future reader could re-check without re-deriving it from scratch |
 | **Alternatives Considered** | What was evaluated and why it was rejected |
 | **Consequences** | Trade-offs, risks, and what changes as a result |
 | **Assumptions** | What must be true for this decision to hold? If any assumption is invalidated, this ADR should be revisited. |
@@ -73,6 +74,10 @@ YYYY-MM-DD
 ## Decision
 [What was decided]
 
+## Sources
+- [File path, command output, or URL that grounds the Context/Decision above]
+- [Add one entry per independent piece of evidence]
+
 ## Alternatives Considered
 
 ### [Option A]
@@ -91,6 +96,12 @@ YYYY-MM-DD
 ## Assumptions
 [What must be true for this decision to hold? If any assumption is invalidated, this ADR should be revisited.]
 ```
+
+**Going-forward only:** the `## Sources` section is required for ADRs written from this
+convention's introduction onward. Existing ADRs written before it are not retrofitted — same
+pattern already used for the `depends_on`/`touches` frontmatter fields in `ticket-lifecycle-mode`.
+The `check-adr-sources.js` script (see `pipelines/deploy/lib/`) enforces this mechanically, going
+forward only, and reports rather than blocks.
 
 ### ADR Lifecycle
 

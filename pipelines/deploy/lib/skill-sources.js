@@ -77,9 +77,15 @@ async function listFilesRecursive({ repo, subPath, ref, fetchFn }) {
  * @param {{ name: string, repo: string, path: string, ref: string }} options.entry
  * @param {string} options.destRoot absolute path to the invoking hub's own skills/ root
  * @param {typeof fetch} [options.fetchFn]
+ * @param {(filename: string, content: string) => string} [options.fileTransform]
+ *   Optional per-file transform applied to each fetched file's text content before
+ *   writing to disk. Receives the filename (basename only, e.g. "SKILL.md") and the
+ *   UTF-8 string content; returns the modified string. Callers use this to apply
+ *   skill-specific modifications at fetch time without keeping a local modified copy
+ *   in the source repo. When omitted, content is written as-is.
  * @returns {Promise<{ name: string, status: 'added'|'updated'|'unchanged'|'error', filesWritten: string[], error?: string }>}
  */
-export async function installSkillFromCatalog({ entry, destRoot, fetchFn = fetch }) {
+export async function installSkillFromCatalog({ entry, destRoot, fetchFn = fetch, fileTransform }) {
 	const { name, repo, path: subPath, ref = 'main' } = entry;
 	const destSkillDir = path.join(destRoot, name);
 
@@ -103,7 +109,17 @@ export async function installSkillFromCatalog({ entry, destRoot, fetchFn = fetch
 			if (!fileRes.ok) {
 				throw new Error(`failed to download ${file.path}: HTTP ${fileRes.status}`);
 			}
-			const newContent = Buffer.from(await fileRes.arrayBuffer());
+			let newContent = Buffer.from(await fileRes.arrayBuffer());
+
+			// Apply the caller's per-file transform when one is provided. The transform
+			// receives the filename (e.g. "SKILL.md") and UTF-8 string content, and
+			// returns modified content. Used by the marketing-skills installer to strip
+			// prospecting's dangling "Tool Integrations" section at fetch time,
+			// without keeping a local modified copy in the source repo.
+			if (fileTransform) {
+				const filename = path.basename(file.path);
+				newContent = Buffer.from(fileTransform(filename, newContent.toString('utf-8')), 'utf-8');
+			}
 
 			const existed = fs.existsSync(destPath);
 			const changed = !existed || sha256(fs.readFileSync(destPath)) !== sha256(newContent);

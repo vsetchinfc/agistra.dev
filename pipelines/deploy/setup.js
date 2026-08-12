@@ -555,6 +555,7 @@ export function createRun({
 		// hubType controls which agent profiles are expected by `npm run doctor`.
 		//   "dev"       — expects: architect, builder, tester, router (no cao)
 		//   "dev:graph" — same profiles as dev; Graphify setup and doctor checks active
+		//   "dev:sub"   — expects: architect, builder, tester, router, cao
 		//   "ops"       — expects: architect, builder, tester, router, cao
 		// On first setup in a packaged archive, .hub-config.json (injected by the
 		// packaging profile) provides the hub type rather than defaulting to "dev".

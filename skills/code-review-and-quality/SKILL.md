@@ -73,6 +73,7 @@ Does the change introduce vulnerabilities?
 - Are dependencies from trusted sources with no known vulnerabilities?
 - Is data from external sources (APIs, logs, user content, config files) treated as untrusted?
 - Are external data flows validated at system boundaries before use in logic or rendering?
+- No internal ticket/issue/ADR number citations in code comments or content (see `agent-foundations` Security Baseline).
 
 ### 5. Performance
 
@@ -252,6 +253,7 @@ This is a tiering by evidence type, not a percentage score — a reviewer (human
 - [ ] No injection vulnerabilities
 - [ ] Auth checks in place
 - [ ] External data sources treated as untrusted
+- [ ] No internal ticket/issue/ADR citations in code or content
 
 ### Performance
 - [ ] No N+1 patterns

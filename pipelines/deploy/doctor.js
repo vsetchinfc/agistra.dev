@@ -351,8 +351,9 @@ function checkProjectsDir({ hubRoot, fsMod }) {
 	return pass(14, 'projects directory', 'projects/ directory scaffolded');
 }
 
-const HUB_TYPE_DEV_REQUIRED = ['architect', 'builder', 'tester', 'router'];
-const HUB_TYPE_OPS_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'];
+const HUB_TYPE_DEV_REQUIRED     = ['architect', 'builder', 'tester', 'router'];
+const HUB_TYPE_DEV_SUB_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'];
+const HUB_TYPE_OPS_REQUIRED     = ['architect', 'builder', 'tester', 'router', 'cao'];
 
 /**
  * Check 15: hubType-aware agent profile verification.
@@ -360,7 +361,7 @@ const HUB_TYPE_OPS_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'
  * Reads `hubType` from workspace.config.json and verifies that the correct
  * set of agent profiles is deployed in .claude/agents/:
  *   "dev"     — architect, builder, tester, router (cao must NOT be present)
- *   "dev:sub" — same profile requirements as "dev" (cao must NOT be present)
+ *   "dev:sub" — architect, builder, tester, router, cao (all five required)
  *   "ops"     — architect, builder, tester, router, cao (all five required)
  *
  * If hubType is absent or unrecognised, warns and falls back to dev checks.
@@ -402,18 +403,13 @@ function checkHubType({ hubRoot, fsMod }) {
 	}
 
 	if (hubType === 'dev:sub') {
-		const missingAgents = HUB_TYPE_DEV_REQUIRED.filter(a => !agentSet.has(a));
+		const missingAgents = HUB_TYPE_DEV_SUB_REQUIRED.filter(a => !agentSet.has(a));
 		if (missingAgents.length > 0) {
 			return fail(15, 'hub type',
 				`hubType=dev:sub but missing profiles: ${missingAgents.join(', ')}`,
 				'run: npm run deploy:dev:sub (redeploy subscriber hub)');
 		}
-		if (agentSet.has('cao')) {
-			return warn(15, 'hub type',
-				'hubType=dev:sub but cao profile found — unexpected in a subscriber hub',
-				'remove cao or change hubType to "ops" in workspace.config.json');
-		}
-		return pass(15, 'hub type', 'hubType=dev:sub — architect, builder, tester, router all present');
+		return pass(15, 'hub type', 'hubType=dev:sub — architect, builder, tester, router, cao all present');
 	}
 
 	if (hubType === 'dev') {
