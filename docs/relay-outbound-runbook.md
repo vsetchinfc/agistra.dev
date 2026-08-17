@@ -39,7 +39,9 @@ Claude Code or Cursor in the hub workspace (`agistra.dev`). Confirm relay MCP to
 Redeploy agents after these relay tools land so Router's manifest includes them:
 
 ```bash
-npm run deploy -- --output <hub-path>
+# Use your hub's tier-specific deploy command
+npm run deploy:ops -- --output <hub-path>
+# or npm run deploy:dev:sub -- --output <hub-path>
 ```
 
 ### 3. Dispatch Router with a valid state transition

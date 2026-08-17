@@ -10,12 +10,20 @@ const PRIORITY_ORDER = { critical: 0, high: 1, medium: 2 };
 /**
  * Run all 5 perspectives against a project directory.
  *
+ * Options:
+ *   projectDir     string  absolute or relative path to the project repo to scan
+ *   graphJsonPath  string  optional absolute path to a Graphify graph.json —
+ *                          forwarded to analyzeSys() so it can prefer
+ *                          Graphify's own graph over dep-graph.js's own scan
+ *                          when present. See scan.js's scan() for how this
+ *                          is derived from projectsDir.
+ *
  * Returns { perspectives, overall, allFindings }
  *   perspectives  — array of { id, name, score, findings[] }
  *   overall       — weighted average score 0–1.0
  *   allFindings   — flat array of all findings across perspectives
  */
-export function scanProject({ projectDir }) {
+export function scanProject({ projectDir, graphJsonPath }) {
 	const root = path.resolve(projectDir);
 
 	if (!fs.existsSync(root)) {
@@ -29,7 +37,7 @@ export function scanProject({ projectDir }) {
 	}
 
 	const perspectives = [
-		analyzeSys(root),
+		analyzeSys(root, { graphJsonPath }),
 		analyzeTst(root),
 		analyzeUsr(root),
 		analyzeAnl(root),

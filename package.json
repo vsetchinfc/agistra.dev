@@ -16,5 +16,8 @@
     "version:check": "node pipelines/deploy/lib/version-check.js",
     "memory-index": "node pipelines/deploy/lib/memory-index.js",
     "memory-index:build": "node pipelines/deploy/lib/memory-index.js build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0"
   }
 }

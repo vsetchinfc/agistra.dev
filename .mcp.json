@@ -7,6 +7,12 @@
 				"@vercel-labs/agent-browser",
 				"agent-browser-mcp-server"
 			]
+		},
+		"dep-graph": {
+			"command": "node",
+			"args": [
+				"pipelines/deploy/lib/dep-graph-mcp-server.js"
+			]
 		}
 	}
 }

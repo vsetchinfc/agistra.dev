@@ -80,7 +80,7 @@ Two independent things are already "known," and neither should be re-asked about
 For everything not already covered by Step 2, classify before asking anything:
 
 - **Deploy-baseline scaffold** — standard files/directories every deployed hub ships regardless of
-  customer content, because `npm run deploy`/`npm run setup` regenerates them fresh in every hub:
+  customer content, because the deploy pipeline/`npm run setup` regenerates them fresh in every hub:
   `.claude/`, `.cursor/`, `.github/`, `.codex/`, `skills/`, `pipelines/`, `packages/`, `agents/`,
   `docs/` (except `docs/decisions/`, which is already in-scope per Step 2), `node_modules/`, `.git/`,
   `package.json`, `package-lock.json`, `workspace.config.json`, `README.md`, `AGENTS.md`, `CLAUDE.md`,

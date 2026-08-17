@@ -66,16 +66,16 @@ Commands:
 `<id>` accepts `<project>#<query>` (task number or slug fragment), a bare query searched
 across every project, or a literal path to the task file.
 
-**`--projects-root <path>`** — every command above accepts this global flag
+**`--projects-root <path>`** -- every command above accepts this global flag
 (anywhere in the argument list, before or after the command name). It reliably resolves
 task files at `<path>` regardless of which repo/directory the CLI process itself is
-running from — the fix for the recurring cross-repo failure (Tester/Builder running the
-CLI from the source repo, `setchin-agent-profiles`, against task files that live under
-the deployed hub's `projects/` directory). A missing value or a path that doesn't exist
-is a clean, non-zero-exit error (`--projects-root not found: <path>`) — never a silent
-fall-back to the cwd-relative default and never a partial write. There is no manual
-fallback for cross-repo resolution; always pass `--projects-root` when the task file's
-location differs from the CLI process's own cwd.
+running from. This preserves cross-repo operation when Tester or Builder runs the CLI
+from `<code-repo>` while canonical task files live under `<projects-root>`. A missing
+value or a path that doesn't exist is a clean, non-zero-exit error
+(`--projects-root not found: <path>`); never a silent fall-back to the cwd-relative
+default and never a partial write. There is no manual fallback for cross-repo resolution;
+always pass `--projects-root` when the task file's location differs from the CLI
+process's own cwd.
 
 **`transition` is atomic and ordered:**
 

@@ -100,7 +100,7 @@ export async function ensureRelayDaemon({
 
 	const daemonScript = resolveDaemonScript(hubRoot, fsMod);
 	if (!daemonScript) {
-		log('relay autostart: skipped — pipelines/deploy/relay not found (run npm run deploy on hub)');
+		log('relay autostart: skipped — pipelines/deploy/relay not found (redeploy hub)');
 		return { action: 'skip', reason: 'daemon script missing' };
 	}
 

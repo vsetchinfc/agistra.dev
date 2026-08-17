@@ -77,7 +77,16 @@ export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) 
 
 	process.stderr.write(`[scan] scanning ${projectRoot}\n\n`);
 
-	const { perspectives, overall, allFindings } = scanProject({ projectDir: projectRoot });
+	// Prefer Graphify's own graph.json over dep-graph.js's own scan when the
+	// project has one. Graphify always writes to
+	// projects/<project>/graphify/graphify-out/graph.json (graph-cli.js's
+	// resolveGraphifyDir()/resolveGraphifyOutDir()) — under projectsDir, not
+	// necessarily under projectRoot, since a project's repoPath can point
+	// anywhere (workspace.config.json → projects.<name>.repoPath).
+	const graphJsonPath = projectsDir
+		? path.join(projectsDir, 'graphify', 'graphify-out', 'graph.json')
+		: undefined;
+	const { perspectives, overall, allFindings } = scanProject({ projectDir: projectRoot, graphJsonPath });
 
 	// Load previous health for trend comparison
 	const prev = loadHealth(projectsDir);

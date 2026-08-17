@@ -10,10 +10,28 @@ import {
 	countLines,
 	collectSourceFiles,
 } from './scan-utils.js';
+import { analyzeDependencyGraph, analyzeDependencyGraphFromGraphify, MAX_FAN_OUT } from './dep-graph.js';
 
 // ── SYS: System / Architecture ────────────────────────────────────────────────
+//
+// Complexity and Cohesion each blend the original line/file-count heuristic
+// with a real dependency-graph signal, 50/50 weight: a module's fan-out
+// feeds Complexity (how much surrounding context you must hold in mind to
+// understand a file), and import cycles feed Cohesion (a cycle is a direct,
+// hard signal that two modules are not well-separated). The heuristics are
+// kept at half-weight rather than fully replaced because file/directory size
+// still catches a signal the import graph does not — a single oversized file
+// with no imports, or a directory of many small unrelated files, would
+// otherwise score perfectly.
+//
+// Dependency-graph source: when the project has already run Graphify
+// (`projects/<project>/graphify/graphify-out/graph.json` exists), that real,
+// richer call/import graph is preferred over this module's own regex-based
+// scan — Graphify is optional and derived, so its absence is never an error,
+// just a fallback to dep-graph.js's own buildImportGraph()/detectCycles()
+// engine (dep-graph.js's own doc comment has the full engine description).
 
-export function analyzeSys(root) {
+export function analyzeSys(root, { graphJsonPath } = {}) {
 	const allFiles = collectSourceFiles(root);
 	const dirCounts = {};
 	let largeCount = 0;
@@ -26,7 +44,13 @@ export function analyzeSys(root) {
 
 	const findings = [];
 
-	const complexityScore = allFiles.length > 0 ? 1 - largeCount / allFiles.length : 1;
+	const resolvedGraphJsonPath = graphJsonPath ?? path.join(root, 'graphify', 'graphify-out', 'graph.json');
+	const graphifyResult = fs.existsSync(resolvedGraphJsonPath)
+		? analyzeDependencyGraphFromGraphify(resolvedGraphJsonPath)
+		: null;
+	const { files: graphFiles, cycles, coupling } = graphifyResult ?? analyzeDependencyGraph(root);
+
+	const lineComplexityScore = allFiles.length > 0 ? 1 - largeCount / allFiles.length : 1;
 	if (largeCount > 0) {
 		findings.push({
 			id: 'sys-large-files',
@@ -37,9 +61,23 @@ export function analyzeSys(root) {
 		});
 	}
 
+	const highFanOut = [...coupling.entries()].filter(([, c]) => c.fanOut > MAX_FAN_OUT);
+	const couplingScore = graphFiles.length > 0 ? 1 - highFanOut.length / graphFiles.length : 1;
+	if (highFanOut.length > 0) {
+		findings.push({
+			id: 'sys-high-coupling',
+			priority: 'medium',
+			title: `Reduce fan-out in ${highFanOut.length} module(s)`,
+			description: `${highFanOut.length} module(s) import more than ${MAX_FAN_OUT} internal dependencies. Top: ${highFanOut.slice(0, 2).map(([m]) => m).join(', ')}`,
+			skill: 'scan-sys', agent: 'architect', mode: 'architecture',
+		});
+	}
+
+	const complexityScore = r((lineComplexityScore + couplingScore) / 2);
+
 	const dirs = Object.values(dirCounts);
 	const overloaded = dirs.filter(n => n > MAX_DIR_FILES).length;
-	const cohesionScore = dirs.length > 0 ? 1 - overloaded / dirs.length : 1;
+	const dirCohesionScore = dirs.length > 0 ? 1 - overloaded / dirs.length : 1;
 	if (overloaded > 0) {
 		findings.push({
 			id: 'sys-overloaded-dirs',
@@ -49,6 +87,20 @@ export function analyzeSys(root) {
 			skill: 'scan-sys', agent: 'architect', mode: 'architecture',
 		});
 	}
+
+	const modulesInCycles = new Set(cycles.flat());
+	const cycleScore = graphFiles.length > 0 ? 1 - modulesInCycles.size / graphFiles.length : 1;
+	if (cycles.length > 0) {
+		findings.push({
+			id: 'sys-dependency-cycles',
+			priority: cycles.length > 3 ? 'high' : 'medium',
+			title: `Break ${cycles.length} dependency cycle(s)`,
+			description: `${cycles.length} import cycle(s) found across ${modulesInCycles.size} module(s). Top: ${cycles.slice(0, 2).map(c => c.join(' -> ')).join(' | ')}`,
+			skill: 'scan-sys', agent: 'architect', mode: 'architecture',
+		});
+	}
+
+	const cohesionScore = r((dirCohesionScore + cycleScore) / 2);
 
 	const hasTs = allFiles.some(f => f.endsWith('.ts') || f.endsWith('.tsx'));
 	const hasTsConfig = fs.existsSync(path.join(root, 'tsconfig.json'));

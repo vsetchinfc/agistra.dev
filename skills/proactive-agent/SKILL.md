@@ -73,7 +73,7 @@ Non-negotiable for technical problems. When something doesn't work:
 Before saying "can't":
 
 1. Try alternative CLI syntax, a different tool, or the API directly
-2. Search memory: "Have I solved this before? How?"
+2. Search memory: "Have I solved this before? How?" — if this hub ships `pipelines/deploy/lib/memory-index.js` (`dev` and `dev:graph` tiers only; check for the file's presence first, don't assume every hub has it — see the Optional Skill Presence Check pattern in `agent-foundations`), try `npm run memory-index -- find <keyword>` for a cross-entry keyword search of the agent's own memory before falling back to a raw multi-file grep. This does not apply on `dev:sub`/`ops` — those tiers already have qmd's vault index covering `Memory/` (see agent-foundations' "Knowledge Retrieval" section); do not suggest memory-index there.
 3. Question the error message — workarounds usually exist
 4. Check logs for past successes with similar tasks
 

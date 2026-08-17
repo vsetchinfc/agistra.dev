@@ -63,7 +63,7 @@ function checkGitignore({ hubRoot, fsMod }) {
 	const p = path.join(hubRoot, '.gitignore');
 	if (!fsMod.existsSync(p)) {
 		return fail(2, '.gitignore entries', '.gitignore not found',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	const content = fsMod.readFileSync(p, 'utf-8');
 	const lines = content.split('\n').map(l => l.trim());
@@ -76,14 +76,14 @@ function checkGitignore({ hubRoot, fsMod }) {
 		return pass(2, '.gitignore entries', 'all personal files covered');
 	}
 	return fail(2, '.gitignore entries', `missing entries: ${missing.join(', ')}`,
-		'run: npm run deploy (redeploy hub to add missing entries)');
+		'rerun the tier-specific deploy command');
 }
 
 function checkGitattributes({ hubRoot, fsMod }) {
 	const p = path.join(hubRoot, '.gitattributes');
 	if (!fsMod.existsSync(p)) {
 		return fail(3, '.gitattributes', '.gitattributes not found',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	const content = fsMod.readFileSync(p, 'utf-8');
 	const missing = [];
@@ -97,7 +97,7 @@ function checkGitattributes({ hubRoot, fsMod }) {
 		return pass(3, '.gitattributes', 'merge=ours entries present');
 	}
 	return fail(3, '.gitattributes', `missing entries: ${missing.join(', ')}`,
-		'run: npm run deploy (redeploy hub to add missing entries)');
+		'rerun the tier-specific deploy command');
 }
 
 /**
@@ -137,20 +137,20 @@ function checkMcpJson({ hubRoot, fsMod }) {
 	const p = path.join(hubRoot, '.mcp.json');
 	if (!fsMod.existsSync(p)) {
 		return fail(5, '.mcp.json', '.mcp.json not found',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	let data;
 	try {
 		data = JSON.parse(fsMod.readFileSync(p, 'utf-8'));
 	} catch {
 		return fail(5, '.mcp.json', '.mcp.json is not valid JSON',
-			'run: npm run deploy (redeploy hub to regenerate .mcp.json)');
+			'rerun the tier-specific deploy command');
 	}
 	if (data?.mcpServers?.['agent-browser']) {
 		return pass(5, '.mcp.json', 'agent-browser wired');
 	}
 	return fail(5, '.mcp.json', 'mcpServers.agent-browser missing',
-		'run: npm run deploy (redeploy hub to add agent-browser)');
+		'rerun the tier-specific deploy command');
 }
 
 export function readHubConfig(hubRoot, fsMod) {
@@ -246,18 +246,18 @@ function checkAgentProfiles({ hubRoot, fsMod }) {
 	const dir = path.join(hubRoot, '.claude', 'agents');
 	if (!fsMod.existsSync(dir)) {
 		return fail(9, 'agent profiles', '.claude/agents/ directory not found',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	let entries;
 	try {
 		entries = fsMod.readdirSync(dir).filter(f => f.endsWith('.md'));
 	} catch {
 		return fail(9, 'agent profiles', 'could not read .claude/agents/',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	if (entries.length === 0) {
 		return fail(9, 'agent profiles', '.claude/agents/ is empty',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	return pass(9, 'agent profiles', `${entries.length} agent profile(s) found in .claude/agents/`);
 }
@@ -266,18 +266,18 @@ function checkCodexAgentProfiles({ hubRoot, fsMod }) {
 	const dir = path.join(hubRoot, '.codex', 'agents');
 	if (!fsMod.existsSync(dir)) {
 		return fail(10, 'codex agent profiles', '.codex/agents/ directory not found',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	let entries;
 	try {
 		entries = fsMod.readdirSync(dir).filter(f => f.endsWith('.toml'));
 	} catch {
 		return fail(10, 'codex agent profiles', 'could not read .codex/agents/',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	if (entries.length === 0) {
 		return fail(10, 'codex agent profiles', '.codex/agents/ is empty',
-			'run: npm run deploy (redeploy hub)');
+			'rerun the tier-specific deploy command');
 	}
 	return pass(10, 'codex agent profiles', `${entries.length} Codex agent profile(s) found in .codex/agents/`);
 }
@@ -310,7 +310,7 @@ function checkAutoDispatchRouterProfile({ hubRoot, fsMod }) {
 		return pass(12, 'auto-dispatch: router profile', '.claude/agents/router.md found');
 	}
 		return fail(12, 'auto-dispatch: router profile', '.claude/agents/router.md not found',
-		'run: npm run deploy (redeploy hub to install router profile)');
+		'rerun the tier-specific deploy command');
 }
 
 function checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }) {
@@ -337,12 +337,12 @@ function checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }) {
 	if (!deployedModel) {
 		return warn(13, 'router model tier',
 			'deployed router.md has no model field — economy tier not enforced',
-			`run: npm run deploy (expected model: ${expectedModel})`);
+			`rerun the tier-specific deploy command (expected model: ${expectedModel})`);
 	}
 	if (deployedModel !== expectedModel) {
 		return warn(13, 'router model tier',
 			`deployed model (${deployedModel}) ≠ manifest economy tier (${expectedModel})`,
-			'run: npm run deploy (redeploy to update router model)');
+			'rerun the tier-specific deploy command');
 	}
 		return pass(13, 'router model tier', `router uses economy model ${deployedModel}`);
 }

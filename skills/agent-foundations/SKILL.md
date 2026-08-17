@@ -41,6 +41,13 @@ Text changes ≠ behaviour changes. Action taken ≠ outcome verified.
 
 For investigation discipline before proposing a fix, see RBR below.
 
+**Verify absence before reporting it:** Before reporting that something is missing, not found, empty, or blocked, widen the search beyond the first location checked rather than concluding absence from a single-location probe. "I checked location X and found nothing" does not prove "it does not exist." A code checkout such as `<code-repo>/<project>` and the canonical task store at `<projects-root>/<project>/` are distinct locations; an empty result in either one says nothing about the other. Search only within a known workspace root; never scan an entire drive or filesystem root:
+
+- PowerShell: `Get-ChildItem -LiteralPath "<workspace-root>" -Recurse -File -Filter "<filename>" -ErrorAction SilentlyContinue`
+- POSIX: `find "<workspace-root>" -type f -name "<filename>" 2>/dev/null`
+
+If the scoped wider search still returns zero, the absence is confirmed; report only then. This extends to reporting inherited memory state as current: before presenting any pending or in-flight item pulled from HOT memory (a PR "awaiting merge," a task "in progress") to the team lead as current, re-verify its live state (`gh pr view`, `gh issue view`, task-cli `read`) rather than reporting the memory snapshot verbatim.
+
 ## Root Before Repair (RBR)
 
 **The law:** Surface-level fixes waste turns. A patch applied to the wrong layer guarantees a second incident. Never propose a code or config change without first confirming the root cause.
@@ -224,7 +231,7 @@ Before reading `memory/<agent>.md` or any other relative-path file at Session St
 
 **The law:** The probe verifies cwd once. It does not, by itself, protect any read or write that happens later in the same session after cwd changes. Once step 2 above succeeds, the pinned hub root is the single source of truth for every subsequent relative-path memory or skill operation — not whatever the shell's working directory happens to be at that later moment.
 
-1. **Pin immediately.** The instant the probe resolves, record the absolute path as the pinned hub root (e.g. `D:\dev\agistra.dev`). This is a one-time capture, done once per session, at Session Start — never re-derived mid-session.
+1. **Pin immediately.** The instant the probe resolves, record the absolute path as the pinned hub root and refer to it as `<hub-root>` thereafter. This is a one-time capture, done once per session, at Session Start — never re-derived mid-session.
 2. **Resolve every later relative path against the pin, not live cwd.** Every subsequent read or write to `memory/<agent>.md`, any `skills/**` file, or any other hub-relative path must be resolved by joining the pinned hub root with the relative path — regardless of what directory a later Bash command, `cd`, or dispatch instruction has made current. If the active shell cwd and the pinned hub root ever disagree, the pinned hub root wins for hub-relative paths.
 3. **Cross-repo dispatch case — the two paths are never conflated.** It is a normal, legitimate pattern for a dispatch to hand an agent a working directory in a different repo for code changes (e.g. Architect tells Builder "working directory: `<source-of-truth code repo>`" because that is where the ticket's code lives). That code working directory and the pinned hub root are two distinct, independently-tracked values:
    - The **code working directory** is wherever the dispatch says the ticket's code lives, and is used for `git`, build, lint, and test commands during implementation.
@@ -244,7 +251,7 @@ All four adapters face the same cwd risk. The probe path differs per adapter (se
 - **Cursor:** cwd is set by the editor's workspace root; usually correct, but subagent spawns may inherit a different working directory. Probe: `.cursor/agents/<name>.md`. Once resolved, pin that absolute path; if a later task switches the active workspace or terminal cwd to a code repo, memory/skill operations still resolve against the pinned hub root, not the new terminal cwd.
 - **GitHub Copilot:** cwd is set by the editor's workspace root. Agent files use the `.agent.md` suffix, not plain `.md`. Probe: `.github/agents/<name>.agent.md`. Once resolved, pin that absolute path; a later terminal command targeting a different repo for code changes does not move the pin.
 - **Codex:** cwd is set by the Codex environment. Agent files are TOML, not Markdown. Probe: `.codex/agents/<name>.toml`. Once resolved, pin that absolute path; a later environment/session command that changes into a code repo for implementation work does not move the pin.
-- **Agent-tool subagent (any adapter):** cwd is set by the harness, not the parent agent's cwd. The harness may resolve to a nested path (observed: `agistra.dev/projects/setchin-agent-profiles/` instead of `agistra.dev/`) — this is the primary failure mode this protocol guards against. The same adapter-specific probe path applies; the subagent knows which adapter it is from its system prompt. This is also the exact cross-repo dispatch case from "Pin and Reuse": if a dispatch prompt additionally specifies a code working directory in a different repo (e.g. `setchin-agent-profiles`) for the ticket's code changes, that code working directory is used only for `git`/build/lint/test commands — it is never confused with, and never overwrites, the pinned hub root used for every `memory/<agent>.md` and `skills/**` operation in that same session.
+- **Agent-tool subagent (any adapter):** cwd is set by the harness, not the parent agent's cwd. The harness may resolve to a nested path such as `<hub-root>/projects/<project>/` instead of `<hub-root>`; this is the primary failure mode this protocol guards against. The same adapter-specific probe path applies; the subagent knows which adapter it is from its system prompt. This is also the exact cross-repo dispatch case from "Pin and Reuse": if a dispatch prompt additionally specifies `<code-repo>` as the code working directory, that directory is used only for `git`/build/lint/test commands; it is never confused with, and never overwrites, the pinned hub root used for every `memory/<agent>.md` and `skills/**` operation in that same session.
 
 ## Security Baseline
 

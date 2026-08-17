@@ -78,7 +78,7 @@ When `relay.primaryRuntime: "claude-code"` and `relay.autoDispatch: true` are se
 npm run relay -- --hub D:/path/to/your/hub
 ```
 
-From a **deployed hub** (after `npm run deploy` copies `cli/relay/`):
+From a **deployed hub** (after the deploy pipeline copies `cli/relay/`):
 
 ```bash
 npm run relay
@@ -149,7 +149,7 @@ Module reference: `cli/relay/README.md` in setchin-agent-profiles.
 | `relay daemon` doctor WARN | Start `npm run relay -- --hub <hub>` |
 | MCP tools missing in session | Restart Claude/Cursor after setup |
 | Outbound works, inbound silent | Message must address Router (`Atlas, …` or `@bot`); see inbound runbook |
-| `cli/relay/mcp/server.js` not found on hub | Redeploy hub (`npm run deploy`) to copy `cli/relay/` |
+| `cli/relay/mcp/server.js` not found on hub | Rerun the tier-specific deploy command to copy `cli/relay/` |
 
 ---
 

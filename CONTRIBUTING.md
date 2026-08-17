@@ -35,7 +35,7 @@ When in doubt, open an issue. A quick discussion avoids a round-trip review cycl
 ## Port-back notice
 
 `agistra.dev` is a deploy output: changes committed here directly will be overwritten by
-the next `npm run deploy` unless they are also ported back into the private source repo.
+the next deploy unless they are also ported back into the private source repo.
 When your PR is accepted, the maintainer creates a port-back task and applies your delta
 to the source. You do not need to do anything — but do note that a merge here is not
 the end of the chain.
