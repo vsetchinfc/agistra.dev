@@ -1,5 +1,9 @@
-/** Command run from hub root on Claude Code SessionStart. */
-export const RELAY_SESSION_START_COMMAND = 'node tools/ensure-relay-daemon.js';
+/**
+ * Command run on Claude Code SessionStart. Anchored to $CLAUDE_PROJECT_DIR
+ * because Claude Code does not guarantee a hook's working directory is the
+ * project root.
+ */
+export const RELAY_SESSION_START_COMMAND = 'node "$CLAUDE_PROJECT_DIR/tools/ensure-relay-daemon.js"';
 
 /**
  * Ensure hub .claude/settings.json includes SessionStart → ensure-relay-daemon.

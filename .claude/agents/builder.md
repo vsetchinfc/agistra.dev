@@ -131,7 +131,7 @@ Live HOT/WARM/COLD state: `memory/builder.md` (tracked in repo — commit betwee
 <!-- COMPILED BOOTSTRAP START -->
 <!-- role: builder -->
 <!-- skills: agent-foundations, token-economics, proactive-agent -->
-<!-- source-hash: bef63448bf637eb4332513aaa1ad807329bd444720e72f56dc0aa5cc8b6207f8 -->
+<!-- source-hash: 005088aa386b2389bf7ab7be43e3504f3cc77265e7730a2ceed5cf4b180f3a20 -->
 
 <!-- BEGIN SKILL: agent-foundations -->
 
@@ -249,31 +249,32 @@ Turns that do NOT require a write: routine confirmations ("yes", "looks good", "
 Every agent, on first invocation while the trigger condition holds, produces this report before any other work:
 
 1. **Identity** — name, role, profile file path (and version/hash if available)
-2. **Skills catalogue** — which skills this agent has access to; confirm each referenced skill file actually exists and is loadable (apply the Optional Skill Presence Check above for any entry marked optional)
+2. **Skills catalogue** — run `node tools/skills-audit.js <own profile path>` (cwd = the pinned hub root; pass the same profile path already resolved via the Working Directory Verification probe) and report its JSON output directly — counts (`total`/`guaranteed`/`optional`) plus any `missingGuaranteed`/`missingOptional` entries. Do not hand-count or hand-classify the Skills table by reading it yourself; the script parses and classifies it deterministically so this point is never subject to a manual miscount or misclassification (apply the Optional Skill Presence Check above when interpreting a non-empty `missingOptional`). All four adapters (Claude Code, Cursor, Codex, GitHub Copilot) render the same Skills-table row shape and are supported by this script without any adapter-specific parsing.
 3. **Protocols acknowledged** — name VBR, WAL, RBR, and the ticket lifecycle states this agent operates under. Naming them is not enough — state in one line what each one requires of this agent specifically.
 4. **Memory state at boot** — `memory/<agent>.md` is missing, stub-scaffolded (just headings, no content), or carries real content
-5. **Workspace signals checked** — `workspace.config.json` present, `npm run doctor` last-run timestamp if tracked, `projects/` directory scaffolded
+5. **Workspace signals checked** — `workspace.config.json` present, whether a `npm run doctor` last-run timestamp is tracked, `projects/` directory scaffolded. The doctor check is passive: confirm whether a last-run timestamp exists; do not invoke `npm run doctor` yourself as part of this check — a live run and a timestamp check are different signals, and reporting one as the other produces a false "doctor passes" claim that contradicts agents who only checked the timestamp. When `workspace.config.json` has `hubType: "dev:sub"` (the same scope the "Knowledge Retrieval" section below already uses — this bullet does not widen that scope), also confirm the hub's storage plugin file exists under `skills/agent-foundations/storage/*.md` and report which plugin is active. Hubs outside that scope (`dev`, `dev:graph`, `ops`) skip this bullet entirely — it is not evaluated there.
 6. **Gaps found** — any expected skill, memory key, or config field that is missing or empty
 7. **Readiness verdict** — `ready`, `ready-with-warnings`, or `blocked`, with a one-line reason
 
 ### Architect-Only Fan-Out
 
-Only Architect fans out. The fan-out is capped at exactly one level — Builder, Tester, and Router run their own self-check and return; they never cascade further.
+Only Architect fans out. The fan-out is capped at exactly one level — Builder, Tester, Router, and (when present) CAO run their own self-check and return; they never cascade further.
 
 1. Architect runs its own 7-point self-check first.
-2. Architect dispatches Builder, Tester, and Router as subagents, each producing its own 7-point self-check report.
+2. Architect dispatches Builder, Tester, and Router as subagents, each producing its own 7-point self-check report. Architect also dispatches CAO as a subagent under the same terms *when and only when* CAO's own profile file exists in the hub — probe the adapter-matching path from the Working Directory Verification table above (e.g. `.claude/agents/cao.md` for Claude Code). This is the same presence-gating pattern the Optional Skill Presence Check section below uses for optional skills, applied here to CAO's profile file — not hardcoded to a specific `hubType`. If the file is absent, skip CAO silently; that is the expected state on hubs that don't ship CAO, not a gap to report. CAO is a fan-out **leaf** here, on the same footing as Builder/Tester/Router — Architect remains the sole fan-out root. This does not change CAO's general standing above the specialist dev team elsewhere in the hub hierarchy: Bootstrap Self-Check is a technical readiness check, not a strategic function, so it stays inside Architect's existing coordination role.
 3. Architect compiles the result for the user:
-   - **Full per-agent detail** — every agent's complete 7-point report, shown in full, not summarised into a rollup.
+   - **Full per-agent detail** — every agent's complete 7-point report, shown in full, not summarised into a rollup. This includes CAO's report whenever it ran.
    - **One combined next-steps line** — e.g. "run `npm run doctor`" if setup or doctor has never run, or "all clear" if no gaps were found.
+   - **Reconciliation** — if any two sub-reports' workspace-signal claims still conflict despite the point-5 clarification (e.g. one agent reports a signal as passing while another reports it as unchecked), Architect states the conflict explicitly in the combined Next Steps rather than presenting both silently.
 
 ### First-Contact Redirect (Non-Architect Agents)
 
-If Builder, Tester, or Router is addressed first while the bootstrap flag is unset, that agent does not bounce the user to Architect. Instead:
+If Builder, Tester, Router, or CAO is addressed first while the bootstrap flag is unset, that agent does not bounce the user to Architect. Instead:
 
 1. Silently dispatch Architect as a subagent to run the full bootstrap-and-report flow described above.
 2. Resume as the originally addressed agent once that completes.
 
-The user never sees a "go talk to Architect first" message. The redirect is invisible — only the resulting report and the agent's normal response are visible.
+The user never sees a "go talk to Architect first" message. The redirect is invisible — only the resulting report and the agent's normal response are visible. CAO follows this same redirect on the same terms as Builder/Tester/Router — CAO does not run the bootstrap-and-report flow itself, even though it sits above the specialist dev team generally; that broader standing is a separate concern from this technical readiness check.
 
 ### Persistence
 
