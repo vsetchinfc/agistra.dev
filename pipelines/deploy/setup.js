@@ -19,6 +19,7 @@ import { wireRelayMcp, readJsonSafe, writeJsonSafe } from './wizard.js';
 import { mergeRelaySessionStartHook } from './lib/claude-hooks.js';
 import {
 	NIGHTLY_DREAMING_TASK_NAME,
+	computeNightlyDreamingTaskName,
 	registerNightlyDreamingTask as registerNightlyDreamingTaskDefault,
 	removeNightlyDreamingTask as removeNightlyDreamingTaskDefault,
 } from './lib/nightly-dreaming.js';
@@ -580,6 +581,16 @@ export function createRun({
 			// Preserve the bootstrap flag across re-runs of setup — re-running setup
 			// must never silently reset "has the team run its self-check" state.
 			...(prev.bootstrap ? { bootstrap: prev.bootstrap } : {}),
+			// Preserve the doctor last-run record across re-runs of setup — re-running
+			// setup must never silently erase doctor's last-run history.
+			...(prev.doctor ? { doctor: prev.doctor } : {}),
+			// Preserve graphify config across re-runs of setup as defense-in-depth: the
+			// dev-graph tier plugin normally re-adds this field itself from its own
+			// existingConfig read after this write, but several of its own early-return
+			// paths (uv not installed and declined, uv install failed, `uv tool install`
+			// failure) exit before reaching that step — this line ensures those paths
+			// never permanently lose a previously-recorded graphify config.
+			...(prev.graphify ? { graphify: prev.graphify } : {}),
 		};
 
 		fsMod.mkdirSync(cliOutputRoot, { recursive: true });
@@ -689,10 +700,15 @@ export function createRun({
 
 			let nightlyDreaming;
 			if (enableNightlyDreaming) {
-				const result = registerNightlyDreamingTask({ hubRoot: cliOutputRoot });
+				// Per-hub unique name — a shared/generic name across every hub on this
+				// machine would let a second hub's `schtasks /create ... /f` silently
+				// overwrite a first hub's already-registered task. See
+				// computeNightlyDreamingTaskName's doc comment in lib/nightly-dreaming.js.
+				const taskName = computeNightlyDreamingTaskName(cliOutputRoot);
+				const result = registerNightlyDreamingTask({ hubRoot: cliOutputRoot, taskName });
 				if (result.ok) {
-					process.stdout.write(`  Nightly Scheduled Task registered (${NIGHTLY_DREAMING_TASK_NAME}).\n`);
-					nightlyDreaming = { enabled: true, taskName: NIGHTLY_DREAMING_TASK_NAME };
+					process.stdout.write(`  Nightly Scheduled Task registered (${taskName}).\n`);
+					nightlyDreaming = { enabled: true, taskName };
 				} else {
 					process.stdout.write(`  WARNING: could not register the nightly Scheduled Task: ${result.error}\n`);
 					process.stdout.write('  Setup will continue — re-run npm run setup to retry.\n');

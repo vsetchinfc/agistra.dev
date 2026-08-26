@@ -14,45 +14,44 @@ reviews:
   auto_review:
     enabled: true
     drafts: false
+  # Per-path instructions for the highest-risk surfaces.
+  # Reviewers should flag anything that weakens, softens, or removes guardrails
+  # rather than strengthening them. Additions that tighten behavior are welcome.
+  path_instructions:
+    - path: "CLAUDE.md"
+      instructions: |
+        This file controls agent startup behavior and session rules for every Claude Code
+        session in this hub. Review any change that:
+        - removes or weakens a mandatory read (the three-file startup sequence)
+        - relaxes an absolute prohibition
+        - changes when agents are allowed to proceed autonomously vs. stop and escalate
+        Flag weakening changes as blocking concerns; tightening changes are welcome.
+
+    - path: "skills/*/SKILL.md"
+      instructions: |
+        Skill files contain natural-language trigger logic and security-baseline rules
+        that agents follow during task execution. Pay close attention to:
+        - VBR (Verify Before Reporting) — agents must confirm facts before asserting them
+        - WAL (Write-Ahead Log) — agents must record state before acting on it
+        - Security baseline rules — what agents are prohibited from doing (credentials,
+          production access, skipping hooks, force-pushing main)
+        - Stop-vs-proceed logic in ticket-lifecycle-mode and agent-foundations
+        Flag any wording change that makes a rule easier to skip or weakens its scope.
+        Flag removal of any VBR, WAL, or security-baseline clause.
+
+    - path: "pipelines/deploy/**/*.js"
+      instructions: |
+        Deploy pipeline scripts run with access to the local filesystem and git history.
+        Review for:
+        - Path-traversal vulnerabilities (user-controlled path segments joined without
+          validation — e.g., path.join(root, userInput) used as a copy destination)
+        - Command injection (user-supplied strings passed to execSync/execFileSync/spawn)
+        - Credential or token handling (tokens must never be written to output files or
+          logged to stdout/stderr)
+        - Changes that expand what hubType gates allow into a hub (especially 'dev' tier
+          receiving dev:sub-only source)
+        Flag any pattern where an external value reaches a filesystem write or exec call
+        without explicit sanitization.
 
 chat:
   auto_reply: true
-
-# Per-path instructions for the highest-risk surfaces.
-# Reviewers should flag anything that weakens, softens, or removes guardrails
-# rather than strengthening them. Additions that tighten behavior are welcome.
-path_instructions:
-  - path: "CLAUDE.md"
-    instructions: |
-      This file controls agent startup behavior and session rules for every Claude Code
-      session in this hub. Review any change that:
-      - removes or weakens a mandatory read (the three-file startup sequence)
-      - relaxes an absolute prohibition
-      - changes when agents are allowed to proceed autonomously vs. stop and escalate
-      Flag weakening changes as blocking concerns; tightening changes are welcome.
-
-  - path: "skills/*/SKILL.md"
-    instructions: |
-      Skill files contain natural-language trigger logic and security-baseline rules
-      that agents follow during task execution. Pay close attention to:
-      - VBR (Verify Before Reporting) — agents must confirm facts before asserting them
-      - WAL (Write-Ahead Log) — agents must record state before acting on it
-      - Security baseline rules — what agents are prohibited from doing (credentials,
-        production access, skipping hooks, force-pushing main)
-      - Stop-vs-proceed logic in ticket-lifecycle-mode and agent-foundations
-      Flag any wording change that makes a rule easier to skip or weakens its scope.
-      Flag removal of any VBR, WAL, or security-baseline clause.
-
-  - path: "pipelines/deploy/**/*.js"
-    instructions: |
-      Deploy pipeline scripts run with access to the local filesystem and git history.
-      Review for:
-      - Path-traversal vulnerabilities (user-controlled path segments joined without
-        validation — e.g., path.join(root, userInput) used as a copy destination)
-      - Command injection (user-supplied strings passed to execSync/execFileSync/spawn)
-      - Credential or token handling (tokens must never be written to output files or
-        logged to stdout/stderr)
-      - Changes that expand what hubType gates allow into a hub (especially 'dev' tier
-        receiving dev:sub-only source)
-      Flag any pattern where an external value reaches a filesystem write or exec call
-      without explicit sanitization.

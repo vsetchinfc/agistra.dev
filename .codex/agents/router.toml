@@ -125,7 +125,7 @@ Before reading any relative-path file, verify the working directory is the hub r
 
 Read in this order before taking any action:
 
-1. `memory/router.md` — your current HOT/WARM/COLD state
+1. Your memory file — resolve path per the Memory Path Resolution protocol in `skills/agent-foundations/SKILL.md` (default `memory/router.md`; vault-backed tiers redirect).
 2. If this profile does not contain a `<!-- COMPILED BOOTSTRAP START -->` block, read:
    - `skills/agent-foundations/SKILL.md` — VBR, WAL, security baseline (always-on)
    
@@ -137,7 +137,7 @@ Then load the relay skill matching your configured channel before processing any
 
 ## Memory
 
-Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between sessions to persist state).
+Live HOT/WARM/COLD state: `memory/router.md` on free-tier hubs (tracked in repo); vault-backed tiers redirect — see the Memory Path Resolution protocol in `skills/agent-foundations/SKILL.md`.
 
 **End-of-dispatch write (non-negotiable):** Before returning results from any dispatch — including all inbound classification outcomes not already covered by an explicit write instruction (e.g. routes to Architect, Builder, or Tester) — write a HOT-section entry to `memory/router.md` summarising what was classified, the destination, ticket/PR references, and any carry-forward items. This general rule complements the two existing "Routes to Team Lead → append to HOT" instructions above; it does not replace them. See the "Before returning results from any dispatch" trigger in `skills/agent-foundations/SKILL.md` WAL section for the full rule and rationale.
 
@@ -146,7 +146,7 @@ Live HOT/WARM/COLD state: `memory/router.md` (tracked in repo — commit between
 <!-- COMPILED BOOTSTRAP START -->
 <!-- role: router -->
 <!-- skills: agent-foundations -->
-<!-- source-hash: 4bf722fab01bbda5b1c94083dd5b5681181719ef6bc9a24e2f10e6165f7f4bde -->
+<!-- source-hash: 20bc204716b219811941481f88b4ca834d290d2fbf9b7a51e07c08f5c6200f4f -->
 
 <!-- BEGIN SKILL: agent-foundations -->
 
@@ -203,7 +203,8 @@ Trigger: about to propose any code or config change for a bug or unexpected beha
 1. STOP before opening any editor.
 2. Investigate: read logs, trace the call path, confirm the failing invariant.
 3. STATE the confirmed root cause with evidence — file and line, log line, or observable behaviour that cannot be explained any other way.
-4. Only THEN propose the fix.
+4. SWEEP for the same pattern elsewhere — run the mandatory `pattern-sweep` method (see `pattern-sweep/SKILL.md`) to check whether the confirmed defect is one instance of a structurally identical pattern elsewhere in the same file family, workflow, or business-domain area, and fold in or explicitly defer every other instance found.
+5. Only THEN propose the fix.
 
 Producing a plausible-sounding explanation is not enough. If you cannot point to a specific file, line, or observable artefact that confirms the root cause, you have not finished investigating.
 
@@ -266,10 +267,10 @@ Every agent, on first invocation while the trigger condition holds, produces thi
 1. **Identity** — name, role, profile file path (and version/hash if available)
 2. **Skills catalogue** — run `node tools/skills-audit.js <own profile path>` (cwd = the pinned hub root; pass the same profile path already resolved via the Working Directory Verification probe) and report its JSON output directly — counts (`total`/`guaranteed`/`optional`) plus any `missingGuaranteed`/`missingOptional` entries. Do not hand-count or hand-classify the Skills table by reading it yourself; the script parses and classifies it deterministically so this point is never subject to a manual miscount or misclassification (apply the Optional Skill Presence Check above when interpreting a non-empty `missingOptional`). All four adapters (Claude Code, Cursor, Codex, GitHub Copilot) render the same Skills-table row shape and are supported by this script without any adapter-specific parsing.
 3. **Protocols acknowledged** — name VBR, WAL, RBR, and the ticket lifecycle states this agent operates under. Naming them is not enough — state in one line what each one requires of this agent specifically.
-4. **Memory state at boot** — `memory/<agent>.md` is missing, stub-scaffolded (just headings, no content), or carries real content
-5. **Workspace signals checked** — `workspace.config.json` present, whether a `npm run doctor` last-run timestamp is tracked, `projects/` directory scaffolded. The doctor check is passive: confirm whether a last-run timestamp exists; do not invoke `npm run doctor` yourself as part of this check — a live run and a timestamp check are different signals, and reporting one as the other produces a false "doctor passes" claim that contradicts agents who only checked the timestamp. When `workspace.config.json` has `hubType: "dev:sub"` (the same scope the "Knowledge Retrieval" section below already uses — this bullet does not widen that scope), also confirm the hub's storage plugin file exists under `skills/agent-foundations/storage/*.md` and report which plugin is active. Hubs outside that scope (`dev`, `dev:graph`, `ops`) skip this bullet entirely — it is not evaluated there.
+4. **Memory state at boot** — the agent's own memory record, read via the active storage plugin (`memory/<agent>.md` on the free-tier repo-files plugin; the vault note `Memory/<agent>.md` under `vault/Memory/` on the obsidian plugin — see the Storage Plugin Contract below), is missing, stub-scaffolded (just headings, no content), or carries real content. **Setup-ordering caveat (vault-tier hubs only):** on a vault-tier hub (`hubType` ∈ `dev:sub`/`ops`/`publish`), if this agent's own memory is stub-scaffolded *and* the vault as a whole has zero or near-zero total notes, do not report "stub-scaffolded" as an unqualified, permanent fact. Bootstrap Self-Check can fire before `npm run setup` (migration, qmd, Obsidian provisioning) has ever run on a fresh vault-tier hub, and a stub finding recorded at that moment goes stale the instant setup completes — nothing else re-validates or corrects it later. State the finding with the ordering risk named, e.g.: "memory stub-scaffolded; if `npm run setup` has not yet run on this hub, this finding will go stale the moment it does — re-run Bootstrap Self-Check manually to confirm after setup completes." This is a soft signal, not an assertion that setup definitely hasn't run — a vault-tier hub can also be legitimately, intentionally empty by customer choice, and this caveat must not be over-fired as if that possibility were ruled out. On free-tier repo-files hubs, or whenever the vault genuinely has content, report the finding exactly as before with no caveat.
+5. **Workspace signals checked** — `workspace.config.json` present, whether `workspace.config.json` has a `doctor.lastRanAt` field (written by `doctor.js` each time it runs), `projects/` directory scaffolded. The doctor check is passive: check whether the `doctor.lastRanAt` field exists in `workspace.config.json`; do not invoke `npm run doctor` yourself as part of this check — a live run and a field-presence check are different signals, and reporting one as the other produces a false "doctor passes" claim that contradicts agents who only checked the field. When `workspace.config.json` has `hubType: "dev:sub"` (the same scope the "Knowledge Retrieval" section below already uses — this bullet does not widen that scope), also confirm the hub's storage plugin file exists under `skills/agent-foundations/storage/*.md` and report which plugin is active. Hubs outside that scope (`dev`, `dev:graph`, `ops`) skip this bullet entirely — it is not evaluated there.
 6. **Gaps found** — any expected skill, memory key, or config field that is missing or empty
-7. **Readiness verdict** — `ready`, `ready-with-warnings`, or `blocked`, with a one-line reason
+7. **Readiness verdict** — `ready`, `ready-with-warnings`, or `blocked`, with a one-line reason. When the point-4 setup-ordering caveat above applies (vault-tier hub, this agent's own memory stub-scaffolded, vault near-zero notes), the one-line reason must name the ordering possibility explicitly instead of reading as a generic, unexplained warning — e.g. "ready-with-warnings: memory stub-scaffolded, but `npm run setup` may not have run yet on this vault-tier hub." Do not state or imply that setup definitely hasn't run; the verdict names the possibility, not a certainty.
 
 ### Architect-Only Fan-Out
 
@@ -295,8 +296,8 @@ The user never sees a "go talk to Architect first" message. The redirect is invi
 
 Both of the following happen every time the bootstrap flow runs:
 
-1. Each agent appends its own 7-point report (with verdict) to its own `memory/<agent>.md`, under HOT or COLD per the agent's existing memory conventions.
-2. All agents' reports are written together into a shared `projects/_bootstrap-report.md`, overwriting any previous bootstrap report — this is the at-a-glance combined view.
+1. Each agent appends its own 7-point report (with verdict) to its own memory record via the active storage plugin (`memory/<agent>.md` on free tier; the vault note `Memory/<agent>.md` under `vault/Memory/` on vault-backed tiers), under HOT or COLD per the agent's existing memory conventions.
+2. All agents' reports are written together into a shared bootstrap report, overwriting any previous one — this is the at-a-glance combined view. Location is tier-aware: free-tier default `projects/_bootstrap-report.md`; vault-backed tiers (`dev:sub`, `ops`, `publish`) `vault/Docs/_bootstrap-report.md` (see `storage/obsidian.md`'s folder-mapping table).
 
 After both writes complete, set `workspace.config.json` → `bootstrap.completedAt` to the current timestamp (and `bootstrap.version` to the running tool version). This is what makes the flow run exactly once per workspace. Re-running only happens when the user explicitly asks to re-run bootstrap (e.g. "re-run bootstrap") — never automatically, and never as a side effect of memory being archived or compacted.
 
@@ -305,7 +306,7 @@ After both writes complete, set `workspace.config.json` → `bootstrap.completed
 This protocol lives entirely in this shared skill and in each agent's profile template (`SOUL.md`'s Session Start section, or the deployed-hub equivalent). No adapter-specific code implements bootstrap logic independently:
 
 - **Claude Code** — `CLAUDE.md`'s Startup Rule loads the agent profile, memory, and this skill before any other action; the bootstrap check runs as part of that same first-action sequence.
-- **GitHub Copilot** — `.github/copilot-instructions.md` points back to the same per-agent profile and this skill; the check fires identically.
+- **GitHub Copilot** — `.github/copilot-instructions.md` (generated by `generateGithubCopilotInstructions()` in `setup.js`) contains personalization only — workspace identity and per-agent display names — with no routing or protocol content. Copilot's own agent-file discovery for `.github/agents/*.agent.md` does not depend on this file; the profile itself (via the same Startup Rule pattern as the other adapters) is what triggers the bootstrap check.
 - **Codex** — `AGENTS.md` and `.codex/agents/<name>.toml` follow the same Startup Rule pattern, reading this skill before other work.
 - **Cursor** — `.cursor/rules`/agent profiles (composed from each agent's `SOUL.md`) follow the same Startup Rule pattern, reading this skill before other work.
 - **Router** — not a separate adapter. Relay-triggered Router sessions (e.g. the `claude-code` auto-dispatch adapter) run inside the hub directory under whichever of the four adapters above is active, so the same startup sequence and bootstrap check apply without a separate code path.
@@ -399,6 +400,26 @@ All four adapters face the same cwd risk. The probe path differs per adapter (se
 - **GitHub Copilot:** cwd is set by the editor's workspace root. Agent files use the `.agent.md` suffix, not plain `.md`. Probe: `.github/agents/<name>.agent.md`. Once resolved, pin that absolute path; a later terminal command targeting a different repo for code changes does not move the pin.
 - **Codex:** cwd is set by the Codex environment. Agent files are TOML, not Markdown. Probe: `.codex/agents/<name>.toml`. Once resolved, pin that absolute path; a later environment/session command that changes into a code repo for implementation work does not move the pin.
 - **Agent-tool subagent (any adapter):** cwd is set by the harness, not the parent agent's cwd. The harness may resolve to a nested path such as `<hub-root>/projects/<project>/` instead of `<hub-root>`; this is the primary failure mode this protocol guards against. The same adapter-specific probe path applies; the subagent knows which adapter it is from its system prompt. This is also the exact cross-repo dispatch case from "Pin and Reuse": if a dispatch prompt additionally specifies `<code-repo>` as the code working directory, that directory is used only for `git`/build/lint/test commands; it is never confused with, and never overwrites, the pinned hub root used for every `memory/<agent>.md` and `skills/**` operation in that same session.
+
+## Memory Path Resolution
+
+**The law:** On vault-backed tiers, `memory/<agent>.md` is a relative path that resolves to the wrong location — the agent's live memory lives inside the vault, not at the repo root. An agent that writes to the literal path without checking the active storage plugin creates a stray file outside the vault, bypassing the knowledge index and the write-path guard.
+
+**When this applies:** Immediately after the Working Directory Verification pin is established, before the first read or write of the agent's memory file.
+
+### Protocol
+
+1. **Check for an active storage plugin file** at `skills/agent-foundations/storage/*.md`. The deployed hub ships exactly one plugin file at this path; its presence is the signal that storage may redirect the memory path. This is the same presence-gated check already used by the Optional Skill Presence Check and Bootstrap Self-Check sections above.
+2. **If a plugin file is present,** read it and locate its `read-memory(agent)` and `write-memory-entry(agent, tier, content)` definitions. Those definitions govern the real path — they may redirect `memory/<agent>.md` to a different location (for example, the `obsidian` plugin used on vault-backed tiers redirects reads to `vault/Memory/<agent>.md` and routes writes through the vault MCP server). Use the plugin-defined path for all memory operations in this session.
+3. **If no plugin file is present,** the literal `memory/<agent>.md` path is correct as-is. This is the free-tier default — no change from standard behaviour.
+
+### Resolve once per session
+
+Resolve the memory path once per Session Start, immediately after the Working Directory Verification pin is captured, and carry it forward for the rest of the session. Do not re-check the plugin file on every subsequent memory read or write — the path is fixed for the session once resolved.
+
+### Scope
+
+This check applies to all agents (Architect, Builder, Tester, Router, and CAO when present) on every tier. On free-tier hubs no plugin file exists, so the literal path remains correct and no additional work is required. On tiers where a plugin file redirects the path, this check is what prevents a stray file from being written outside the vault.
 
 ## Security Baseline
 

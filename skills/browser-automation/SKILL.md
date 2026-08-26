@@ -45,6 +45,22 @@ agent-browser represents each page in 200–400 tokens — roughly 10–20× che
 
 Keep browser sessions short: navigate → capture evidence → close. Do not leave sessions open across multiple tool calls.
 
+## Native Browser and Computer-Use Tools
+
+The `agent-browser` MCP server is the default path for routine per-ticket VBR evidence on every adapter — this does not change. It is adapter-independent (our own MCP server, configured identically via `.mcp.json` on Claude Code, Codex, Cursor, and Copilot) and its 200–400 token/page cost is the reason the skill was standardised around it.
+
+Two adapters ship a heavier native browser/screen-automation capability:
+
+- **Claude Code** — `claude-in-chrome` (native browser automation, full interactive control)
+- **Codex** — `computer-use` (screen automation via `~/.codex/computer-use/config.json`)
+
+Both are supplementary options, not replacements. Use them only when `agent-browser` genuinely cannot do the job:
+
+- Visual or interactive judgment calls where `agent-browser`'s text/screenshot extraction is insufficient — e.g. verifying a CSS animation, drag-and-drop flow, or canvas rendering that requires real browser interactivity.
+- GIF or screen recording production for a human-facing demo.
+
+Do not treat these as general-purpose alternatives to `agent-browser` for routine QA evidence. The token-efficiency rationale for `agent-browser` applies on every ticket; the native tools are the exception.
+
 ## When Browser Is Unavailable
 
 If the MCP server is not running or not configured, fall back to:

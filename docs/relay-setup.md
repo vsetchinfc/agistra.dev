@@ -105,8 +105,6 @@ When `remoteTeam.enabled`, doctor checks:
 | relay MCP | PASS when `mcpServers.relay` wired (Claude and/or Cursor) |
 | telegram config | PASS when `telegram.enabled`, token, and group id set |
 
-Doctor no longer requires `mcpServers.telegram` (deprecated for group relay).
-
 ---
 
 ## 5. Platform paths
@@ -150,10 +148,3 @@ Module reference: `cli/relay/README.md` in setchin-agent-profiles.
 | MCP tools missing in session | Restart Claude/Cursor after setup |
 | Outbound works, inbound silent | Message must address Router (`Atlas, …` or `@bot`); see inbound runbook |
 | `cli/relay/mcp/server.js` not found on hub | Rerun the tier-specific deploy command to copy `cli/relay/` |
-
----
-
-## Deprecated
-
-- **`wireTelegramMcp` / `mcpServers.telegram`** — Claude official plugin; fine for DM experiments, not production group relay. Use relay MCP + daemon instead.
-- See [telegram-setup.md](./telegram-setup.md) for historical context only.

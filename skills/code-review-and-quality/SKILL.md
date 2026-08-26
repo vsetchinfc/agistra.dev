@@ -24,6 +24,14 @@ Multi-dimensional code review with quality gates. Every change gets reviewed bef
 - When refactoring existing code
 - After any bug fix (review both the fix and the regression test)
 
+## Relationship to Native Review Tools
+
+- **On Claude Code:** run the built-in `/code-review` command first for a fast, diff-scoped automated pass, then apply this skill's five-axis framework on top. `/code-review` covers the pending changeset quickly; this skill adds the structured severity vocabulary, confidence tiers, and the VBR gate that the native command does not produce.
+- **On Codex:** the same relationship applies to `codex review`, which is backed by the `review-agent` system skill and produces a read-only, defect-first diff review. Run it first, then apply this skill's framework for the structured output.
+- **On Cursor or GitHub Copilot:** no comparable native review command exists — apply this skill's five-axis framework directly.
+
+Either way, the VBR approval gate — all Critical issues resolved AND tests pass AND build passes before reporting LGTM — is owned by this skill, never by the native command. A passing native review does not satisfy the VBR gate.
+
 ## The Five-Axis Review
 
 Every review evaluates code across these five dimensions:

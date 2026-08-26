@@ -2,14 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { analyzeDependencyGraph } from './dep-graph.js';
 
-// ── Dependency-graph MCP session (ADR-036 Stage 2, task_274/#508) ──────────
+// ── Dependency-graph MCP session ─────────────────────────────────────────────
 //
-// Session-scoped state wrapping the Stage 1 engine (dep-graph.js) for the
-// dep-graph MCP server: scan(path) runs the engine and remembers the result
-// in-memory for the life of this process; baseline() persists that result to
-// a local file next to the scanned directory; diff() and check() re-scan and
-// compare against the saved baseline. No persistent daemon — one session
-// object per spawned MCP server process (ADR-036 Decision 5).
+// Session-scoped state wrapping the dep-graph.js engine for the dep-graph MCP
+// server: scan(path) runs the engine and remembers the result in-memory for
+// the life of this process; baseline() persists that result to a local file
+// next to the scanned directory; diff() and check() re-scan and compare
+// against the saved baseline. No persistent daemon — one session object per
+// spawned MCP server process.
 
 export const BASELINE_FILENAME = '.dep-graph-baseline.json';
 
@@ -17,8 +17,8 @@ export const BASELINE_FILENAME = '.dep-graph-baseline.json';
 // directly JSON-serializable. Convert to a plain, tool-response-safe shape.
 // The raw edge-level graph itself is intentionally omitted from the
 // tool/baseline payload — cycles + per-module coupling are the two metrics
-// this MCP surface exposes (ADR-036 Decision 3); the full edge map is an
-// internal engine detail, not part of the session's public contract.
+// this MCP surface exposes; the full edge map is an internal engine detail,
+// not part of the session's public contract.
 function toJsonSafe(raw) {
 	return {
 		files: raw.files,

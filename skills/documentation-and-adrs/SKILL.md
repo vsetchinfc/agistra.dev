@@ -123,6 +123,16 @@ This is the inverse of implementation work — code changes always go through a 
 - Stop. Do not stage, commit, branch, or open a PR.
 - Inform the team lead that the file is ready for their review and commit.
 
+## Sharing ADRs and Reports with Non-Technical Stakeholders (Claude Code only)
+
+When an ADR or report needs to be shared with a non-technical stakeholder or presented visually, additionally publish it as an Artifact via Claude Code's `artifact-design` or `artifact-diagramming` skill. The Artifact is a presentation layer on top of the committed document — it does not replace it.
+
+The committed markdown in `docs/decisions/` remains the source of truth. The No-Delete Rule and the Commit Ownership Rule above are unaffected: the Artifact is produced after the ADR file is written and committed by the team lead, as a separate presentation step, never as a substitute for it.
+
+There is no Codex equivalent for this path. Codex's `imagegen` produces static bitmap assets — a materially narrower and different capability that does not produce a shareable, interactive, or editable presentation of an ADR. On Codex, stakeholder presentation of a decision document means sharing the committed markdown directly, or producing an HTML/PDF export separately; do not imply parity with Claude Code's Artifacts that does not exist.
+
+On Cursor and GitHub Copilot, no comparable Artifact publishing system exists — same conclusion as Codex.
+
 ## Inline Comment Discipline
 
 ### Comment the WHY, not the WHAT

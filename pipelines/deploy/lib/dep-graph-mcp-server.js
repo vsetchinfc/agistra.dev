@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /**
- * Dependency-graph MCP server (ADR-036 Stage 2, task_274/#508) — exposes the
- * Stage 1 engine (dep-graph.js) to the active coding agent as session-scoped
- * tools: scan(path), baseline(), diff(), check(). Spawned per-session by the
- * client via .mcp.json's `command`, the same pattern the existing
- * agent-browser entry already uses — no persistent daemon, no lifecycle
- * hooks, no doctor.js readiness check (ADR-036 Decision 5).
+ * Dependency-graph MCP server — exposes the dep-graph.js engine to the active
+ * coding agent as session-scoped tools: scan(path), baseline(), diff(),
+ * check(). Spawned per-session by the client via .mcp.json's `command`, the
+ * same pattern the existing agent-browser entry already uses — no persistent
+ * daemon, no lifecycle hooks, no doctor.js readiness check.
  *
  * Usage:
  *   node pipelines/deploy/lib/dep-graph-mcp-server.js

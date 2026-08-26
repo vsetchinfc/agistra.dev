@@ -18,12 +18,14 @@ import { execFileSync } from 'node:child_process';
 import { CLAUDE_SETTINGS_PATH, readJsonSafe } from './wizard.js';
 import { resolveRouterModel, parseProfileModel } from './lib/models.js';
 import { scaffoldMemoryFile } from './lib/memory-scaffold.js';
+import { resolveMemoryRootSegment, resolveTasksRootSegment } from './lib/memory-root.js';
 import {
 	isNightlyDreamingTaskRegistered,
 	NIGHTLY_DREAMING_TASK_NAME,
 	getNightlyDreamingTaskRuntimeInfo,
 	findMostRecentArchiveDate,
 } from './lib/nightly-dreaming.js';
+import { markDoctorRun } from './lib/bootstrap.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -87,8 +89,8 @@ function checkGitattributes({ hubRoot, fsMod }) {
 	}
 	const content = fsMod.readFileSync(p, 'utf-8');
 	const missing = [];
-	if (!/memory\/\*\.md\s+merge=ours/.test(content)) missing.push('memory/*.md merge=ours');
-	if (!/.cursor\/rules\/workspace-identity\.mdc\s+merge=ours/.test(content)) {
+	if (!/memory\/\*\.md\s+(?:\S+[ \t]+)*merge=ours/.test(content)) missing.push('memory/*.md merge=ours');
+	if (!/.cursor\/rules\/workspace-identity\.mdc\s+(?:\S+[ \t]+)*merge=ours/.test(content)) {
 		missing.push('.cursor/rules/workspace-identity.mdc merge=ours');
 	}
 	if (!/tools\/\*\.sh\s+(?:text\s+)?eol=lf/.test(content)) missing.push('tools/*.sh eol=lf');
@@ -120,7 +122,33 @@ function discoverDeployedAgentIds({ hubRoot, fsMod }) {
 
 function checkMemoryFiles({ hubRoot, fsMod }) {
 	const agentIds = discoverDeployedAgentIds({ hubRoot, fsMod });
-	const memoryRoot = path.join(hubRoot, 'memory');
+	// hubType-aware: vault-backed tiers (dev:sub/ops/publish) scaffold into
+	// vault/Memory (see lib/memory-root.js, the single source of truth shared
+	// with lib/extras.js and lib/session-cli.js). readHubConfig() is the same
+	// workspace.config.json reader checkHubType() (check 15) uses below.
+	const { config } = readHubConfig(hubRoot, fsMod);
+	const segment = resolveMemoryRootSegment(config?.hubType);
+	const displaySegment = segment.replace(/\\/g, '/');
+	const memoryRoot = path.join(hubRoot, segment);
+	//
+	// Unlike the free-tier "memory" default, this check deliberately does NOT
+	// auto-scaffold vault/Memory via a raw fs.mkdirSync when it is missing on
+	// a vault-backed tier. Two reasons: (1) a raw mkdirSync here bypasses the
+	// vault storage plugin's own mutation path the Storage Plugin Contract
+	// (agents/skills/agent-foundations/SKILL.md) documents for all vault
+	// writes; (2) since this check runs earlier in runChecks() than the
+	// vault-readiness check further down (a dev:sub-only tier plugin, excluded
+	// from this file when it ships to the free "dev" tier — see
+	// checkOptionalTierReadiness below), an unconditional mkdirSync here would
+	// make the vault root appear to exist before that later check evaluates it,
+	// masking its own "vault root not found" fail with a misleading "present"
+	// signal on every doctor run. vault/Memory is instead scaffolded at deploy
+	// time by lib/extras.js — same precedent already established for
+	// vault/Tasks (see checkProjectsDir below).
+	if (segment !== 'memory' && !fsMod.existsSync(memoryRoot)) {
+		return warn(4, 'memory files', `${displaySegment}/ directory not found`,
+			'run the tier-specific deploy command (e.g. npm run deploy:dev:sub) to scaffold the vault-canonical memory root');
+	}
 	const scaffolded = [];
 	for (const agentId of agentIds) {
 		if (scaffoldMemoryFile({ memoryRoot, agentId, fsMod })) {
@@ -309,7 +337,7 @@ function checkAutoDispatchRouterProfile({ hubRoot, fsMod }) {
 	if (fsMod.existsSync(profilePath)) {
 		return pass(12, 'auto-dispatch: router profile', '.claude/agents/router.md found');
 	}
-		return fail(12, 'auto-dispatch: router profile', '.claude/agents/router.md not found',
+	return fail(12, 'auto-dispatch: router profile', '.claude/agents/router.md not found',
 		'rerun the tier-specific deploy command');
 }
 
@@ -344,22 +372,48 @@ function checkAutoDispatchRouterModel({ hubRoot, fsMod, profilesRoot }) {
 			`deployed model (${deployedModel}) ≠ manifest economy tier (${expectedModel})`,
 			'rerun the tier-specific deploy command');
 	}
-		return pass(13, 'router model tier', `router uses economy model ${deployedModel}`);
+	return pass(13, 'router model tier', `router uses economy model ${deployedModel}`);
 }
 
 function checkProjectsDir({ hubRoot, fsMod }) {
-	const projectsPath = path.join(hubRoot, 'projects');
-	if (fsMod.existsSync(projectsPath)) {
-		return pass(14, 'projects directory', 'projects/ directory present');
+	// hubType-aware: vault-backed tiers (dev:sub/ops/publish) use vault/Tasks
+	// (see lib/memory-root.js, the single source of truth shared with
+	// lib/extras.js). readHubConfig() is the same workspace.config.json
+	// reader checkHubType() (check 15) uses below.
+	//
+	// Unlike the free-tier "projects" default, this check deliberately does
+	// NOT auto-scaffold vault/Tasks via a raw fs.mkdirSync when it is missing
+	// on a vault-backed tier. Two reasons: (1) a raw mkdirSync here bypasses
+	// the vault storage plugin's own mutation path the Storage Plugin
+	// Contract (agents/skills/agent-foundations/SKILL.md) documents for all
+	// vault writes; (2) reproduced directly — since this check runs earlier
+	// in runChecks() than the vault-readiness check further down (a
+	// dev:sub-only tier plugin, excluded from this file when it ships to the
+	// free "dev" tier — see checkOptionalTierReadiness below), an
+	// unconditional mkdirSync here would make the vault root appear to exist
+	// before that later check evaluates it, masking its own "vault root not
+	// found" fail with a misleading "present" signal on every doctor run.
+	// vault/Tasks is instead scaffolded at deploy time by lib/extras.js —
+	// same precedent already established for vault/Memory.
+	const { config } = readHubConfig(hubRoot, fsMod);
+	const segment = resolveTasksRootSegment(config?.hubType);
+	const displaySegment = segment.replace(/\\/g, '/');
+	const tasksPath = path.join(hubRoot, segment);
+	if (fsMod.existsSync(tasksPath)) {
+		return pass(14, 'projects directory', `${displaySegment}/ directory present`);
 	}
-	// Auto-scaffold: create the directory in the same run
-	fsMod.mkdirSync(projectsPath, { recursive: true });
-	return pass(14, 'projects directory', 'projects/ directory scaffolded');
+	if (segment !== 'projects') {
+		return warn(14, 'projects directory', `${displaySegment}/ directory not found`,
+			'run the tier-specific deploy command (e.g. npm run deploy:dev:sub) to scaffold the vault-canonical tasks root');
+	}
+	// Auto-scaffold: create the directory in the same run (free-tier default only)
+	fsMod.mkdirSync(tasksPath, { recursive: true });
+	return pass(14, 'projects directory', `${displaySegment}/ directory scaffolded`);
 }
 
-const HUB_TYPE_DEV_REQUIRED     = ['architect', 'builder', 'tester', 'router'];
+const HUB_TYPE_DEV_REQUIRED = ['architect', 'builder', 'tester', 'router'];
 const HUB_TYPE_DEV_SUB_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'];
-const HUB_TYPE_OPS_REQUIRED     = ['architect', 'builder', 'tester', 'router', 'cao'];
+const HUB_TYPE_OPS_REQUIRED = ['architect', 'builder', 'tester', 'router', 'cao'];
 
 /**
  * Check 15: hubType-aware agent profile verification.
@@ -695,18 +749,18 @@ export function computeExitCode(checks) {
 const LABEL_WIDTH = 24;
 
 function formatCheck(check, useColor) {
-	const green  = useColor ? '\x1b[32m' : '';
-	const red    = useColor ? '\x1b[31m' : '';
+	const green = useColor ? '\x1b[32m' : '';
+	const red = useColor ? '\x1b[31m' : '';
 	const yellow = useColor ? '\x1b[33m' : '';
-	const dim    = useColor ? '\x1b[2m'  : '';
-	const reset  = useColor ? '\x1b[0m'  : '';
+	const dim = useColor ? '\x1b[2m' : '';
+	const reset = useColor ? '\x1b[0m' : '';
 
 	let sym;
 	switch (check.status) {
 		case 'pass': sym = `${green}✓${reset}`; break;
-		case 'fail': sym = `${red}✗${reset}`;   break;
+		case 'fail': sym = `${red}✗${reset}`; break;
 		case 'warn': sym = `${yellow}⚠${reset}`; break;
-		default:     sym = '-';
+		default: sym = '-';
 	}
 
 	const label = check.label.padEnd(LABEL_WIDTH);
@@ -746,15 +800,15 @@ export function formatReport(checks, useColor = false) {
 	const exitCode = computeExitCode(checks);
 	if (exitCode === 0) {
 		const green = useColor ? '\x1b[32m' : '';
-		const reset = useColor ? '\x1b[0m'  : '';
+		const reset = useColor ? '\x1b[0m' : '';
 		lines.push(`  ${green}READY${reset} — hub is correctly configured`);
 	} else {
-		const red    = useColor ? '\x1b[31m' : '';
+		const red = useColor ? '\x1b[31m' : '';
 		const yellow = useColor ? '\x1b[33m' : '';
-		const reset  = useColor ? '\x1b[0m'  : '';
-		const fails  = checks.filter(c => c.status === 'fail').length;
-		const warns  = checks.filter(c => c.status === 'warn').length;
-		const parts  = [];
+		const reset = useColor ? '\x1b[0m' : '';
+		const fails = checks.filter(c => c.status === 'fail').length;
+		const warns = checks.filter(c => c.status === 'warn').length;
+		const parts = [];
 		if (fails > 0) parts.push(`${red}${fails} error${fails > 1 ? 's' : ''}${reset}`);
 		if (warns > 0) parts.push(`${yellow}${warns} warning${warns > 1 ? 's' : ''}${reset}`);
 		lines.push(`  NOT READY — ${parts.join(', ')}`);
@@ -779,5 +833,7 @@ if (isMain) {
 	const checks = await runChecks({ hubRoot });
 	const useColor = Boolean(process.stdout.isTTY);
 	process.stdout.write(formatReport(checks, useColor));
-	process.exit(computeExitCode(checks));
+	const exitCode = computeExitCode(checks);
+	markDoctorRun(hubRoot, { exitCode });
+	process.exit(exitCode);
 }

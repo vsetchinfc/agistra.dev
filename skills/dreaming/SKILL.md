@@ -135,9 +135,9 @@ The "Compacted" section must always report:
 **Dispatch behaviour:**
 
 - If Architect receives the trigger directly:
-  1. **Status report phase** — invoke Builder, Tester, and Router as subagents simultaneously with the status-contribution prompt: `"EOD status check. Read your memory file and return your status contribution: active tickets, dispatched-but-unreturned work, and any blockers. Bullets only."` Collect all three responses.
+  1. **Status report phase** — invoke Builder, Tester, and Router as subagents simultaneously with the status-contribution prompt: `"EOD status check. Read your memory file and return your status contribution: active tickets, dispatched-but-unreturned work, and any blockers. Bullets only."` Also invoke CAO with the same status-contribution prompt under the same terms *when and only when* CAO's own profile file exists in the hub — probe the adapter-matching path (e.g. `.claude/agents/cao.md` for Claude Code), the same presence-gating pattern the Bootstrap Self-Check section of `agent-foundations` already uses for this identical problem. If the file is absent, skip CAO silently; that is the expected state on hubs that don't ship CAO, not a gap to report. Collect all responses (three, or four when CAO is present).
   2. **Compile and deliver EOD report** — using the status contributions plus Architect's own HOT section, compile a single project-grouped report (per the multi-project output format in `agent-foundations`: group by project, mention the relevant agent owner inside each section). Deliver to the team lead before any consolidation output.
-  3. **Consolidation phase** — run shared steps (including decay rules + LAST_EVENT retirement), then invoke Builder, Tester, and Router as subagents simultaneously with the dreaming consolidation prompt: `"End of day consolidation. Run the dreaming skill for [role] workspace."` Wait for all three to acknowledge.
+  3. **Consolidation phase** — run shared steps (including decay rules + LAST_EVENT retirement), then invoke Builder, Tester, and Router as subagents simultaneously with the dreaming consolidation prompt: `"End of day consolidation. Run the dreaming skill for [role] workspace."` Also invoke CAO with the same consolidation prompt, presence-gated on the same terms as the status report phase above — skip silently if CAO's profile file is absent. Wait for all invoked agents to acknowledge (three, or four when CAO is present).
   4. Confirm to the team lead: `"Good night. All agents consolidated."`
 
 - If the trigger arrives via subagent dispatch: run shared steps (including decay rules + LAST_EVENT retirement) only, then acknowledge: `"Architect consolidated. Good night."`
@@ -226,5 +226,34 @@ The "Compacted" section must always report:
 - Router runs end-of-day consolidation when dispatched by Architect as a subagent. Router does NOT cascade the trigger.
 - If dispatched with the **status-contribution prompt**: read `memory/router.md` HOT section. Return bullets only — any unresolved routing classifications, pending escalations, or relay activity since last session. Do not run consolidation steps; Architect will dispatch again for that separately.
 - If dispatched with the **consolidation prompt**: run shared steps (including decay rules + LAST_EVENT retirement). Acknowledge: `"Router consolidated. Good night."`
+
+### CAO
+
+**Live file:** `memory/cao.md` on free-tier hubs (tracked in repo); vault-backed tiers redirect — resolve the actual path per the Memory Path Resolution protocol in `skills/agent-foundations/SKILL.md`, same as every other reference to CAO's memory in this codebase.
+**Archive file:** `memory/archive/cao-YYYY-MM-DD.md` (same vault-redirection rule applies to the archive path where relevant).
+
+**Promotion focus:** stable offer structures, pricing patterns, resolved lead-triage decisions, client relationship notes, unresolved next-day items (open leads, pending call prep, awaited founder approvals), transient notes safe to collapse. CAO does not manage other agents' memory and does not run status-report or consolidation dispatches of its own — it only promotes within its own HOT/WARM/COLD tiers, per its `SOUL.md` memory schema (HOT: current active leads, in-progress offers, upcoming calls; WARM: recently closed deals, completed campaigns, resolved lead triage decisions; COLD: stable offer structures, pricing patterns, client relationship notes).
+
+**Promotion targets:**
+
+- Recently closed deals, completed campaigns, and resolved lead-triage decisions → `memory/cao.md` (WARM/COLD tiers) every run
+- Stable offer structures, pricing patterns, and client relationship notes → `memory/cao.md` (COLD tier) every run
+- Dreaming-managed transient captures → compacted in their original memory file after checkpoint (only when explicitly marked)
+
+(CAO does not promote to user memory beyond its own role — commercial/strategic intelligence stays scoped to `memory/cao.md`, mirroring Tester's and Router's "does not promote to user memory" convention above.)
+
+**Compaction enforcement (CAO):**
+
+- LAST_EVENT: Cap at 10 most recent entries. Retire entries older than 7 days with no open ticket/PR/blocker reference. Summarise entries exceeding 500 chars to one-liner + archive full detail.
+- HOT decay: Items not referenced in 48h move to WARM.
+- WARM decay: Items not referenced in 7d move to COLD.
+- Archive snapshot must report before/after line counts and compaction delta.
+- Contradiction review: scoped to this agent's own memory only (never another agent's file); findings recorded in `## Flagged Contradictions` in the archive snapshot — best-effort, human-review only, never auto-resolved.
+
+**Dispatch behaviour:**
+
+- CAO runs end-of-day consolidation when dispatched by Architect as a subagent, presence-gated as described in Architect's "Dispatch behaviour" above — CAO is only dispatched when its own profile file exists in the hub. CAO does NOT cascade the trigger and does not dispatch Builder, Tester, or Router itself (CAO never dispatches them directly, per its own `ROUTING.md`).
+- If dispatched with the **status-contribution prompt**: read `memory/cao.md` HOT section. Return bullets only — active leads, in-progress offers, upcoming calls, any blockers or pending founder approvals. Do not run consolidation steps; Architect will dispatch again for that separately.
+- If dispatched with the **consolidation prompt**: run shared steps (including decay rules + LAST_EVENT retirement). Acknowledge: `"CAO consolidated. Good night."`
 
 This is internal-only. Do not post to GitHub issues, PRs, or any external channel.

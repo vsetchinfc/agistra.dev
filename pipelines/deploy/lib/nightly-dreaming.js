@@ -50,6 +50,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import crypto from 'node:crypto';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
@@ -67,6 +68,40 @@ export const NIGHTLY_DREAMING_PROMPT =
 // Non-interactive permission mode — nobody is present overnight to approve a permission
 // prompt for the file-writing tool calls consolidation requires.
 export const NIGHTLY_DREAMING_PERMISSION_MODE = 'bypassPermissions';
+
+// Number of hex characters of the SHA-256 digest appended to the base task name.
+// 12 hex chars = 48 bits of the hubRoot's digest — collision probability across the
+// small number of hubs realistically registered on one machine is negligible, and the
+// resulting name (base name + 1 dash + 12 chars = 38 chars total) sits nowhere near
+// Windows Task Scheduler's task-name length ceiling (confirmed empirically: `schtasks
+// /create /tn <38-char-name>` succeeds without truncation or error — see the PR
+// description for the exact commands run). Task names may contain letters, digits,
+// and `-` without any escaping/quoting concerns (also confirmed empirically), so a
+// plain hex suffix needs no further sanitization.
+const NIGHTLY_DREAMING_TASK_NAME_HASH_LENGTH = 12;
+
+/**
+ * Derive a Scheduled Task name unique to this hub's resolved absolute path.
+ *
+ * Two or more hubs on the same Windows machine must never register under the same
+ * Scheduled Task name — `registerNightlyDreamingTask` calls `schtasks /create ... /f`,
+ * and `/f` force-overwrites any existing task with that name with no warning. Appending
+ * a short hash of the hub's own absolute root path to the shared base name gives every
+ * hub a distinct, stable (same hubRoot always produces the same name — no randomness)
+ * task name, so a second hub's `npm run setup` can never silently hijack a first hub's
+ * already-registered task.
+ *
+ * @param {string} hubRoot  Absolute hub root path. Required — the hash is meaningless
+ *   (and would collide across every hub) without a real, hub-specific path to hash.
+ * @returns {string}
+ */
+export function computeNightlyDreamingTaskName(hubRoot) {
+	if (!hubRoot) {
+		throw new Error('computeNightlyDreamingTaskName: hubRoot is required');
+	}
+	const digest = crypto.createHash('sha256').update(hubRoot).digest('hex');
+	return `${NIGHTLY_DREAMING_TASK_NAME}-${digest.slice(0, NIGHTLY_DREAMING_TASK_NAME_HASH_LENGTH)}`;
+}
 
 /**
  * Minimal XML text escaping for the values interpolated into the task definition
