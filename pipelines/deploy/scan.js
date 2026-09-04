@@ -67,9 +67,14 @@ export function renderReadme({ projectName, perspectives, overall, allFindings, 
  *   projectRoot   string   absolute path to the project repo to scan
  *   projectName   string   name of the project (used in filenames and content)
  *   projectsDir   string   absolute path to the projects/<name>/ queue directory
+ *   hubRoot       string   optional absolute path to the hub root — used to
+ *                          resolve Graphify's own graph.json location. Absent
+ *                          (e.g. a deploy target with no Graphify integration)
+ *                          means the Graphify-preference check is skipped and
+ *                          dep-graph.js's own scan is always used.
  *   dryRun        boolean  print what would be written without writing files
  */
-export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) {
+export function scan({ projectRoot, projectName, projectsDir, hubRoot, dryRun = false }) {
 	if (!projectRoot || !projectName) {
 		process.stderr.write('[scan] --project <name> is required\n');
 		process.exit(1);
@@ -79,12 +84,17 @@ export function scan({ projectRoot, projectName, projectsDir, dryRun = false }) 
 
 	// Prefer Graphify's own graph.json over dep-graph.js's own scan when the
 	// project has one. Graphify always writes to
-	// projects/<project>/graphify/graphify-out/graph.json (graph-cli.js's
-	// resolveGraphifyDir()/resolveGraphifyOutDir()) — under projectsDir, not
-	// necessarily under projectRoot, since a project's repoPath can point
-	// anywhere (workspace.config.json → projects.<name>.repoPath).
-	const graphJsonPath = projectsDir
-		? path.join(projectsDir, 'graphify', 'graphify-out', 'graph.json')
+	// .graphify/<project>/graphify-out/graph.json under the hub root
+	// (graph-cli.js's resolveGraphifyDir()/resolveGraphifyOutDir() build the
+	// identical path — deliberately re-derived here with a plain path.join()
+	// rather than imported, since scan.js ships to every hub tier
+	// unconditionally while graph-cli.js only ships to Graphify-capable
+	// tiers; a static import would break module resolution on tiers that
+	// never copy graph-cli.js) — independent of projectsDir, since a
+	// project's repoPath can point anywhere (workspace.config.json →
+	// projects.<name>.repoPath).
+	const graphJsonPath = hubRoot
+		? path.join(hubRoot, '.graphify', projectName, 'graphify-out', 'graph.json')
 		: undefined;
 	const { perspectives, overall, allFindings } = scanProject({ projectDir: projectRoot, graphJsonPath });
 

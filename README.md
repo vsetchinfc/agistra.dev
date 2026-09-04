@@ -1,7 +1,7 @@
 # Agistra Dev
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-0.2.0-blue.svg)](VERSION)
+[![Version](https://img.shields.io/badge/Version-0.2.3-blue.svg)](VERSION)
 [![Node.js](https://img.shields.io/badge/Node.js-22%2B-339933.svg)](package.json)
 
 [![Claude Code](https://img.shields.io/badge/Claude_Code-supported-blue.svg)](.claude/agents)

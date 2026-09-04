@@ -218,6 +218,8 @@ Confidence is graded by the kind of evidence behind the finding, not by an abstr
 
 This is a tiering by evidence type, not a percentage score — a reviewer (human or agent) should be able to point at *why* a finding sits in its tier, not just assert a number.
 
+**Precedent check, before tiering a shape-based finding:** A finding inferred from code shape alone — a widened query, a new abstraction, an altered control-flow branch — that is not a directly reproduced failure needs one more step before it can be tiered Confirmed or Likely: grep the codebase for whether the same pattern already ships elsewhere as an accepted convention. A pattern that already ships unremarked elsewhere is counter-evidence, not confirmation — downgrade the finding to Speculative (and drop it per the suppression rule above if its severity isn't Critical or Required) rather than posting it and waiting for the author to supply the precedent that was available before the review shipped.
+
 ## Red Flags
 
 - PRs merged without any review

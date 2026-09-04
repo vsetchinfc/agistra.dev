@@ -1,6 +1,6 @@
 # .coderabbit.yaml — agistra.dev
 # CodeRabbit configuration for the public agistra.dev hub.
-# Shape follows the career-ops reference model (ADR-020, decision 4).
+# Shape follows the team's public-hub review policy template.
 # Requires CodeRabbit Pro to be enabled on this repository.
 
 language: en-US

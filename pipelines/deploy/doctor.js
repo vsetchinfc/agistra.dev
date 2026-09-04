@@ -2,9 +2,10 @@
 /**
  * doctor.js — Hub health check command.
  *
- * Runs 17 checks and prints a coloured report showing green/warn/fail for each
- * configuration item. Designed to be run after `npm run setup` to confirm the
- * hub is correctly configured before starting a work session.
+ * Runs a series of readiness checks and prints a coloured report showing
+ * green/warn/fail for each configuration item. Designed to be run after
+ * `npm run setup` to confirm the hub is correctly configured before starting
+ * a work session.
  *
  * Usage:
  *   node pipelines/deploy/doctor.js --output <hub-root>   # check the given hub
@@ -26,6 +27,10 @@ import {
 	findMostRecentArchiveDate,
 } from './lib/nightly-dreaming.js';
 import { markDoctorRun } from './lib/bootstrap.js';
+import { discoverProfileDirs, readAgentManifest, readProfileIdentity } from './lib/profiles.js';
+import { buildPortablePrompt } from './lib/compose-portable-prompt.js';
+import { normalise } from './lib/validate-utils.js';
+import { LANGGRAPH_RUNTIME_DIR, LANGGRAPH_GENERATED_DIR, langGraphArtifactFileName } from './lib/langgraph-paths.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -606,6 +611,82 @@ function checkNightlyDreamingConsolidationFreshness({ hubRoot, fsMod, execFn, pl
 }
 
 /**
+ * Check 21: LangGraph compile target freshness.
+ *
+ * Not tier-gated and not a `*.doctor-plugin.js` plugin — that mechanism is
+ * reserved for content deployExtras() ships into hubs at certain tiers.
+ * This check is generic like checkAgentProfiles/checkCodexAgentProfiles above,
+ * but gracefully skips when `runtime/langgraph/` is absent. That skip is the
+ * normal packaged-hub path because the LangGraph runtime source is only present
+ * in the source repository during compile-target development.
+ * Running `node pipelines/deploy/doctor.js --output .` from the source repo
+ * checkout (hubRoot = the repo root) is what exercises this check when the
+ * compile target is being maintained.
+ *
+ * Regenerates the expected prompt from the CAO profile source using the same
+ * regenerate-and-diff flow the other compile targets use, then compares the
+ * generated artifact against the copy on disk via the injectable fsMod.
+ * `compareFile` cannot be reused directly here because it hardcodes real `fs`
+ * access; this check needs the same normalized diff logic while honoring the
+ * doctor command's fs injection seam.
+ */
+function checkLangGraphCompileTarget({ hubRoot, fsMod, profilesRoot }) {
+	const runtimeDir = path.join(hubRoot, LANGGRAPH_RUNTIME_DIR);
+	if (!fsMod.existsSync(runtimeDir)) {
+		return skip(21, 'langgraph compile target', 'runtime/langgraph/ not present — nothing to check');
+	}
+
+	const agentsProfilesRoot = path.join(profilesRoot, 'agents', 'profiles');
+	const agentsSkillsRoot = path.join(profilesRoot, 'agents', 'skills');
+
+	let profileDirs;
+	try {
+		profileDirs = discoverProfileDirs(agentsProfilesRoot);
+	} catch {
+		return warn(21, 'langgraph compile target', 'could not read agents/profiles/ to determine eligible profiles',
+			'run from a setchin-agent-profiles checkout, or pass --profiles-root explicitly');
+	}
+
+	const eligible = profileDirs
+		.map(profileDir => ({ profileDir, manifest: readAgentManifest(profileDir) }))
+		.filter(({ manifest }) => manifest?.exports?.generatePortablePrompt === true);
+
+	if (eligible.length === 0) {
+		return skip(21, 'langgraph compile target', 'no profile declares exports.generatePortablePrompt: true — nothing to check');
+	}
+
+	const generatedDir = path.join(hubRoot, LANGGRAPH_GENERATED_DIR);
+	const problems = [];
+	const fresh = [];
+	for (const { profileDir, manifest } of eligible) {
+		const identity = readProfileIdentity(profileDir);
+		const artifactPath = path.join(generatedDir, langGraphArtifactFileName(identity.id));
+		if (!fsMod.existsSync(artifactPath)) {
+			problems.push(`${identity.id}: artifact missing (${path.relative(hubRoot, artifactPath)})`);
+			continue;
+		}
+		let expected;
+		try {
+			expected = buildPortablePrompt(profileDir, agentsSkillsRoot, manifest.skills ?? []);
+		} catch (err) {
+			problems.push(`${identity.id}: could not regenerate expected prompt (${err.message})`);
+			continue;
+		}
+		const actual = fsMod.readFileSync(artifactPath, 'utf-8');
+		if (normalise(expected) !== normalise(actual)) {
+			problems.push(`${identity.id}: stale relative to profile source`);
+		} else {
+			fresh.push(identity.id);
+		}
+	}
+
+	if (problems.length > 0) {
+		return fail(21, 'langgraph compile target', problems.join('; '), 'run: npm run compile:langgraph');
+	}
+	return pass(21, 'langgraph compile target', `compiled prompt artifact(s) present and fresh: ${fresh.join(', ')}`);
+}
+
+/**
  * Checks 16+: optional tier-specific readiness (dev:sub, ops, publish hubs only).
  *
  * Manifest-driven, not hardcoded: some hub tiers ship one or more additional
@@ -726,6 +807,7 @@ export async function runChecks({
 		checkHubType({ hubRoot, fsMod }),
 		checkNightlyDreamingTask({ hubRoot, fsMod, execFn, platform }),
 		checkNightlyDreamingConsolidationFreshness({ hubRoot, fsMod, execFn, platform }),
+		checkLangGraphCompileTarget({ hubRoot, fsMod, profilesRoot }),
 		...(await checkOptionalTierReadiness({ hubRoot, fsMod, execFn, platform, env, fetchFn, pluginOptions })),
 	];
 }
@@ -835,5 +917,15 @@ if (isMain) {
 	process.stdout.write(formatReport(checks, useColor));
 	const exitCode = computeExitCode(checks);
 	markDoctorRun(hubRoot, { exitCode });
-	process.exit(exitCode);
+	// Set process.exitCode instead of calling process.exit(exitCode) directly.
+	// process.exit() forces immediate, synchronous process termination, which
+	// on Windows can race libuv's teardown of any handle still mid-close (a
+	// dynamic import(), a real network probe made by an optional-tier
+	// doctor-plugin check, or a spawned child process) — producing
+	// "Assertion failed: !(handle->flags & UV_HANDLE_CLOSING), file src\win\async.c"
+	// and a crash after the report has already printed correctly. Setting
+	// process.exitCode instead lets Node drain the event loop naturally and
+	// close every pending handle before exiting on its own with the same
+	// code.
+	process.exitCode = exitCode;
 }

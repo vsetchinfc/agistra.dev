@@ -21,10 +21,17 @@
  * This intentionally does NOT perform any HOT/WARM/COLD compaction, decay,
  * or archival — that remains `dreaming`'s judgment-driven territory. This
  * command only covers the existence/skeleton step described above.
+ *
+ * Memory root resolution is hubType-aware via lib/memory-root.js's
+ * resolveMemoryRootForHub() — the single source of truth shared with
+ * doctor.js and lib/session-cli.js. Vault-backed tiers (dev:sub/ops/publish)
+ * resolve to `vault/Memory`; free/customer-archive tiers (dev/dev:graph, or
+ * unset hubType) resolve to the pre-existing `memory` default.
  */
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { resolveMemoryRootForHub } from './memory-root.js';
 
 /** Capitalises the first letter of an agent id for the memory file title (architect -> Architect). */
 function displayName(agentId) {
@@ -37,16 +44,19 @@ function memorySkeleton(agentId) {
 }
 
 /**
- * Ensures `memory/<agent>.md` exists with the HOT/WARM/COLD skeleton and
- * that `memory/archive/` exists, without touching either if already
- * present. `repoRoot` defaults to cwd; `fsMod` is injectable for tests.
+ * Ensures `<memory-root>/<agent>.md` exists with the HOT/WARM/COLD skeleton
+ * and that `<memory-root>/archive/` exists, without touching either if
+ * already present. `repoRoot` defaults to cwd; `fsMod` is injectable for
+ * tests. The memory root itself is hubType-aware — resolved via
+ * `resolveMemoryRootForHub()` (vault-backed tiers get `vault/Memory`,
+ * everything else keeps the pre-existing `memory` default).
  */
 export function ensureMemoryFile(agentId, { repoRoot = process.cwd(), fsMod = fs } = {}) {
 	if (!agentId) {
 		return { ok: false, error: 'agent id is required. Usage: memory ensure <agent>' };
 	}
 
-	const memoryDir = path.join(repoRoot, 'memory');
+	const memoryDir = resolveMemoryRootForHub(repoRoot, { fsMod });
 	const archiveDir = path.join(memoryDir, 'archive');
 	const memoryFile = path.join(memoryDir, `${agentId}.md`);
 

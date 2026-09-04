@@ -6,9 +6,11 @@ argument-hint: "Correction, unexpected error, capability gap, or recurring patte
 
 # Self-Improving Agent
 
-Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent) — MIT License. Enables the agent to capture corrections, errors, and knowledge gaps during sessions and promote durable learnings into permanent project memory.
+Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/self-improving-agent) — MIT License. Defines the mechanics that `agent-foundations`' WAL protocol routes through automatically: the trigger table below, the log formats, and the promotion rules for turning durable learnings into permanent project memory. This is not a skill an agent separately decides to load — WAL's "Learnings routing" step already folds a matching trigger into its mandatory write, the same turn it fires. Going forward, a correction or recurring pattern gets a structured `.learnings/` entry as a matter of course, in the same motion as the agent-memory write, not as an afterthought that depends on remembering to open this file later.
 
 ## When to Log
+
+The five trigger types WAL's mandatory write scans for. When one matches, the `.learnings/` entry is written as part of that same write — not a follow-up step to schedule for later.
 
 | Trigger | Where |
 | ------- | ----- |
@@ -18,13 +20,26 @@ Adapted from [pskoett/self-improving-agent v3.0.21](https://clawhub.ai/pskoett/s
 | The agent's knowledge proves outdated or incorrect | `.learnings/LEARNINGS.md` — category: `knowledge_gap` |
 | A better approach is discovered for a recurring task | `.learnings/LEARNINGS.md` — category: `best_practice` |
 
-Also review `.learnings/` before starting a major task or entering a new codebase area.
+**Storage-plugin note:** every `.learnings/*.md` path in this skill (the table above,
+First-Use Initialisation, Recurring Pattern Detection, Periodic Review) is the free-tier
+default. Before writing or reading, check for an active storage plugin file at
+`storage/*.md` — the same presence-gated check `agent-foundations`'s Memory Path Resolution
+protocol uses for Memory/Task/Document. When one is present, writes route through that
+plugin's Learnings-store `write-learning-entry(store, category, content)` operation
+(`store` is `LEARNINGS`, `ERRORS`, or `FEATURE_REQUESTS`, matching the three files below)
+instead of a literal file write, and reads (Recurring Pattern Detection's search, Periodic
+Review's pending count) route through `list-pending-learnings(store)` instead of a raw
+`grep`. On free tier (no plugin file present), the literal paths below remain correct as-is.
+
+Also review `.learnings/` before starting a major task or entering a new codebase area — this review step is separate from the WAL-triggered logging above, and still requires the agent to actively open this file.
 
 ---
 
 ## First-Use Initialisation
 
-Before logging anything, ensure the `.learnings/` directory exists in the project root. If missing, create:
+Free-tier only — see the Storage-plugin note above; on vault-backed tiers the plugin
+provisions `Research/Learnings/` itself, no manual initialisation step applies. Before
+logging anything, ensure the `.learnings/` directory exists in the project root. If missing, create:
 
 ```
 .learnings/LEARNINGS.md
@@ -164,9 +179,12 @@ When a learning applies across multiple files or features, or prevents a recurri
 
 | Promotion target | What goes there |
 | ---------------- | --------------- |
-| `memory/<agent>.md` COLD section | Project facts, conventions, verified practices |
+| `memory/<agent>.md` COLD section (or the active storage plugin's memory store on vault-backed tiers — see the storage-plugin note below) | Project facts, conventions, verified practices |
 | `AGENTS.md` in the workspace | Workflow improvements, automation rules — applies to Codex and GitHub Copilot environments; for Claude Code the equivalent is `CLAUDE.md` |
-| `~/.claude/projects/.../memory/` auto-memory | Cross-project patterns and preferences |
+| `.cursor/rules/*.mdc` | Workflow improvements, automation rules — Cursor's equivalent mechanism to the `CLAUDE.md`/`AGENTS.md` row above |
+| `~/.claude/projects/.../memory/` auto-memory | Cross-project patterns and preferences — Claude-Code-only; there is no equivalent promotion target on Cursor, Codex, or GitHub Copilot |
+
+**Storage-plugin note (`memory/<agent>.md` COLD row):** before promoting to `memory/<agent>.md`, check for an active storage plugin file at `agents/skills/agent-foundations/storage/*.md` — the same presence-gated check `agent-foundations`'s Memory Path Resolution protocol uses. If no plugin file is present, the literal `memory/<agent>.md` path is correct as-is (free-tier default). If a plugin file is present (vault-backed tier, e.g. `dev:sub`/`ops`/`publish`), the literal repo-relative path is wrong — promote instead via that plugin's `write-memory-entry(agent, 'COLD', content)` operation (see `agent-foundations`'s Memory Path Resolution protocol and the active plugin file, e.g. `storage/obsidian.md`, for the authoritative procedure). Writing to the literal path on a vault-backed tier creates a stray file outside the vault, bypassing the knowledge index.
 
 ### Promotion threshold
 

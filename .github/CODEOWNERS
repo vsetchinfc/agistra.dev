@@ -4,7 +4,7 @@
 # These files contain natural-language agent-behavior instructions that code-level
 # tools (CodeQL, dependency-review) cannot audit for semantic weakening.
 #
-# Paths designated security-critical by ADR-020, decision 5:
+# Paths designated security-critical by the public-hub review policy:
 
 # Agent foundations skill — VBR, WAL, security baseline, stop-vs-proceed logic
 /skills/agent-foundations/SKILL.md @vsetchinfc

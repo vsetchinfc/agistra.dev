@@ -67,7 +67,7 @@ if (command === 'dispatch') {
 
 } else if (command === 'scan') {
 	const dryRun = args['dry-run'] === true;
-	scan({ projectRoot, projectName: project, projectsDir, dryRun });
+	scan({ projectRoot, projectName: project, projectsDir, hubRoot: consultingRoot, dryRun });
 
 // ── install-skill ─────────────────────────────────────────────────────────────
 //

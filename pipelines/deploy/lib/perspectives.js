@@ -25,11 +25,12 @@ import { analyzeDependencyGraph, analyzeDependencyGraphFromGraphify, MAX_FAN_OUT
 // otherwise score perfectly.
 //
 // Dependency-graph source: when the project has already run Graphify
-// (`projects/<project>/graphify/graphify-out/graph.json` exists), that real,
-// richer call/import graph is preferred over this module's own regex-based
-// scan — Graphify is optional and derived, so its absence is never an error,
-// just a fallback to dep-graph.js's own buildImportGraph()/detectCycles()
-// engine (dep-graph.js's own doc comment has the full engine description).
+// (`.graphify/<project>/graphify-out/graph.json` exists under the hub root),
+// that real, richer call/import graph is preferred over this module's own
+// regex-based scan — Graphify is optional and derived, so its absence is
+// never an error, just a fallback to dep-graph.js's own
+// buildImportGraph()/detectCycles() engine (dep-graph.js's own doc comment
+// has the full engine description).
 
 export function analyzeSys(root, { graphJsonPath } = {}) {
 	const allFiles = collectSourceFiles(root);

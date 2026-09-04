@@ -14,7 +14,7 @@ Profiles should bind themselves to one or more lifecycle roles. The skill stays 
 
 **Local task files are the canonical system of record for the ticket lifecycle.** External trackers (GitHub Issues, Telegram) are downstream **mirrors / projections** of the local record, used primarily as a communication and info-passing surface for external teams.
 
-The task file's **`status:` frontmatter field is authoritative** for lifecycle state. The **filename infix** (`task_N_<state>_slug.md`) is a derived, human- and CLI-readable **index** of that state, kept in sync by the CLI on every transition. If the two ever diverge, frontmatter wins; the CLI reconciles the filename.
+The task file's **`status:` frontmatter field is authoritative** for lifecycle state. On the free-tier (repo-files) default, the **filename infix** (`task_N_<state>_slug.md`) is a derived, human- and CLI-readable **index** of that state, kept in sync by the CLI on every transition — see the `transition` operation description under State Transition CLI below for exactly when this applies. If the two ever diverge, frontmatter wins; the CLI reconciles the filename. On vault-backed tiers there is no filename infix at all; the active storage plugin's Task store section (e.g. `storage/obsidian.md`) is authoritative for that tier's on-disk state-encoding convention.
 
 ## Role Model
 
@@ -32,7 +32,7 @@ The following fields define the authoritative state and configuration for every 
 
 | Field                      | Values                                                                                                                                                        | Set by                                     | Notes                                                                                               |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------ | --------------------------------------------------------------------------------------------------- |
-| `status`                   | `state:ready-for-implementation` \| `state:in-progress` \| `state:ready-for-review` \| `state:ready-for-qa` \| `state:changes-requested` \| `state:qa-passed` \| `closed` | owning agent on state transition           | **Authoritative** lifecycle state; filename infix is derived from this; `closed` is the terminal value (filename token: `done`) |
+| `status`                   | `state:ready-for-implementation` \| `state:in-progress` \| `state:ready-for-review` \| `state:ready-for-qa` \| `state:changes-requested` \| `state:qa-passed` \| `closed` | owning agent on state transition           | **Authoritative** lifecycle state on every tier; `closed` is the terminal value. On the free-tier default the filename infix is derived from this (filename token: `done`) — see State Transition CLI below for the tier-aware rule; vault-backed tiers have no filename infix. |
 | `verifier`                 | `Tester` \| `Architect` \| `Automated`                                                                                                                        | `Developer Lead` at ticket creation        | Drives the post-completion branch in `task-automation-flow`; ticket without verifier is underscoped |
 | `fail-count`               | `0` \| `1` \| `2`                                                                                                                                             | active verifier on QA fail                 | Replaces `qa-fail-*` labels; incremented on each fail attempt                                       |
 | `parked`                   | `true` \| `false` (or absent)                                                                                                                                 | `Developer Lead` when fail-count reaches 3 | A parked task is not auto-dispatched; requires team lead direction to resume                        |
@@ -41,7 +41,7 @@ The following fields define the authoritative state and configuration for every 
 | `depends_on`               | list of task ids (e.g. `task_<id>`, `<id>`)                                                                                                                       | `Developer Lead` at ticket creation        | **Optional.** Declares a hard ordering constraint: this ticket must not start until every listed id has landed. Backward compatible — absent on existing task files, which continue to parse normally. Consumed by `npm run task -- waves <project>` to exclude conflicting pairs from the same wave and to detect dependency cycles. |
 | `touches`                  | list of glob patterns (e.g. `pipelines/deploy/lib/*.js`)                                                                                                        | `Developer Lead` at ticket creation        | **Optional.** Declares the files/paths this ticket is expected to modify. Backward compatible — absent means no glob-overlap constraint is inferred for this ticket. Consumed by `npm run task -- waves <project>` to exclude tickets with overlapping `touches` from the same wave. |
 
-Agents update these fields on every lifecycle transition. The CLI keeps the filename infix in sync with `status:` when performing transitions.
+Agents update these fields on every lifecycle transition. Whether the filename infix is also kept in sync with `status:` is tier-dependent — see the `transition` operation description under State Transition CLI below.
 
 ## State Transition CLI
 
@@ -80,7 +80,13 @@ process's own cwd.
 **`transition` is atomic and ordered:**
 
 1. update `status:` frontmatter
-2. rename the filename infix to match
+2. check for an active storage plugin file at `agents/skills/agent-foundations/storage/*.md`
+   — the same presence-gated check `agent-foundations`'s own Memory Path Resolution
+   protocol uses for Memory/Task/Document store operations. If a plugin is present and its
+   Task store section's `transition-state` operation documents a rename-free transition
+   (as `storage/obsidian.md`'s does), skip the rename — the plugin file is the source of
+   truth for whether this step applies, not this skill. Only on the free-tier default (no
+   plugin file present) does this step rename the filename infix to match.
 3. when a tracker reference field is present in frontmatter (e.g. `github:` /
    `github-issue:`), sync the tracker label via `gh` (remove the old `state:*` label,
    add the new one)
@@ -95,9 +101,15 @@ the Mirror Update Obligation below).
 
 Backend note: `task-cli.js` implements the repo-files task store operations from the
 Storage Plugin Contract in `agent-foundations/SKILL.md` (`read-task`, `list-tasks`,
-`update-task-fields`, `transition-state`). A future storage backend (e.g. an obsidian
-plugin) would implement the same operations behind this CLI's module boundary without
-changing the CLI surface agents call.
+`update-task-fields`, `transition-state`). The `obsidian` plugin
+(`agent-foundations/storage/obsidian.md`) is a real, already-shipped, currently-active
+storage backend on vault-backed tiers (`dev:sub`, `ops`, `publish`) — not hypothetical
+future work. It implements the same operations behind this CLI's module boundary with
+materially different transition behavior on that tier: no filename rename. See that
+plugin's own Task store section (`transition-state`) for the authoritative statement of
+what changes on a vault-tier transition — this file does not restate it. Agents must
+check which storage plugin is active, per the same presence-gated check named in step 2
+above, before assuming the repo-files rename step applies.
 
 ## Token Spend Log Convention
 
@@ -127,6 +139,11 @@ Rules:
 - A parked-for-budget dispatch (see `task-automation-flow`) is **not** logged here, since it never ran — only completed dispatches contribute spend.
 
 ## State Vocabulary (Filename Token ↔ Lifecycle State)
+
+The filename-token column below documents the free-tier (repo-files) convention only.
+Vault-backed tiers have no filename infix — state lives solely in the `status:` property
+(see the active storage plugin's Task store section, e.g. `storage/obsidian.md`). The
+`status:` frontmatter value column applies on every tier.
 
 | Filename token      | `status:` frontmatter value      | Auto-dispatchable                 |
 | ------------------- | -------------------------------- | --------------------------------- |
@@ -191,7 +208,7 @@ When creating a new ticket for a project that has a tracker configured, a matchi
 
 When a tracker is configured for a project — signalled by a tracker reference field in the task file frontmatter (e.g. `github-issue:` for the GitHub plugin) or a workspace-level tracker config — **every lifecycle transition must update both the local task file and the corresponding tracker record as part of the same transition.**
 
-- The **local write is authoritative and happens first**: update `status:` frontmatter, `fail-count:`, and filename infix. Run this via the state transition CLI (`npm run task -- transition <id> <new-state>`, see State Transition CLI above) rather than by hand.
+- The **local write is authoritative and happens first**: update `status:` frontmatter, `fail-count:`, and (on tiers where it applies — see State Transition CLI above) the filename infix. Run this via the state transition CLI (`npm run task -- transition <id> <new-state>`, see State Transition CLI above) rather than by hand.
 - The **mirror write is a required follow-on step**: the same CLI invocation syncs and post-verifies the tracker label (currently the GitHub plugin's `state:*` label via `gh`) as part of the atomic transition — no separate manual step is needed for the GitHub tracker. Comments (e.g. QA reports) still use the active plugin's update-record procedure directly (defined in `trackers/<plugin-name>.md`).
 - A transition is **not complete** until the mirror write succeeds **or** the failure is explicitly recorded for retry — the CLI reports this via a non-zero exit code and a named failed step; do not treat a non-zero exit as success.
 - "I updated the local file" is not a complete transition when a tracker is configured.
@@ -199,7 +216,7 @@ When a tracker is configured for a project — signalled by a tracker reference 
 **Failed mirror write handling:**
 
 - Append the failure to the task file's `## Log` section (timestamp, attempted action, error).
-- Record the failed outbound in Router's `memory/router.md` HOT section under `failed-outbound` (if Router is active).
+- Record the failed outbound in Router's memory HOT section under `failed-outbound` via the active storage plugin using `write-memory-entry('router', 'HOT', content)` (if Router is active).
 - Reconcile the mirror before the ticket is considered closed.
 
 **No tracker configured:** local-only; no mirror obligation exists.
@@ -225,7 +242,7 @@ When a tracker is configured for a project — signalled by a tracker reference 
 
 `state:qa-passed` is normally reached via `QA`. The sole exception is when the ticket's verifier field is set to `Architect`: in that case the `Developer Lead` (acting as verifier) transitions directly from `state:ready-for-review` to `state:qa-passed` after reviewing engineering quality and verifying all ACs — no separate QA phase is required. In all other verifier paths, a `Developer Lead` completing an engineering review must advance to `state:ready-for-qa`, never directly to `state:qa-passed`.
 
-**On every state transition:** run the state transition CLI — `npm run task -- transition <id> <new-state>` — instead of manually editing the frontmatter, renaming the file, and calling the tracker plugin as separate steps. The CLI performs the local write (frontmatter `status:` + filename infix) and, when a tracker is configured, the mirror update and post-verify in one atomic, ordered call. See State Transition CLI below and Mirror Update Obligation above.
+**On every state transition:** run the state transition CLI — `npm run task -- transition <id> <new-state>` — instead of manually editing the frontmatter, renaming the file, and calling the tracker plugin as separate steps. The CLI performs the local write (frontmatter `status:`, and, on tiers where it applies, the filename infix — see State Transition CLI above) and, when a tracker is configured, the mirror update and post-verify in one atomic, ordered call. See State Transition CLI below and Mirror Update Obligation above.
 
 ## Typical Direct Lane Flow
 
@@ -254,7 +271,7 @@ All of these should be true:
 - required migrations, edge functions, seed data, or environment setup are ready for QA
 - the target QA environment is live, reachable, and configured for the intended handoff path
 - the Developer -> QA handoff payload is complete
-- **the state transition CLI has been run** (`npm run task -- transition <id> state:ready-for-qa`) — this atomically updates `status:` frontmatter, renames the filename infix, and (when a tracker is configured) syncs and verifies the tracker label in one ordered operation; do not hand-rename the file or hand-edit labels
+- **the state transition CLI has been run** (`npm run task -- transition <id> state:ready-for-qa`) — this atomically updates `status:` frontmatter, renames the filename infix on tiers where that applies (see State Transition CLI above), and (when a tracker is configured) syncs and verifies the tracker label in one ordered operation; do not hand-rename the file or hand-edit labels
 - **tracker record is updated** (when tracker configured): the same CLI invocation performs this — see State Transition CLI below
 
 ### Before `state:qa-passed`

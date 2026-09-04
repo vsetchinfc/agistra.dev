@@ -20,7 +20,7 @@ Structural and architectural health.
 | Cohesion | 50/50 blend of a directory-count heuristic (directories with more than 20 source files) and real dependency-cycle detection over the JS/TS import graph |
 | Infrastructure | TypeScript project without `tsconfig.json` = 0; no CI/CD pipeline = 0; both present = 1.0 |
 
-A pure JS/Node dependency-graph engine (no TypeScript compiler API, no native/compiled parser) builds the module-level import graph behind Complexity and Cohesion, and reports fan-in/fan-out coupling and hard cycle detection. JS/TS only; other languages aren't covered yet. Ships to every tier. On tiers where Graphify is available, an already-generated `projects/<project>/graphify/graphify-out/graph.json` is preferred over the engine's own source scan when present; the engine's own scan is always the fallback when no Graphify graph exists for a project.
+A pure JS/Node dependency-graph engine (no TypeScript compiler API, no native/compiled parser) builds the module-level import graph behind Complexity and Cohesion, and reports fan-in/fan-out coupling and hard cycle detection. JS/TS only; other languages aren't covered yet. Ships to every tier. On tiers where Graphify is available, an already-generated `.graphify/<project>/graphify-out/graph.json` is preferred over the engine's own source scan when present; the engine's own scan is always the fallback when no Graphify graph exists for a project.
 
 **Findings generated:** oversized files (high), high-fan-out modules (medium), overloaded directories (medium), dependency cycles (high or medium depending on count), missing `tsconfig.json` (high), missing CI/CD (medium)
 
